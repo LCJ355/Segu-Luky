@@ -1,0 +1,123 @@
+SEGU-LUKY V-1.12s - PROTOCOLO Y ALGORITMO
+==========================================
+Documento de comprension de la app (deteccion, cuenta atras, llamadas,
+WhatsApp, ubicacion y recuperacion). Describe el codigo real.
+
+AVISO IMPORTANTE
+----------------
+Este APK REALIZA ACCIONES REALES: marca llamadas, envia SMS y abre o envia
+WhatsApp a los contactos configurados. No es una simulacion. Antes de activar
+FUNCIONALIDAD SOS, comprueba los contactos guardados. Para probar sensores,
+desactiva FUNCIONALIDAD SOS: la cuenta atras se ejecuta sin avisar a nadie.
+
+1) RESUMEN
+----------
+Segu-Luky vigila los sensores mientras el monitor esta activo. Si cree que ha
+habido un accidente inicia una cuenta atras de 30 s con pitidos que puedes
+cancelar. Si se completa, y solo con FUNCIONALIDAD SOS activada, ejecuta SMS,
+WhatsApp y llamadas en orden. El monitor es un servicio en primer plano: sigue
+con la pantalla apagada y el telefono bloqueado.
+
+2) COMO SE DECIDE UN SOS
+------------------------
+Sensibilidad (SENSIBILIDAD A LOS GOLPES, 0,5 a 7 g; por defecto 3,5 g) es el
+unico umbral de golpe.
+
+A) CAIDA / ORIENTACION ACTIVADA (valor por defecto, MODO MOTO):
+   - Un golpe fuerte aislado NO dispara el SOS: arma CANDIDATO A CAIDA (15 s).
+   - La pantalla se enciende al armar el candidato, para poder cancelar.
+   - El SOS salta si, dentro de la ventana, el movil queda inclinado 55 grados
+     o mas durante 4 s seguidos (sensor de gravedad).
+   - El candidato se aborta si vuelve a vertical (menos de 25 grados), si el
+     GPS indica 30 km/h o mas, o si expira la ventana.
+   - En candidato y cuenta atras el GPS pasa a 2 s. En vigilancia normal usa
+     20 s o 25 m.
+
+   DESACTIVADO:
+   - Todo golpe que alcance la sensibilidad inicia la cuenta atras al instante.
+
+B) SOS DELIBERADO:
+   - Sacudida: 2 picos fuertes dentro de 1,2 s.
+   - Mantener el boton S O S 5 segundos.
+   - Mantener dos dedos 5 segundos dentro de la app.
+   - Gesto global (opcional, Android 12+): dos dedos 5 s en cualquier pantalla;
+     tres o mas dedos confirman al instante. Requiere activar el servicio de
+     accesibilidad "Segu-Luky: gesto SOS".
+   - Decir "ayuda" o "socorro" (VOZ AYUDA / SOCORRO, desactivado por defecto):
+     funciona con el monitor activo y con la pantalla apagada. Si se activa la
+     voz con el monitor ya iniciado, la captura arranca sin reiniciar el
+     servicio.
+
+3) CUENTA ATRAS (30 SEGUNDOS)
+-----------------------------
+- Pitidos en los ultimos 20 s, mas frecuentes al final.
+- CANCELAR SOS desarma el evento y rearma el monitor.
+- Cada evento se ejecuta UNA sola vez: identificador unico y marca de
+  completado en disco. El ticker y la alarma de respaldo no pueden duplicar el
+  aviso. Una alarma duplicada ya no puede destruir un monitor sano.
+
+4) GPS Y UBICACION
+------------------
+- Posicion valida: precision de 100 m o mejor. Posicion reciente: 60 s.
+- Vigilancia: 20 s / 25 m. Candidato, cuenta atras y validacion: 2 s / 0 m.
+- El enlace de mapa usa la ultima posicion valida de los ultimos 5 minutos, por
+  lo que sigue disponible aunque el movil este parado y el GPS haya reducido
+  su ritmo. Si no hay ninguna, el texto indica "ubicacion GPS no disponible".
+- La deteccion de golpes funciona sin GPS, sin permiso de ubicacion o con el GPS
+  apagado.
+
+5) AL COMPLETARSE LA CUENTA ATRAS
+---------------------------------
+Si FUNCIONALIDAD SOS esta DESACTIVADA:
+   No se llama ni se envia nada; solo queda el registro.
+
+Si FUNCIONALIDAD SOS esta ACTIVADA:
+   1. SMS AUTOMATICO (si esta activado y hay permiso): se envia a todos los
+      contactos. Funciona con pantalla apagada y sin Accesibilidad.
+   2. WHATSAPP (contactos con WhatsApp habilitado):
+      - Con ENVIO AUTO WHATSAPP + Accesibilidad, se encola cada contacto y la
+        accesibilidad pulsa Enviar tras verificar paquete, destinatario y texto.
+      - Si un envio queda atascado, una alarma de supervision reintenta la cola
+        y continua con el resto. Si el proceso muere, el despacho persistido se
+        reanuda al arrancar el servicio.
+      - Sin Accesibilidad, se publica una notificacion "ABRIR WHATSAPP" por
+        cada contacto con WhatsApp habilitado.
+   3. LLAMADAS EN ORDEN: se llama de uno en uno. Se espera a que la llamada
+      termine antes de llamar al siguiente; una llamada conectada de 3 s o mas
+      se considera atendida y detiene la ronda. Una llamada no se corta antes de
+      5 minutos. El avance se programa con alarma para sobrevivir a la muerte
+      del proceso. Con ANSWER_PHONE_CALLS concedido, al agotar el tiempo se
+      intenta colgar antes de pasar al siguiente.
+   4. UBICACION: {MAPA} se sustituye por el enlace de Google Maps.
+
+6) RECUPERACION
+---------------
+- La cuenta atras persiste eventId, fin en reloj monotono y de pared, y la
+  ultima ubicacion.
+- Alarmas exactas si el usuario las autoriza; si no, Android puede retrasar el
+  respaldo y se registra el aviso.
+- El servicio arranca en primer plano con tipo LOCATION si puede y, si Android
+  lo rechaza en segundo plano, cae a SPECIAL_USE para no perder el SOS. Si el
+  arranque de ubicacion en segundo plano no esta permitido, el monitor sigue
+  con sensores y sin GPS en vivo.
+- BootReceiver reanuda la monitorizacion si el usuario la habia pedido. Un
+  despacho pendiente tiene prioridad sobre un simple rearme.
+
+7) REQUISITOS
+-------------
+- FUNCIONALIDAD SOS activada y al menos un destinatario.
+- Permiso de llamadas para marcar; SMS si se activa; microfono para voz;
+  Accesibilidad para el envio automatico de WhatsApp y para el gesto global.
+- Alarmas exactas y ubicacion en segundo plano mejoran la recuperacion; la app
+  avisa de su estado en Configuracion.
+
+8) CONSUMO (V-1.12s)
+--------------------
+- Estado en disco solo ante cambios relevantes; reloj de ubicacion agrupado en
+  tramos de 15 s.
+- Latido 5 s en vigilancia, 100 ms en cuenta atras.
+- Giroscopio solo en candidato/validacion.
+- Pantalla solo en candidato/cuenta atras.
+- Calibracion vuelca cada 5 s.
+
+Version: V-1.12s (versionCode 4).

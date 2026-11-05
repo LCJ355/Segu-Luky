@@ -1,0 +1,15 @@
+CARPETA DE CALIBRACIONES
+========================
+Coloca aqui los ZIP exportados por la app Segu-Luky de cada movil
+(Descargas/Segu-Luky/*.zip, recibidos por WhatsApp o copiados por USB).
+
+Luego ejecuta:
+  - Doble clic en "analizar_calibracion.bat", o
+  - python analizar_calibracion.py "Calibracion"
+
+El script agrupa por modelo de movil y actividad, y genera
+"recomendaciones.txt" con la sensibilidad sugerida para evitar falsos SOS.
+
+Recomendado: para cada movil, grabar al menos estas actividades
+  Andando, Moto autovia, Moto camino, Coche autovia, Coche camino
+con el movil en la posicion habitual (soporte, bolsillo...).

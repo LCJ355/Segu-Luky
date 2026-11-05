@@ -1,0 +1,30 @@
+*.iml
+.idea/
+.gradle/
+build/
+**/build/
+/local.properties
+local.properties
+.DS_Store
+/captures
+.externalNativeBuild
+.cxx
+.kotlin/
+
+# Signing material must never be committed
+*.jks
+*.keystore
+keystore.properties
+
+# Built artifacts
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Raw calibration data contains real GPS traces (privacy) and is large
+Instrucciones/Calibracion/*.zip
+Instrucciones/Calibracion/*.csv
+
+# Historical binaries
+APK´s/_anterior/

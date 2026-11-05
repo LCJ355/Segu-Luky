@@ -1,0 +1,77 @@
+INTEROPERABILIDAD SEGU-LUKY <-> INTERCOM-LUKY
+==============================================
+Estudio (07/09/2026). Estado: documento de decision, sin cambios de codigo.
+
+1) OBJETIVO Y ALCANCE
+---------------------
+Mantener DOS aplicaciones independientes que conviven instaladas:
+  - Segu-Luky      (com.intercom.segluky)   : SOS / deteccion de caidas,
+                                              monitor 24/7.
+  - InterCOM-Luky  (com.intercom.lukymoto)  : intercomunicador de moto
+                                              (VOX/PTT/duplex), sala/grupo,
+                                              mapa.
+Cada app conserva su nombre, applicationId y firma actuales. NO se fusiona
+codigo en un solo APK.
+
+2) ESTADO ACTUAL
+----------------
+- Segu-Luky ya detecta a InterCOM (paquete com.intercom.lukymoto): fila
+  "INTERCOM OK/--" en ESTADO y boton "ABRIR INTERCOM" en Instrucciones
+  (IntercomInstallation.kt).
+- InterCOM-Luky no conoce a Segu: no la consulta ni la lanza.
+- Firmas distintas; se instalan por separado.
+
+3) CAPACIDADES CRUZADAS EVALUADAS Y DECISION
+--------------------------------------------
+Se evaluaron cuatro capacidades posibles:
+
+  A) Lanzarse mutuamente (botones de apertura cruzada).
+     -> DESCARTADA por ahora.
+  B) Boton SOS en InterCOM que lanza Segu y arranca la cuenta atras.
+     -> DESCARTADA por ahora.
+  C) "SOS avisa en la sala": Segu abre InterCOM en la sala/mapa del grupo
+     pasando el room (Segu guardaria la sala como preferencia).
+     -> DESCARTADA por ahora.
+  D) PRIORIDAD DE AUDIO ANTE LLAMADA REAL (UNICA SELECCIONADA):
+     InterCOM cede el audio (SCO/fake-call/microfono) cuando hay una
+     llamada telefonica REAL en curso, para que la llamada SOS de Segu se
+     oiga en el casco y en el movil.
+     -> SELECCIONADA como objetivo, pero SU IMPLEMENTACION SE POSPONE.
+
+4) REQUISITOS TECNICOS FUTUROS (para cuando se implemente D)
+------------------------------------------------------------
+Implementar en InterCOM-Luky (sin tocar Segu):
+  - PhoneStateListener via TelephonyManager con permiso READ_PHONE_STATE.
+  - Al detectar llamada real ajena (OFFHOOK/RINGING): pausar la sesion de
+    intercom, liberar SCO/audio y cancelar/ocultar el fake-call.
+  - Al colgar (IDLE): restaurar el estado previo del intercom.
+Puntos de codigo implicados en InterCOM:
+  - SCOAudioManager.kt (captura/reproduccion, rutas SCO 293-364 y 566-697).
+  - FakeCallManager.kt (llamada fantasma 39-65).
+Riesgo a validar en OPPO:
+  - Distinguir la llamada SOS REAL del fake-call PROPIO de InterCOM para no
+    pausarse ante su propia llamada fantasma.
+
+5) ALTERNATIVAS DESCARTADAS Y MOTIVO
+------------------------------------
+- Fusion en un solo APK: contradice mantener instalaciones independientes;
+  ademas exige unificar Application/Hilt/Firebase/launcher, resolver dos
+  motores de audio en un proceso y cambiar firma.
+- A/B/C: requieren visibilidad de paquetes cruzada, acciones/contratos
+  nuevos y gestion del room; se descartan por alcance actual.
+
+6) LIMITACIONES DE PLATAFORMA
+-----------------------------
+- Una app no puede iniciar de forma fiable en segundo plano el
+  servicio/foreground de la otra; los lanzamientos cruzados deben originarse
+  en primer plano (boton tocado, notificacion).
+- Sin permisos de firma compartida (firmas distintas): solo acciones
+  explicitas con paquete y extras; no exponer datos sensibles.
+- El SCO del fake-call de InterCOM puede capturar el casco mientras no se
+  implemente la cesion de audio (punto D).
+
+7) PRUEBA PENDIENTE EN OPPO (cuando se implemente D)
+----------------------------------------------------
+- Lanzar SOS real desde Segu y comprobar que suena por casco y altavoz.
+- Verificar que el intercom se pausa durante la llamada y reanuda al colgar.
+- Verificar que el fake-call propio no dispara la pausa.

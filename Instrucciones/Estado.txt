@@ -1,0 +1,930 @@
+SEGU-LUKY V-1.12s
+BITACORA DE ACTUALIZACIONES Y PRUEBAS
+
+Ultima actualizacion: 05/11/2026
+Estado: release de evolucion V-1.12s - fiabilidad del despacho SOS, alarmas
+exactas, voz reactivable, gesto global declarado y limpieza de codigo.
+
+Nota de versionado: a partir de ahora se usa el formato V-1.xxs
+(versionName "1.12s", versionCode 4). Siguiente incremento: 1.13s, etc.
+
+CAMBIO MAS RECIENTE: FIABILIDAD SOS, LLAMADAS Y RECUPERACION (05/11/2026)
+-------------------------------------------------------------------------
+- Despacho persistente con pasos WHATSAPP -> CALLS; funciona aunque no haya
+  contactos de llamada y se reanuda al arrancar el servicio.
+- Watchdog de avisos SOS: reintenta la cola de WhatsApp y evita que una cabeza
+  PROCESSING/SENT/FAILED bloquee al resto.
+- Alarmas duplicadas/tardias ya no destruyen el monitor ni el despacho.
+- Llamadas: OFFHOOK ya no se interpreta como "respondida". Se espera al fin de
+  llamada, se considera atendida una llamada conectada >=3 s y no se corta antes
+  de 5 min. ANSWER_PHONE_CALLS opcional para colgar y avanzar.
+- Alarmas exactas: permiso SCHEDULE_EXACT_ALARM + tarjeta de estado en
+  Configuracion; fallback inexacto registrado.
+- FGS de ubicacion con fallback a specialUse si Android rechaza el arranque en
+  segundo plano.
+- Candidato de caida: enciende pantalla y pasa GPS a 2 s; al expirar/abortar
+  vuelve a 20 s / 25 m.
+- Voz: activarla con el monitor en marcha arranca la captura; el fallo de
+  AudioRecord ya no deja un bucle ocupado.
+- WhatsApp manual: una notificacion por contacto (hasta 5).
+- Gesto global de accesibilidad declarado en el manifest (Android 12+), con
+  tarjeta de estado.
+- Eliminado codigo muerto (medidor de voz duplicado, GateRow, condiciones SOS
+  antiguas, openWhatsApp).
+- Tests: 61 (nuevos EscalationPolicy, ContactsRepository, WhatsAppAutoSend).
+- Lint y CI anadidos; version 1.12s / versionCode 4.
+
+CAMBIO ANTERIOR: ENVIO AUTOMATICO (SMS) Y REQUISITOS WHATSAPP (15/09/2026)
+-----------------------------------------------------------------------------
+- Nuevo interruptor "SMS SOS AUTOMATICO": envia por SMS (SmsManager) el mensaje
+  con el enlace de Maps a TODOS los contactos, SIN confirmacion y con pantalla
+  apagada o bloqueada. Requiere permiso SEND_SMS (se pide al activarlo).
+  Es la via realmente automatica; puede tener coste de operador.
+- WhatsApp automatico: se aclaran los DOS permisos que necesita y se muestran
+  su estado en la tarjeta ENVIO AUTO WHATSAPP:
+    * Accesibilidad "Envio SOS WhatsApp" (pulsa Enviar).
+    * "Aparecer encima de otras apps" (SYSTEM_ALERT_WINDOW): permite abrir
+      WhatsApp desde segundo plano en Android moderno.
+  Si falta alguno, el SOS ofrece WhatsApp manual como respaldo (no se pierde).
+- startActivityFromBackground usa ActivityOptions
+  MODE_BACKGROUND_ACTIVITY_START_ALLOWED en Android 14+.
+
+CAMBIO ANTERIOR: AJUSTES DE CALIBRACION Y UMBRAL (14/09/2026)
+-----------------------------------------------------------------
+- Analisis de 5 ZIP (OPPO CPH2695 y Xiaomi 2201117SY): maxima aceleracion
+  dinamica en coche ~3.2 g (autovia, baches). Recomendacion del script 4.0 g.
+- Sensibilidad por defecto cambiada de 3.0 g a 3.5 g (por encima del maximo
+  medido, con margen) manteniendo MODO MOTO (confirmacion por inclinacion),
+  que evita falsos SOS por baches.
+- Tarjeta CALIBRACION DE SENSORES simplificada: se quitaron los botones
+  redundantes por archivo (WHATSAPP/COMPARTIR); ahora hay EXPORTAR y
+  WHATSAPP del conjunto y BORRAR por archivo.
+- Pendiente: registrar MOTO autovia/camino (aun no hay datos) para fijar el
+  umbral definitivo.
+
+CAMBIO ANTERIOR: CALIBRACION DE SENSORES (07/09/2026)
+---------------------------------------------------------
+- Nueva tarjeta "CALIBRACION DE SENSORES" en Configuracion:
+  selector de actividad (Andando / Corriendo / Moto autovia / Moto camino /
+  Coche autovia / Coche camino) + INICIAR/DETENER REGISTRO + lista de
+  archivos con COMPARTIR/BORRAR.
+- Servicio SensorCalibrationService (foreground specialUse, independiente
+  del monitor): graba aceleracion lineal, acelerometro, gravedad, giroscopio
+  y GPS (1 Hz) en CSV con cabecera descriptiva.
+- Archivos: Android/data/com.intercom.segluky/files/calibracion/
+  segu_calib_<MODELO>_<actividad>_<fecha>.csv; nombre y cabecera incluyen
+  fabricante/modelo (para distinguir moviles de amigos).
+- EXPORTAR: crea un ZIP (todos los CSV + ajustes.txt) en la carpeta
+  publica Descargas/Segu-Luky para copiar al PC. WHATSAPP: abre WhatsApp
+  con el ZIP adjunto para enviarlo. Por archivo: WHATSAPP y COMPARTIR.
+  (Se retiro IMPORTAR: los archivos se reunen en el PC.)
+- Analizador: Instrucciones\analizar_calibracion.py (estadisticas p95/p99/max
+  por actividad y sensibilidad sugerida).
+- Guia: Instrucciones\CALIBRACION.txt.
+
+CAMBIO ANTERIOR: LLAMADAS EN ORDEN 1o/2o/3o + TEXTO CONTACTO (07/09/2026)
+-----------------------------------------------------------------------------
+- Las llamadas SOS se hacen en el ORDEN de la lista de CONTACTOS SOS:
+  1o; si no responde en 1 minuto, 2o; si no, 3o, etc. Se detecta respuesta
+  con el estado de la llamada (READ_PHONE_STATE) y cada salto se programa
+  con alarma para sobrevivir a la muerte del proceso.
+- El WhatsApp se envia a TODOS los contactos con WhatsApp activado (cola de
+  autoenvio cuando ENVIO AUTO WHATSAPP esta activo).
+- Leyendas: "AÑADIR CONTACTO" (antes ANADIR DESTINATARIO), texto "Añade..."
+  con ñ, y secciones renombradas a CONTACTOS SOS / NUEVO CONTACTO /
+  EDITAR CONTACTO. El orden de la lista ya NO se ordena alfabeticamente:
+  el primer contacto anadido es el 1o de llamada.
+
+CAMBIO ANTERIOR: CAIDA DE MOTO + VOZ PANTALLA APAGADA (07/09/2026)
+-----------------------------------------------------------------------
+CAIDA / ORIENTACION (MODO MOTO, activo por defecto):
+- Un golpe fuerte aislado ya NO dispara el SOS al instante: entra en
+  CANDIDATO A CAIDA (15 s) y solo salta la cuenta atras si el movil queda
+  inclinado >= 55 grados durante 4 s seguidos (sensor de gravedad a baja
+  tasa, 5-20 Hz; sin giroscopio ni rotation vector).
+- Se aborta solo si vuelve a vertical (~25 grados), si el GPS marca
+  >30 km/h (sigues rodando) o si expira la ventana. Baches y curvas no
+  avisan; el golpe solo vibra y enciende la pantalla 15 s.
+- La sacudida deliberada sigue inmediata: 2 picos >= sensibilidad en
+  1,2 s -> cuenta atras. Boton S O S, dos dedos y voz: inmediatos.
+- Con el interruptor OFF se conserva el comportamiento antiguo: todo golpe
+  al nivel elegido inicia la cuenta atras al instante (golpe = agitar).
+
+VOZ AYUDA / SOCORRO (pantalla apagada):
+- La captura de microfono se movio al SafetyMonitorService (foreground),
+  por lo que funciona con la pantalla apagada mientras el monitor este
+  activo (INICIAR). Palabras aceptadas por palabra completa: ayuda o
+  socorro (tolerancia de reconocimiento: socoro). Se revisan las 3 mejores
+  hipotesis y no dispara fuera de fase ni con SOS en curso.
+- El medidor de NIVEL DE AUDIO de la Home ahora refleja el estado del
+  servicio (ya no graba la propia Activity, evitando doble microfono).
+
+CAMBIO ANTERIOR: HARDENING 2 / RECUPERACION DEL SOS (07/09/2026)
+---------------------------------------------------------------------
+Recuperacion del SOS ante muerte de proceso (probado en OPPO):
+- La cuenta atras persiste eventId + fin en reloj de pared y monotono.
+- Se programa una alarma RTC exacta (SosAlarmReceiver) que relanza el
+  servicio y completa el protocolo aunque el proceso muera.
+- PRUEBA ADB superada: con la cuenta atras en curso se hizo "am crash";
+  la alarma reinicio el servicio en proceso nuevo y completo el SOS una
+  sola vez (runtime_last_completed_event_id = mismo eventId).
+- BootReceiver: si se pedia monitorizacion, se relanza tras reinicio.
+- Ubicacion reciente persistida para incluir el mapa al recuperarse.
+
+Deteccion sin GPS y ahorro real de bateria:
+- El monitor ya NO exige ubicacion/GPS: sin permiso o con GPS apagado
+  registra sensores y detecta golpes; solo pierde mapa y velocidad.
+- GPS adaptativo real: 2 s hasta el primer fix, luego 10 s, y 2 s durante
+  cuenta atras; se re-registra la peticion al cambiar el intervalo.
+- Se retira el giroscopio y la orientacion (ya no aportaban nada con la
+  regla golpe=SOS directo). El acelerometro con gravedad se registra con
+  batching 250 ms cuando el FIFO lo permite.
+- El sensor se elige por rango suficiente para la sensibilidad elegida y
+  con respaldo si falla el registro.
+- Ticker: 1 s en monitorizacion, 100 ms solo en cuenta atras; las
+  notificaciones no se re-publican si el texto no cambia.
+
+WhatsApp y llamadas honestas:
+- El autoenvio encola TODOS los destinatarios (TTL 120 s) y la
+  accesibilidad los procesa de uno en uno verificando paquete y mensaje
+  completos; al terminar solicita una sola llamada primaria.
+- Llamada mediante TelecomManager.placeCall; si falla (falta rol/pantalla
+  bloqueada) se informa "no iniciada", nunca se finge exito.
+- Sin autoenvio, WhatsApp queda como notificacion "ABRIR WHATSAPP" (manual).
+- claimHead admite reintentar un PENDING/PROCESSING de la misma cabeza.
+
+Voz y audio:
+- Palabras por forma exacta (ayuda, socorro, socoro); revisa todas las
+  hipotesis; ignora callbacks tras dispose, sin permiso o fuera de fase.
+- Session timeout 8 s, cesion del microfono 250 ms antes de escuchar,
+  polling reducido y liberacion del AudioRecord en onDispose.
+- El medidor decorativo actualiza ~7 Hz y usa Dispatchers.IO.
+
+UI y configuracion:
+- Retirados los interruptores GPS/VELOCIDAD/CAIDA que ya no gateaban nada;
+  ahora son filas informativas.
+- "GPS APAGADO"/permisos dejan de bloquear el inicio; textos actualizados.
+
+Plataforma y distribucion:
+- BOM de Compose + lifecycle 2.8.4 alineados (corrige crash R8 de
+  LocalLifecycleOwner en release). Activity-compose 1.9.1.
+- Se anade FOREGROUND_SERVICE_SPECIAL_USE, RECEIVE_BOOT_COMPLETED y
+  SosAlarmReceiver/BootReceiver en el manifiesto.
+- build.gradle.kts sin contrasenas de keystore por defecto.
+
+CAMBIO ANTERIOR: HARDENING COMPLETO (07/09/2026)
+-----------------------------------------------------
+Bugs criticos corregidos:
+- completeProtocol ahora marca "completed" DESPUES de ejecutar todas las
+  acciones. Si el proceso muere, el evento se reintenta al restaurar.
+- SOS manual desde detenido: al cancelar/completar se restaura el estado
+  anterior (ya no deja monitoreo activo indefinidamente).
+- failAndStop no borra el estado durante una cuenta activa.
+- Los tests ahora validan el comportamiento real (golpe = SOS directo).
+
+WhatsApp auto-send hardening:
+- WhatsAppAutoSendService usa la cola persistente con TTL en lugar de
+  la API deprecated arm(). Verifica paquete exacto y mensaje completo.
+- openWhatsApp usa enqueue() con eventId, recipient, expectedPackage, TTL.
+- Cola con expiracion, disarmAll al desactivar, estados SENT/FAILED/EXPIRED.
+
+Ahorro de batería:
+- GPS adaptativo: 2s inicio -> 10s con fix -> 2s durante validacion.
+- Ticker fase-aware: 1s monitorizacion, 100ms solo en cuenta atras.
+- Wake screen reducido: 15s para movimiento (antes 5 min).
+- Gravity sensor registrado para calibracion precisa del acelerometro.
+
+Seguridad:
+- build.gradle.kts: contrasenas de keystore removidas del fallback.
+- .gitignore creado excluyendo *.jks y keystore.properties.
+
+Contactos:
+- canonicalPhoneNumber en ContactsRepository para normalizacion.
+
+Permisos:
+- hasCallPermission, hasNotificationPermission, locksCriticalSettings,
+  acceptsVoiceEmergency, permissionDenialMessage anadidos.
+
+Prueba realizada: testDebugUnitTest + assembleDebug/Release correctos. APK
+debug instalada en OPPO CPH2695 y release V-1.11s copiada a APK's.
+
+CAMBIO ANTERIOR: GOLPE FUERTE = SOS DIRECTO (06/09/2026)
+-----------------------------------------------------------------------
+- Release firmada con R8 (minify + shrinkResources): Segu-Luky-V-1.0s.apk
+  (2,3 MB) en la carpeta APK's del proyecto.
+- Firma propia: segu-luky-release.jks + keystore.properties en la raiz del
+  proyecto (alias segu). NO coincide con la firma debug instalada en el OPPO:
+  para probar la release hay que desinstalar la version debug antes.
+- Mapping de ofuscacion: app/build/outputs/mapping/release/mapping.txt.
+- Instrucciones de uso aclaran: INICIAR no arranca con el GPS apagado (avisa
+  para activarlo) y el SOS manual si funciona sin GPS.
+- Al pulsar INICIAR con el GPS apagado, bajo el boton aparece la tarjeta roja
+  GPS APAGADO con el boton ABRIR AJUSTES GPS (abre la ubicacion del telefono).
+  Se elimino la leyenda duplicada "Activa la ubicacion GPS antes de iniciar".
+- NIVEL DE AUDIO con voz activa: el medidor vigila siempre con AudioRecord
+  (barra naranja en vivo). Solo al detectar un grito sostenido se lanza una
+  sesion del reconocedor (barra verde ESCUCHANDO) para buscar AYUDA/SOCORRO.
+- Voz por nivel: en silencio no hay sesiones del reconocedor, por lo que no
+  suenan los tonos de inicio del sistema. Tras una sesion espera 2,5 s antes
+  de volver a escuchar un grito.
+
+CAMBIO ANTERIOR: ENVIO AUTO WHATSAPP (06/09/2026)
+--------------------------------------------------------
+- Nueva tarjeta ENVIO AUTO WHATSAPP en Configuracion tras VOZ AYUDA / SOCORRO.
+  Interruptor persistente, desactivado por defecto, con boton ABRIR
+  ACCESIBILIDAD cuando esta activado.
+- Al completar un SOS con FUNCIONALIDAD SOS y ENVIO AUTO WHATSAPP activados,
+  WhatsApp se abre y el mensaje se envia automaticamente (no queda solo
+  escrito). El envio lo realiza el servicio de accesibilidad WhatsAppAutoSend.
+- El servicio solo actua mientras existe un envio pendiente (marcado por
+  SafetyMonitorService justo antes de abrir el chat), comprueba que el texto
+  del chat coincide con el mensaje de emergencia, pulsa Enviar y se desarma.
+  Solo observa com.whatsapp y com.whatsapp.w4b.
+- Requiere activar una vez: Ajustes del telefono > Accesibilidad > Envio SOS
+  WhatsApp (el toggle de la app no activa el servicio del sistema).
+- Sin este servicio activado, WhatsApp se abre con el mensaje listo y el
+  envio queda manual (comportamiento anterior).
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+en OPPO CPH2695; tarjeta visible en Configuracion. Pendiente validacion
+fisica del envio automatico con cuenta atras completada.
+
+CAMBIO ANTERIOR: ACCIONES REALES SOS (06/09/2026)
+---------------------------------------------------------
+- Al completar la cuenta atras con FUNCIONALIDAD SOS activada, Segu-Luky
+  ejecuta las acciones reales configuradas por contacto:
+  - Llamada: abre el marcador del telefono (ACTION_CALL) con el numero del
+    contacto si tiene llamada habilitada y el permiso CALL_PHONE concedido.
+    Sin permiso, abre el marcador relleno (ACTION_DIAL) para confirmar.
+  - WhatsApp: abre WhatsApp (o WhatsApp Business si esta instalado) con el
+    mensaje personal del contacto y el marcador {MAPA} ya resuelto.
+  - Ubicacion: {MAPA} se sustituye por el enlace Google Maps de la ultima
+    posicion GPS precisa y reciente; sin GPS reciente se envia el texto con
+    la nota "ubicacion GPS no disponible".
+- Las acciones se lanzan incluso con la app en segundo plano mediante
+  PendingIntent, y cada evento solo se ejecuta una vez aunque Android recree
+  el servicio.
+- FUNCIONALIDAD SOS desactivada sigue bloqueando toda accion hacia contactos
+  (registro: "AVISOS SOS DESACTIVADOS: no se llamara ni enviara WhatsApp").
+- Nuevo permiso CALL_PHONE en el manifest, solicitado al iniciar el monitor
+  cuando FUNCIONALIDAD SOS esta activada. Tambien se declaran visibilidad de
+  paquetes com.whatsapp y com.whatsapp.w4b.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+en OPPO CPH2695. Pendiente validacion fisica del dialer y WhatsApp con una
+cuenta atras completada.
+
+CAMBIO ANTERIOR: CONTROL DE VOZ EN CONFIGURACION (06/09/2026)
+-------------------------------------------------------------------
+- Nueva tarjeta VOZ AYUDA / SOCORRO en Configuracion, justo despues de
+  CAIDA / ORIENTACION. Interruptor persistente y desactivado por defecto.
+- La pantalla principal conserva solo NIVEL DE AUDIO; la fila de voz se
+  elimina del panel de conduccion.
+- Con el control activado y el monitor en marcha, el reconocedor escucha
+  AYUDA/SOCORRO y el medidor de nivel queda EN ESPERA (no disputa el micro).
+  Con el control desactivado, solo funciona el medidor de NIVEL DE AUDIO.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+en OPPO CPH2695; tarjeta visible tras CAIDA / ORIENTACION y persistente.
+Control desactivado: NIVEL DE AUDIO real (-35 dB). Control activado: nivel en
+EN ESPERA. Telefono restaurado a voz desactivada y monitor detenido.
+
+CAMBIO ANTERIOR: VOZ AYUDA / SOCORRO (06/09/2026)
+---------------------------------------------------------
+- Nueva fila VOZ AYUDA / SOCORRO bajo NIVEL DE AUDIO. Con el monitor activo,
+  esta pantalla visible y el microfono autorizado, el reconocedor del telefono
+  escucha de forma continua (resultados parciales en espanol).
+- Al detectar la palabra ayuda o socorro (sin importar acentos o mayusculas)
+  inicia la cuenta atras SOS igual que el boton de 5 s. Cooldown de 20 s y
+  reconexion automatica tras errores silenciosos.
+- Mientras la voz esta ESCUCHANDO, NIVEL DE AUDIO queda EN ESPERA para no
+  disputar el microfono. Sin servicio de reconocimiento, la fila muestra
+  NO DISPONIBLE y el medidor de nivel vuelve a funcionar.
+- La voz se procesa en el reconocedor del sistema; la app no guarda audio.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+en OPPO CPH2695; fila ESCUCHANDO estable con monitor activo y EN ESPERA al
+detenerlo. Pendiente validacion hablando ayuda/socorro al microfono.
+
+CAMBIO ANTERIOR: AVISO SOS DESACTIVADO EN ESTADO (06/09/2026)
+-------------------------------------------------------------------
+- Con FUNCIONALIDAD SOS desactivada, la tarjeta muestra justo encima de
+  ESTADO APAGADO/OK el texto rojo parpadeante AVISOS SOS DESACTIVADOS.
+- El aviso se lee de la misma preferencia que Configuracion; cambia al volver
+  de la pantalla de ajustes sin reiniciar.
+- Al activar FUNCIONALIDAD SOS el aviso desaparece de la tarjeta.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+en OPPO CPH2695; aviso visible con SOS desactivado y oculto con SOS activado.
+Telefono restaurado a FUNCIONALIDAD SOS desactivada.
+
+CAMBIO ANTERIOR: NIVEL DE AUDIO AMBIENTE (06/09/2026)
+--------------------------------------------------------
+- Se anade NIVEL DE AUDIO justo bajo MOVIMIENTO DEL MOVIL, con barra naranja y
+  lectura en dB del microfono.
+- El microfono solo se abre cuando el monitor esta activo, la pantalla
+  principal es visible y el usuario concedio RECORD_AUDIO. No se graba,
+  almacena ni transmite sonido.
+- Al detener el monitor o salir de la pantalla, el indicador pasa a EN ESPERA
+  y libera el microfono.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+en OPPO CPH2695; lectura ambiente real verificada (-28 dB) y monitor detenido.
+
+CAMBIO ANTERIOR: TITULO Y BOTON DEL MONITOR (06/09/2026)
+---------------------------------------------------------------
+- El titulo de las tres pantallas queda en el centro geometrico de la barra,
+  independiente del ancho de VOLVER, el engranaje o V-1.0s.
+- INICIAR/DETENER usa ahora el boton nativo de Android. Se elimina su detector
+  tactil personalizado, que esperaba a soltar y podia cancelar un toque.
+- El SOS de 5 s se conserva solo en el boton circular SOS y en el gesto de dos
+  dedos; mantener INICIAR/DETENER ya no puede iniciar un SOS por accidente.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+en OPPO CPH2695. Un toque cambio INICIAR a DETENER, registro rot_vec y el
+siguiente toque devolvio INICIAR y detuvo el servicio.
+
+CAMBIO ANTERIOR: CAIDA / ORIENTACION Y RETIRADA DE SIMULAR (06/09/2026)
+----------------------------------------------------------------------------
+- Se elimina SIMULAR ACCIDENTE. Para probar sensores reales sin contactar a
+  nadie basta desactivar FUNCIONALIDAD SOS en Configuracion.
+- Nueva opcion CAIDA / ORIENTACION, desactivada por defecto. Al activarla y
+  reiniciar el monitor, calibra la posicion montada durante 3 s.
+- La opcion solo inicia la validacion existente, nunca un aviso directo: exige
+  un golpe al nivel de sensibilidad y una inclinacion nueva >= 60 grados que
+  permanezca 5 s, dentro de los 10 s posteriores al golpe.
+- El rumbo no cuenta como caida: se compara el plano del movil con su posicion
+  de referencia, por lo que una curva o giro de brujula no activa el protocolo.
+- Si el sensor falta, es impreciso o deja de aportar datos, la opcion se
+  desactiva en runtime y el golpe conserva el comportamiento normal.
+- La tarjeta de estado muestra ORIENTACION con calibracion, inclinacion actual
+  y disponibilidad. OPPO CPH2695 verificado: rot_vec, geo_rotvec y game_rotvec
+  estan disponibles en sensorservice.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+en OPPO CPH2695 mediante ADB. Calibracion inicial y suscripcion a rot_vec
+confirmadas; pendiente prueba segura de impacto e inclinacion con el telefono
+montado.
+
+CAMBIO ANTERIOR: AVISOS SOS Y PRUEBA DE SENSORES (06/09/2026)
+------------------------------------------------------------------
+- Configuracion comienza con FUNCIONALIDAD SOS. El interruptor maestro se
+  guarda en el telefono y esta desactivado por defecto; al activarlo habilita
+  las acciones SOS configuradas para los contactos.
+- Desactivarlo bloquea todas las acciones hacia contactos, pero no detiene
+  sensores, GPS, monitor, SOS ni pruebas de deteccion.
+- SIMULAR ACCIDENTE es una prueba aislada de sensores: tanto el toque corto
+  como su pulsacion de 5 s se marcan como simulacion y nunca usan contactos,
+  WhatsApp ni el interruptor maestro.
+- La marca de simulacion se persiste durante validacion y cuenta atras. Si
+  Android recrea el servicio, la prueba sigue sin avisar a ningun contacto.
+- El Registro reciente diferencia una simulacion de sensores completada de
+  un protocolo SOS normal.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+en OPPO CPH2695 mediante ADB.
+
+CAMBIO ANTERIOR: SIMULAR ACCIDENTE BAJO INICIAR (06/09/2026)
+---------------------------------------------------------------
+- El control pasa de SIMULAR a SIMULAR ACCIDENTE.
+- Se mueve justo debajo de INICIAR/DETENER, antes de SENSIBILIDAD A LOS
+  GOLPES. Conserva toque corto para simular impacto y pulsacion de 5 s para
+  confirmar un evento pendiente.
+- Las instrucciones de uso reflejan el nuevo nombre del control.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+en OPPO CPH2695 mediante ADB.
+
+CAMBIO ANTERIOR: LIMPIEZA DE PANTALLA PRINCIPAL (06/09/2026)
+------------------------------------------------------------------
+- La pantalla principal termina ahora en el boton SIMULAR; se eliminaron de
+  debajo el texto de ayuda, la tarjeta InterCOM, el registro y el panel
+  explicativo para dejar el panel de conduccion limpio.
+- La pantalla abierta desde V-1.0s conserva lo necesario: instrucciones de
+  SIMULAR, estado y acceso a InterCOM-Luky, y REGISTRO RECIENTE en vivo.
+- Los textos explicativos repetidos no se trasladaron; ya estan cubiertos por
+  las instrucciones de uso y la configuracion SOS.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+en OPPO CPH2695 mediante ADB.
+
+CAMBIO ANTERIOR: CONFIGURACION SOS E INSTRUCCIONES (06/09/2026)
+-----------------------------------------------------------------
+- La barra superior ahora muestra un engranaje a la izquierda de Segu-Luky.
+  Abre CONFIGURACION, donde se administra la lista de destinatarios SOS.
+- Cada destinatario guarda nombre, telefono, si se incluye en llamadas, si se
+  incluye en WhatsApp y su texto WhatsApp individual.
+- El marcador {MAPA} se conserva en cada plantilla y, durante la simulacion,
+  se resuelve como enlace Google Maps cuando existe GPS preciso y reciente.
+  Si el usuario borra el marcador, se anade de nuevo al guardar.
+- El texto V-1.0s a la derecha abre INSTRUCCIONES DE USO. Incluye puesta en
+  marcha, sensibilidad, SOS, estados GPS y la limitacion de simulacion.
+- El protocolo sigue sin hacer llamadas ni enviar WhatsApp automaticamente;
+  al completar una simulacion registra cuantos destinatarios de cada tipo se
+  habrian avisado y si habia enlace Maps disponible.
+- Se anadio EmergencyContactTest para plantilla {MAPA} y URL de Google Maps.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+y abierta en OPPO CPH2695 mediante ADB.
+
+CAMBIO ANTERIOR: VALORES G EN SENSOR (06/09/2026)
+-----------------------------------------------------
+- La fila SENSOR ahora muestra aceleracion dinamica actual y sensibilidad
+  seleccionada, con formato: actual / ajuste (por ejemplo, 0.03 g / 3.0 g).
+- La lectura usa el mismo valor sin gravedad que usa el detector; no es la
+  barra normalizada MOVIMIENTO DEL MOVIL.
+- Prueba realizada: testDebugUnitTest + assembleDebug correctos. APK instalada
+  en OPPO CPH2695 mediante ADB.
+
+CAMBIO MAS RECIENTE: ORDEN DEL PANEL DE CONTROL (06/09/2026)
+-------------------------------------------------------------
+- El primer bloque visible tras el encabezado ahora es INICIAR/DETENER.
+- Debajo aparece SENSIBILIDAD A LOS GOLPES, seguido de AJUSTE y el deslizador 0..7 g.
+- La escala numerica queda directamente asociada al deslizador.
+- MOVIMIENTO DEL MOVIL y su barra verde se muestran despues del ajuste, en
+  una linea propia, para no confundirse con la sensibilidad.
+- SOS, estado y SIMULAR conservan su comportamiento y se desplazan debajo.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos.
+APK debug instalado en OPPO CPH2695 mediante ADB.
+
+CAMBIO MAS RECIENTE: AUDITORIA Y CORRECCIONES CRITICAS (04/09/2026)
+---------------------------------------------------------------
+Se ha realizado una auditoria completa del codigo identificando y corrigiendo
+los siguientes fallos criticos y de alto riesgo:
+
+1. DESARME SILENCIOSO TRAS COMPLETAR EL PROTOCOLO (CRITICO)
+   - Antes: al terminar la cuenta atras el detector quedaba en PROTOCOL_SIMULADO
+     y ignoraba cualquier nuevo golpe, sacudida o confirmacion.
+   - Ahora: el monitor se rearma automaticamente tras completar el protocolo
+     (resumeMonitoring), y la UI muestra "COMPLETADO" sin quedar bloqueado.
+   - Archivos: AccidentDetector.kt, SafetyMonitorService.kt, MainActivity.kt
+
+2. PERDIDA DE EMERGENCIA POR MUERTE DE PROCESO (CRITICO)
+   - Antes: el estado (validacion, cuenta atras) solo vivia en memoria.
+     START_STICKY recreaba el servicio desde cero sin recuperar la emergencia.
+   - Ahora: SafetyRuntimeRepository persiste fase, deadline, eventId y
+     monitoringEnabled. Al reiniciar, el servicio restaura validaciones y
+     cuentas atras en curso y las completa si el deadline ya paso.
+   - Archivos: SafetyRuntimeRepository.kt (nuevo), SafetyMonitorService.kt
+
+3. SENSIBILIDAD 0.5-1.0 g DISPARABA SOS CON TELEFONO QUIETO (ALTO)
+   - Antes: la magnitud total del acelerometro incluye ~1 g de gravedad.
+     Con umbrales bajos, un telefono en reposo disparaba SOS.
+   - Ahora: el detector usa aceleracion dinamica (sin gravedad) como fuente
+     canonica. TYPE_LINEAR_ACCELERATION es la fuente principal; si no existe,
+     se estima gravedad con filtro pasa-bajas y se resta.
+   - Archivos: AccidentDetector.kt, SafetyMonitorService.kt
+
+4. RANGO 5.5-7 g SE GUARDA COMO 5 g SIN AVISO (ALTO)
+   - Antes: la UI permitia 7 g pero saveSensitivity/setSensitivity limitaban a 5 g.
+   - Ahora: rango unico 0.5-7 g en AccidentDetector y SafetyMonitorService.
+     Verificado en testDebugUnitTest.
+   - Archivos: AccidentDetector.kt, SafetyMonitorService.kt, MainActivity.kt
+
+5. DOS MODELOS DE IMPACTO INCOMPATIBLES (ALTO)
+   - Antes: acelerometro exigia 7 g; aceleracion lineal validaba con 8 m/s2
+     (~0.82 g) y despertaba con 3 m/s2, ignorando la sensibilidad elegida.
+   - Ahora: ambos sensores alimentan la misma magnitud dinamica en g.
+     Impacto automatico = 7 g dinamicas. Despertar = sensibilidad configurada.
+     La sensibilidad escala tambien el pico de sacudida (1.2x) y el SOS directo.
+   - Archivos: AccidentDetector.kt, SafetyMonitorService.kt
+
+6. SACUDIDA DELIBERADA CONTABA MUESTRAS, NO PICOS REALES (ALTO)
+   - Antes: tres callbacks consecutivos del mismo golpe contaban como 3 picos.
+   - Ahora: deteccion por cruce de umbral con histeresis (ratio 0.55) y
+     separacion minima 180 ms entre picos. Una meseta sostenida cuenta 1.
+   - Archivos: AccidentDetector.kt
+
+7. VALIDACION NUNCA CADUCABA (ALTO)
+   - Antes: un impacto podia armar validacion indefinidamente y disparar
+     horas despues al aparcar.
+   - Ahora: validationMaxDurationMs = 10 min por defecto (2x la ventana de
+     inmovilidad). Al vencer, onValidationExpired rearma MONITORING.
+   - Archivos: AccidentDetector.kt
+
+8. PULSACIONES Y MULTI-TOUCH PODIAN DISPARAR AL DESPLAZAR/SCROLL (ALTO)
+   - Antes: timeout y cancelacion devolvian null indistintamente.
+   - Ahora: HoldableButton y RoundActionButton distinguen RELEASED,
+     CANCELLED (arrastrar/fuera/sistema) y LONG_PRESS. Solo LONG_PRESS
+     confirma. MultiTouchEmergencyDetector programa deadline monotono y
+     evalua en tiempo real aunque los dedos no se muevan.
+   - Archivos: MainActivity.kt, MultiTouchEmergencyDetector.kt
+
+9. GESTO GLOBAL DE ACCESIBILIDAD NO FUNCIONAL (ALTO)
+   - Antes: FLAG_SEND_MOTION_EVENTS sin touch-exploration no entrega eventos.
+     La UI podia mostrar "Activo" sin recibir nada.
+   - Ahora: servicio y declaracion eliminados del manifest. El gesto
+     multi-touch funciona solo dentro de la app (Surface root).
+   - Archivos: AndroidManifest.xml, MainActivity.kt (eliminado bloque UI)
+
+10. SOS PODIA FALLAR AL INICIAR SERVICIO EN ANDROID 14+ (ALTO)
+    - Antes: todos los comandos arrancaban foreground service tipo location.
+    - Ahora: separacion de modos:
+      * monitoring -> tipo location (requiere permiso preciso y GPS activo)
+      * solo cuenta atras / confirmacion -> shortService (API 34) o
+        servicio degradado sin GPS.
+      Centralizacion de comprobaciones y manejo de SecurityException.
+    - Archivos: SafetyMonitorService.kt, AndroidManifest.xml
+
+11. NOTIFICACION DE CUENTA ATRAS NO SE ACTUALIZABA Y SIN ACCION CANCELAR (ALTO)
+    - Antes: lastStateUpdateAt compartido impedia refresco; sin boton Cancel.
+    - Ahora: dos canales (monitor baja, SOS alta). Notificacion SOS incluye
+      accion CANCELAR con PendingIntent. Actualizacion cada segundo.
+    - Archivos: SafetyMonitorService.kt
+
+12. RELOJ DE PARED VULNERABLE (ALTO)
+    - Antes: System.currentTimeMillis() en validacion, cuenta atras, GPS.
+    - Ahora: SystemClock.elapsedRealtime() (monotonico) en detector, servicio,
+      ticker, notificacion y UI. Location.elapsedRealtimeNanos para GPS.
+    - Archivos: AccidentDetector.kt, SafetyMonitorService.kt, MainActivity.kt
+
+13. SENSOR / GPS / VELOCIDAD MOSTRADOS VERDES SIN SER VALIDOS (MEDIO)
+    - Ahora: SafetySnapshot incluye gpsFixAgeSeconds, sensorAvailable,
+      sensorDetail. UI muestra edad de fix y "PENDIENTE" si expira 60 s.
+      Telemetria con timestamps monotónicos y comprobacion de precision.
+    - Archivos: SafetyModels.kt, SafetyMonitorService.kt, MainActivity.kt
+
+14. PITIDOS FINALES DEL BOTON SOS NO SONABAN (MEDIO)
+    - Antes: elapsed - Long.MIN_VALUE desbordaba.
+    - Ahora: beepIndex incremental y lastBeepIndex centinela.
+    - Archivos: MainActivity.kt (RoundActionButton)
+
+15. CONTACTOS CORRUPTIBLES POR DELIMITADOR '|' (MEDIO)
+    - Antes: StringSet con "nombre|telefono" fallaba si el nombre tenia '|'.
+    - Ahora: JSON array con campos name/phone. Migracion automatica v1->v2.
+    - Archivos: ContactsRepository.kt, MainActivity.kt (validacion telefono)
+
+Pruebas unitarias expandidas (AccidentDetectorTest: 23 tests):
+- Reproduccion exacta de cada fallo + regresiones
+- Validacion de gravedad en reposo, prioridad 7 g, caducidad, picos separados,
+  puertas GPS/velocidad, restauracion, segundo SOS tras rearmar
+- MultiTouchEmergencyDetectorTest: deadlines y reset
+
+Resultado: testDebugUnitTest + assembleDebug + lintDebug CORRECTOS.
+APK debug generado: G:\-IA-\APK -interCOM-\APKs\Segu-Luky-V-1.0s-debug.apk
+
+CAMBIO ANTERIOR: GESTO TACTIL MENOS ACCIDENTAL
+---------------------------------------------------
+- Problema: la cuenta atras comenzaba al tocar la pantalla con varios dedos
+  sin querer. La causa: 3 o mas dedos confirmaban al instante en toda la
+  pantalla.
+- Cambio: el gesto de 3 dedos ya no es instantaneo; ahora debe mantenerse
+  1 segundo (2 dedos siguen con 5 segundos). Se actualizan los textos de
+  ayuda y el servicio de Accesibilidad hereda el nuevo umbral.
+- Pruebas anadidas: 3 dedos breves no disparan; 3 dedos durante 1 s si.
+
+APK generado e instalado: Segu-Luky-V-1.0s-debug.apk en el OPPO.
+
+CAMBIO ANTERIOR: CONDICIONES GPS Y VELOCIDAD PARA INICIAR SOS
+-----------------------------------------------------------------
+- Las filas GPS y VELOCIDAD de la tarjeta ahora son seleccionables con un
+  interruptor (solo editables con el monitor detenido).
+- GPS activo: exige senal GPS reciente (<= 60 s) para que el movimiento
+  fuerte inicie la cuenta atras.
+- VELOCIDAD activa: exige velocidad reciente >= umbral ajustable (5-200
+  km/h, pasos de 5, por defecto 10 km/h) para iniciar la cuenta atras.
+- AccidentDetector.setSosConditions(requireGps, minSpeedKmh). Con ambas
+  desactivadas (por defecto) el SOS por movimiento fuerte funciona igual.
+- Pruebas anadidas: con puerta de velocidad, sin velocidad no inicia y con
+  velocidad >= umbral si inicia.
+
+APK generado e instalado: Segu-Luky-V-1.0s-debug.apk en el OPPO.
+
+CAMBIO ANTERIOR: SOS DIRECTO CON UN SOLO MOVIMIENTO FUERTE
+---------------------------------------------------------------
+- Un unico movimiento/sacudida fuerte que supere la sensibilidad fijada
+  inicia directamente la cuenta atras de 30 s (SOS), sin esperar 3 picos
+  ni velocidad GPS.
+- Requiere monitor iniciado y fase MONITORING. Con la sensibilidad por
+  defecto (3.0 g) basta un golpe >= 3 g para arrancar la cuenta atras.
+- La deteccion de impacto automatico (>= 7 g con velocidad reciente) sigue
+  intacta: si supera 7 g con velocidad entra primero en validacion.
+- Se anadieron pruebas: movimiento unico sobre el umbral inicia SOS;
+  movimiento bajo el umbral no inicia nada.
+
+APK generado e instalado: Segu-Luky-V-1.0s-debug.apk en el OPPO.
+
+CAMBIO ANTERIOR: BOTON SOS EN DOS LINEAS CON PITIDOS FINALES
+----------------------------------------------------------------
+- Se elimina el texto "SERVICIOS" de la tarjeta de estado.
+- El boton SOS ahora muestra "S O S" en grande (40 sp) con "5 s" en la
+  segunda linea (20 sp); boton mas grande (210 dp).
+- Al mantener pulsado SOS, en sus ultimos 3 segundos suenan pitidos de
+  aviso antes de confirmar (1 pitido/segundo en los ultimos 3 s del
+  pulsado de 5 s).
+- La cuenta regresiva de 30 s NO se modifica: conserva sus pitidos
+  originales (20-10 cada 2 s, 10-3 cada segundo, 3-0 dos por segundo).
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. Verificado en
+el OPPO: boton con "S O S" y "5 s" y sin texto SERVICIOS.
+APK generado e instalado: Segu-Luky-V-1.0s-debug.apk en el OPPO.
+
+CAMBIO ANTERIOR: BLOQUE DE SENSIBILIDAD BAJO DETENER Y ESCALA A 7
+--------------------------------------------------------------------
+- Se elimina el texto "MOVIMIENTO" y el texto de "Evento cancelado".
+- El bloque completo de sensibilidad (titulo + valor, linea segmentada
+  3 colores, barra de actividad y numeros) pasa a estar justo debajo del
+  boton INICIAR/DETENER (fuera de la tarjeta de estado).
+- La graduacion pasa de 0..5 a 0..7 g. Zonas: verde 0-1.5, amarillo
+  1.5-3.5 y rojo de 3.5 a 7.
+- IMPORTANTE: una vez iniciado el monitor NO se puede cambiar la
+  sensibilidad; el deslizador se deshabilita y el servicio ignora cambios
+  en caliente. Solo se ajusta con el monitor detenido.
+- Rango interno del detector ampliado a 0.5-7 g; el impacto automatico
+  sigue fijo en 7 g.
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. Verificado
+en el OPPO: bloque bajo DETENER con numeros 0..7 y sin texto MOVIMIENTO.
+APK generado e instalado: Segu-Luky-V-1.0s-debug.apk en el OPPO.
+
+CAMBIO ANTERIOR: BARRA DE SENSIBILIDAD EN G (0-5) CONFIGURABLE
+----------------------------------------------------------------
+- Se anadio la barra "SENSIBILIDAD GOLPE (g)" configurable (0.5-5 g,
+  pasos 0.5). Configura el umbral de golpe/vibracion (despertar pantalla);
+  la sacudida SOS se deriva como ~1.2x. El impacto automatico queda fijo
+  en 7 g. Valor guardado en preferencias y aplicado en caliente.
+- AccidentDetector expone setGolpeSensitivity(g).
+
+CAMBIO ANTERIOR: REORDEN BOTONES Y RETROALIMENTACION AL PULSAR
+---------------------------------------------------------------
+- El boton SIMULAR deja de ser redondo: vuelve a boton rectangular naranja
+  justo debajo de INICIAR/DETENER.
+- El boton SOS 5 s queda solo, redondo, centrado y mas grande (190 dp,
+  texto 26 sp).
+- Todos los controles reflejan visualmente que se estan tocando: al
+  mantener pulsado se encogen y bajan su opacidad.
+- Orden en pantalla: SOS 5 s arriba, tarjeta de estado, luego
+  INICIAR/DETENER, SIMULAR (rectangular) y CANCELAR en cuenta atras.
+
+CAMBIO ANTERIOR: CALIBRACION DE SENSIBILIDAD
+-------------------------------------------------
+Motivo: al probar sacudiendo el movil se comprobo que los umbrales eran
+demasiado bajos para la moto; un golpe real sera mucho mas fuerte. Se suben
+a valores conservadores para evitar falsos positivos (pantalla que despierta
+sola, validacion falsa o cuenta atras SOS) durante la marcha.
+
+Nuevos umbrales en AccidentDetector.kt:
+  - Impacto automatico (g): 3 -> 7
+  - Impacto automatico (aceleracion lineal, m/s2): 2.5 -> 8
+  - Pico de sacudida SOS (g): 1.8 -> 3.5 (ventana 1200 ms sin cambios)
+  - Despertar por golpe lateral (g): 1.15 -> 2
+  - Despertar por golpe lateral (lineal, m/s2): 1.5 -> 3
+
+Prueba realizada: testDebugUnitTest + assembleDebug correctos. Se anadieron
+regresiones: sacudida moderada (2g) no dispara SOS ni validacion; una
+sacudida fuerte deliberada (4.6g) si dispara la cuenta atras SOS.
+APK generado e instalado: Segu-Luky-V-1.0s-debug.apk en el OPPO.
+Pendientes: verificar en moto la ausencia de falsos positivos y ajustar si
+un golpe real necesita otro margen.
+
+ESTADO AL CERRAR LA SESION (04/09/2026)
+--------------------------
+- La aplicacion se llama Segu-Luky V-1.0s.
+- El APK debug esta instalado y abre correctamente en el OPPO CPH2695.
+- El panel visual usa verde OK, amarillo PENDIENTE, rojo SOS/ERROR y gris APAGADO.
+- Los servicios GPS, VELOCIDAD, SENSOR e INTERCOM se muestran en filas completas.
+- Se elimino el texto redundante "Servicio detenido".
+- GPS aparece PENDIENTE hasta que el servicio este iniciado y reciba una posicion.
+- En el OPPO los permisos GPS estan concedidos y la ubicacion esta activada.
+- El ultimo diagnostico encontro el servicio detenido, no un fallo del GPS.
+- La compilacion, pruebas unitarias (24 -> 27 tests) y lint son correctos.
+- Gestos de emergencia solo dentro de la app (Accesibilidad global retirada).
+- Monitor se rearma tras protocolo completado; estado persistente sobrevive a reinicio.
+
+PARA CONTINUAR (04/09/2026)
+--------------
+1. Abrir Segu-Luky, conceder ubicacion precisa y notificaciones.
+2. Pulsar INICIAR monitorizacion. Verificar notificacion permanente y sensor OK.
+3. Probar SIMULAR IMPACTO -> VALIDANDO -> CANCELAR VALIDACION (boton en tarjeta).
+4. Probar SOS manteniendo boton SOS 5 s -> CUENTA ATRAS -> CANCELAR SOS (boton/notificacion).
+5. Probar gesto multi-touch en app: 2 dedos 5 s / 3 dedos 1 s confirma SOS.
+6. Con monitor activo, apagar pantalla. Golpear/sacudir: pantalla despierta 5 min.
+7. Probar SIMULAR durante cuenta atras: debe ignorarse (solo valido en MONITORING).
+8. Probar segundo SOS tras completar primero: monitor debe estar rearmado.
+9. Verificar Registro reciente muestra eventos con timestamps.
+
+IMPORTANTE: el gesto global de Accesibilidad YA NO EXISTE. Solo funciona
+dentro de la app. Los permisos de GPS preciso y notificaciones son obligatorios
+para iniciar el monitor.
+
+NOMBRE ACTUAL
+-------------
+El nombre visible y de los APK es Segu-Luky V-1.0s. Se conserva el paquete
+tecnico com.intercom.segluky y la carpeta del proyecto para mantener la
+compatibilidad de instalacion y deteccion junto a InterCOM V-3.8F.
+El titulo superior queda centrado y usa naranja tipo Harley (#F58220).
+
+CAMBIO MAS RECIENTE
+--------------------
+Se retiro el modo de exploracion tactil del servicio de Accesibilidad para
+no interferir con el gesto de tres dedos propio de ColorOS. Se mantiene solo
+la recepcion de eventos de movimiento.
+
+Se reorganizo la pantalla principal como un panel visual de seguridad.
+El estado actual aparece grande y con color propio: detenido, monitorizando,
+validando, cuenta atras, cancelado o protocolo simulado. La cuenta atras usa
+numeros grandes, los sensores aparecen como indicadores GPS/VELOCIDAD/INTERCOM
+y la validacion muestra una barra de progreso de 0 a 100 por ciento.
+Se adopto el codigo visual: verde = OK/activado, amarillo = pendiente,
+rojo = fallo o SOS activo y gris = apagado/cancelado. Siempre se conserva
+una palabra junto al color para no depender solo de la percepcion cromatica.
+El encabezado visible usa mensajes directos como ESTADO OK y ESTADO APAGADO.
+GPS, VELOCIDAD e INTERCOM aparecen agrupados bajo SERVICIOS.
+La barra verde MOVIMIENTO aparece encima de GPS y representa la actividad
+instantanea captada por acelerometro y aceleracion lineal.
+El bloque explicativo PANEL DE SEGURIDAD se movio al final para dejar arriba
+el estado y los servicios prioritarios.
+Los tres servicios se muestran en filas independientes de ancho completo para
+evitar que se recorten sus nombres o valores en pantallas pequenas.
+En estado normal se elimino el texto "Monitorizando sensores y GPS"; queda
+solo ESTADO OK y la informacion de SERVICIOS.
+Si el servicio aun no recibe una posicion, GPS muestra PENDIENTE en amarillo
+en lugar de un simbolo sin explicacion.
+
+======================================================================
+1. OBJETIVO
+======================================================================
+
+Segu-Luky es una aplicacion independiente de seguridad que funciona
+junto a InterCOM-Luky V-3.8F.
+
+InterCOM-Luky V-3.8F no se modifica, no se recompila y no se sobrescribe.
+InterSEG usa el paquete separado: com.intercom.segluky
+La futura integracion con InterCOM se reservara para V-3.9S.
+
+======================================================================
+2. FUNCIONES IMPLEMENTADAS
+======================================================================
+
+- Servicio foreground para monitorizar sensores y GPS en segundo plano.
+- Acelerometro, acelerometro wake-up, aceleracion lineal y giroscopio.
+- Ultima velocidad y ultima ubicacion GPS validas.
+- GPS perdido tratado como dato neutro.
+- Golpe o movimiento lateral externo detectado por sensores.
+- Sacudida fuerte detectada por sensores.
+- Despertar de pantalla durante 5 minutos tras golpe o movimiento fuerte.
+- La pantalla se despierta bloqueada; no se desbloquea el telefono.
+- Velocidad valida reciente de 10 km/h o mas antes de un impacto.
+- Validacion de inmovilidad durante 5 minutos antes del protocolo.
+- Boton SOS con pulsacion real de 5 segundos.
+- Tres picos de sacudida en poco tiempo como confirmacion SOS.
+- Cuenta atras de 30 segundos cancelable.
+- Contactos guardados solamente en el telefono.
+- Deteccion de si esta instalada InterCOM-Luky V-3.8F.
+- Registro de eventos recientes.
+- Panel visual con estado humano, colores de riesgo, cuenta atras grande y progreso de validacion.
+
+======================================================================
+3. SONIDOS DE LA CUENTA ATRAS
+======================================================================
+
+- Entre 20 y 10 segundos: un pitido cada 2 segundos.
+- Entre 10 y 3 segundos: un pitido cada segundo.
+- Entre 3 y 0 segundos: dos pitidos por segundo.
+
+El APK actual no realiza llamadas, SMS ni envios automaticos por WhatsApp.
+Al terminar la cuenta atras solo registra la accion que se ejecutaria.
+
+======================================================================
+4. TOQUES CON VARIOS DEDOS
+======================================================================
+
+Con Segu-Luky visible:
+
+- Dos dedos mantenidos durante 5 segundos: confirma SOS.
+- Tres dedos o mas: confirma SOS inmediatamente.
+- Si se levanta un dedo antes de los 5 segundos, se reinicia el gesto.
+
+Para usarlo con otra aplicacion visible hay un servicio opcional de
+Accesibilidad. Android exige activarlo manualmente en:
+
+    Segu-Luky > Abrir Ajustes > Accesibilidad
+    Segu-Luky: gesto SOS
+
+El servicio no lee el contenido de otras aplicaciones.
+
+IMPORTANTE: con la pantalla apagada Android no entrega toques de pantalla
+a las aplicaciones. El digitalizador puede despertar el telefono con
+gestos propios de OPPO, pero esos gestos los controla el sistema.
+
+======================================================================
+5. FUNCIONAMIENTO CON PANTALLA APAGADA
+======================================================================
+
+Para la pantalla apagada se usan sensores, no toques:
+
+- Un golpe lateral o movimiento externo fuerte despierta la pantalla 5 min.
+- Una sacudida fuerte puede confirmar la accion SOS.
+- El acelerometro wake-up permite recibir eventos con pantalla apagada.
+- Si existe velocidad GPS reciente, el golpe puede iniciar la validacion.
+- La inmovilidad sostenida durante 5 min inicia el protocolo simulado.
+
+El servicio solo funciona despues de pulsar Iniciar monitorizacion y
+conceder los permisos solicitados. En OPPO conviene excluir Segu-Luky de
+ahorro de bateria para evitar que ColorOS detenga el servicio.
+
+======================================================================
+6. PRUEBA EN EL OPPO
+======================================================================
+
+Modelo: CPH2695
+Android: 16
+Serial ADB: FYIZHUUCMNEY9PRK
+
+1. Abrir Segu-Luky.
+2. Conceder ubicacion y notificaciones.
+3. Pulsar Iniciar monitorizacion.
+4. Confirmar que aparece la notificacion permanente.
+5. Probar SIMULAR IMPACTO y cancelar la cuenta atras.
+6. Probar SOS manteniendo el control 5 segundos.
+7. Opcionalmente activar el servicio de Accesibilidad.
+8. Con el monitor activo, apagar la pantalla.
+9. Dar un golpe lateral o sacudir el telefono.
+10. Comprobar si la pantalla se despierta durante 5 minutos.
+11. Revisar Registro reciente.
+
+No hacer pruebas de golpes fuertes sobre superficies duras ni durante la
+conduccion. La deteccion de accidente se prueba primero en simulacion.
+
+======================================================================
+7. ARCHIVOS Y APK
+======================================================================
+
+Proyecto:
+    G:\-IA-\APK -interCOM-\InterSEG-Luky
+
+APK debug actualizado:
+    G:\-IA-\APK -interCOM-\APKs\Segu-Luky-V-1.0s-debug.apk
+
+APK release unsigned inicial:
+    G:\-IA-\APK -interCOM-\APKs\Segu-Luky-V-1.0s-release-unsigned.apk
+
+El APK release debe regenerarse cuando se requiera una version release
+que incluya cambios posteriores al primer build release.
+
+======================================================================
+8. VERIFICACIONES REALIZADAS
+======================================================================
+
+Comandos correctos (04/09/2026):
+    gradlew.bat testDebugUnitTest   (27 tests, 3 suites)
+    gradlew.bat assembleDebug
+    gradlew.bat lintDebug
+
+Cobertura de pruebas unitarias:
+- AccidentDetectorTest (23): impacto 7 g prioridad, gravedad reposo, caducidad
+  validacion, picos separados/histeresis, puertas GPS/velocidad solo golpe
+  fuerte, restauracion runtime, segundo SOS tras rearmar, simulacion invalida.
+- MultiTouchEmergencyDetectorTest (4): deadlines 2/3 dedos, reset al soltar.
+- CountdownBeepPatternTest (4): intervalos 20-10-3-0 s.
+
+Resultado mas reciente: compilacion debug, 27 pruebas unitarias y lint correctos.
+El APK debug se instalo y se abrio correctamente en el OPPO.
+
+======================================================================
+9. LIMITACIONES CONOCIDAS
+======================================================================
+
+- No se pueden detectar toques de pantalla con pantalla apagada.
+- El gesto multi-touch de emergencia SOLO funciona dentro de la app visible
+  (Surface root). No hay gesto global cross-app.
+- El despertar depende de que OPPO permita el acelerometro wake-up y no
+  detenga el servicio por ahorro de bateria. Excluir de optimizacion.
+- La pantalla puede encenderse, pero permanece bloqueada.
+- WhatsApp automatico requiere WhatsApp Business API y servidor externo.
+- Las llamadas y SMS reales aun no estan implementados (solo simulacion).
+- La sensibilidad de los sensores debe calibrarse con pruebas reales en moto.
+- Sensor maximo: si maximumRange < 7 g, impacto automatico imposible.
+  Verificado en runtime y loggeado como WARNING.
+- Validacion maxima 10 min; despues se descarta y rearmoniza monitor.
+
+======================================================================
+10. PROXIMAS ACTUALIZACIONES
+======================================================================
+
+PENDIENTES FISICOS (requieren moto/OPPO real):
+- Probar golpe lateral y sacudida con pantalla apagada en el OPPO.
+- Verificar que no hay falsos positivos por vibracion de motor/baches.
+- Confirmar que el servicio sobrevive al bloqueo y pantalla apagada (>1 h).
+- Validar que GPS/velocidad recientes funcionan en movimiento real.
+- Calibrar sensibilidad: 3 g por defecto; ajustar si golpe real necesita margen.
+- Comprobar maxRange del sensor en OPPO (log WARNING si < 7 g).
+
+PENDIENTES DE SOFTWARE:
+- Regenerar release signed cuando el prototipo quede validado en moto.
+- Preparar envio simulado a contactos (ya hay infraestructura).
+- Solo despues estudiar integracion V-3.9S en InterCOM-Luky.
+
+======================================================================
+FORMATO PARA FUTURAS ENTRADAS
+======================================================================
+
+Fecha:
+Version:
+Cambio:
+Motivo:
+Prueba realizada:
+Resultado:
+APK generado:
+Pendientes:

@@ -1,0 +1,51 @@
+CALIBRACION DE SENSORES - SEGU-LUKY V-1.11s
+==========================================
+Objetivo: grabar datos reales de sensores etiquetados por actividad para
+ajustar la sensibilidad y los umbrales de deteccion de golpe/caida.
+
+1) COMO GRABAR DESDE LA APP
+---------------------------
+Configuracion (engranaje) > tarjeta "CALIBRACION DE SENSORES":
+  1. Elige la actividad que vas a realizar:
+     Andando / Corriendo / Moto autovia / Moto camino / Coche autovia / Coche camino.
+  2. Pulsa "INICIAR REGISTRO" (aparece una notificacion "Segu-Luky: calibracion").
+  3. Realiza la actividad con el movil en la posicion habitual (soporte, bolsillo...).
+  4. Pulsa "DETENER REGISTRO".
+  5. Dos opciones para reunir los datos:
+     - "EXPORTAR": crea un ZIP (todos los CSV + ajustes.txt) en la carpeta
+       publica Descargas/Segu-Luky, listo para copiar al PC por USB.
+     - "WHATSAPP": abre WhatsApp con el ZIP ya adjunto para enviarlo a un
+       contacto o grupo (el amigo tambien puede usar este boton).
+     En un archivo concreto de la lista tambien hay "WHATSAPP" y "COMPARTIR".
+
+La grabacion es independiente del monitor: puedes grabar con o sin monitor activo.
+
+2) QUE SE GRABA (FORMATO CSV)
+-----------------------------
+Cada archivo: segu_calib_<MODELO>_<actividad>_<AAAAMMDD_HHMMSS>.csv
+Cabecera con lineas '#': actividad, fecha, fabricante, modelo, dispositivo,
+producto, hardware, sensores y columnas.
+Datos con columnas: tipo,t_ms,a,b,c,extra
+  - tipo: lin | accel | grav | gyro | gps
+  - t_ms: marca de tiempo (ms)
+  - a,b,c: ejes (m/s^2 en aceleracion/gravedad; rad/s en giroscopio;
+           en gps: a=latitud, b=longitud, c=velocidad m/s; extra=precision m)
+Sensores registrados: aceleracion lineal, acelerometro, gravedad, giroscopio y GPS (1 Hz).
+
+3) COMO SE ANALIZA
+------------------
+Script: Instrucciones\analizar_calibracion.py
+  python analizar_calibracion.py <carpeta | archivos .csv | archivos .zip>
+Acepta los ZIP exportados por la app (o CSV sueltos) y agrupa por movil y
+actividad. Calcula media, desviacion, p99, p99.9 y maximo de la aceleracion
+dinamica (en g), giroscopio y velocidad GPS, y recomienda:
+  - una sensibilidad por movil (maximo normal x1.2, minimo 1.5 g),
+  - una recomendacion global segura para el peor caso.
+Genera ademas "recomendaciones.txt" junto a los datos. Se configura el valor
+en la app: SENSIBILIDAD A LOS GOLPES (mas alto = menos falsos SOS).
+
+4) DONDE ESTAN LOS ARCHIVOS
+---------------------------
+- En el movil (internos de la app): Android/data/com.intercom.segluky/files/calibracion/
+- Exportados: Descargas/Segu-Luky/*.zip (ZIP con todos los CSV + ajustes.txt).
+  Copia ese ZIP al PC por USB y descomprimelo en la carpeta de analisis.

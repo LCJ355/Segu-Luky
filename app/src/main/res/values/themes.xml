@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.InterSeg" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#F4F1EA</item>
+        <item name="android:navigationBarColor">#F4F1EA</item>
+        <item name="android:colorAccent">#B3261E</item>
+    </style>
+</resources>

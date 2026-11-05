@@ -1,0 +1,35 @@
+==============================================================================
+INFORME DE CALIBRACION SEGU-LUKY
+==============================================================================
+Archivos analizados: 5
+Dispositivos: 2
+
+DISPOSITIVO: OPPO CPH2695
+------------------------------------------------------------------------------
+  andando        n=784     media=0.00g std=0.00 p99=0.00g p99.9=0.00g max=0.00g  (archivos=1)
+      giro: media=0.00 p99=0.01 max=0.01 rad/s
+  coche_autovia  n=48848   media=0.05g std=0.07 p99=0.26g p99.9=0.80g max=2.70g  (archivos=1)
+      giro: media=0.29 p99=3.37 max=20.47 rad/s
+      velocidad: media=102 p95=121 max=126 km/h
+  coche_camino   n=31356   media=0.05g std=0.10 p99=0.51g p99.9=1.16g max=3.15g  (archivos=3)
+      giro: media=0.31 p99=3.99 max=26.37 rad/s
+      velocidad: media=17 p95=52 max=57 km/h
+  -> SENSIBILIDAD RECOMENDADA para este movil: 4.0 g
+
+DISPOSITIVO: Xiaomi 2201117SY
+------------------------------------------------------------------------------
+  andando        n=1008    media=0.05g std=0.09 p99=0.45g p99.9=0.79g max=1.16g  (archivos=1)
+      giro: media=0.19 p99=3.26 max=4.38 rad/s
+  coche_autovia  n=23109   media=0.05g std=0.05 p99=0.19g p99.9=0.50g max=3.21g  (archivos=1)
+      giro: media=0.04 p99=0.19 max=5.78 rad/s
+      velocidad: media=102 p95=121 max=125 km/h
+  coche_camino   n=6045    media=0.05g std=0.05 p99=0.30g p99.9=0.49g max=0.58g  (archivos=1)
+      giro: media=0.14 p99=1.23 max=5.22 rad/s
+      velocidad: media=30 p95=54 max=57 km/h
+  -> SENSIBILIDAD RECOMENDADA para este movil: 4.0 g
+
+==============================================================================
+RECOMENDACION GLOBAL (segura para el peor caso observado): 4.0 g
+Configura ese valor en la app: SENSIBILIDAD A LOS GOLPES.
+Nota: cuanto mas alto, menos falsos SOS pero mas facil perder un golpe real.
+==============================================================================
