@@ -1136,6 +1136,16 @@ Verificacion en el OPPO:
 - El enlace de Google Maps sigue exigi?ndose con menos de 5 min de antiguedad, asi que una posicion de red solo se usa si es reciente.
 - APK generado: app-release.apk (1.34s).
 
+1.35s (versionCode 27)
+Fecha: 2026-11-11
+Aclaracion de la VELOCIDAD y arranque con velocidad conocida:
+- La fila VELOCIDAD ya no muestra "--" con el monitor activo: si no hay dato muestra "SIN DATO" y explica que solo la aporta el GPS con cielo visible.
+- Comprobado en el OPPO: la posicion por red que llega bajo techo no incluye velocidad (dumpsys location sin vel ni sAcc), asi que el punto sigue naranja aunque la posicion ya sea OK.
+- Prueba de que la velocidad si funciona: el ultimo fix GNSS del telefono trae vel=0,68 m/s con sAcc=4,3 (limite 5), o sea 2,4 km/h, suficiente para ponerse en verde en cuanto haya cielo visible.
+- Al arrancar, si la ultima posicion conocida trae velocidad valida, tambien se reutiliza (igual que la posicion), descartandola si supera los 60 s.
+- APK generado: app-release.apk (1.35s).
+
+
 
 
 

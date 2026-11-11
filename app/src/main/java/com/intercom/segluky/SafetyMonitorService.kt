@@ -925,6 +925,12 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         lastQualifiedLocationAt = seededAt
         lastQualifiedLocationWallTime = best.time.takeIf { it > 0L } ?: System.currentTimeMillis()
         lastAccuracy = best.accuracy
+        val speedValid = best.hasSpeed() && best.speed.isFinite() && best.speed >= 0f &&
+            (!best.hasSpeedAccuracy() || best.speedAccuracyMetersPerSecond <= MAX_SPEED_ACCURACY_MS)
+        if (speedValid) {
+            lastSpeed = best.speed * 3.6f
+            lastSpeedAt = seededAt
+        }
     }
 
     private fun setLocationUpdateInterval(intervalMs: Long, minDistanceM: Float = 0f) {

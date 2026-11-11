@@ -2195,9 +2195,15 @@ private fun MonitorCard(
         ServiceRow("GPS", gpsLiveText, gpsLiveState, gpsStatusNote)
         ServiceRow(
             "VELOCIDAD",
-            snapshot.speedKmh?.let { String.format(Locale.US, "%.1f km/h", it) } ?: "--",
+            snapshot.speedKmh?.let { String.format(Locale.US, "%.1f km/h", it) }
+                ?: if (running) "SIN DATO" else "--",
             if (snapshot.speedKmh != null) IndicatorState.GOOD else IndicatorState.PENDING,
-            "Informativa; nunca bloquea golpes."
+            when {
+                !running -> "Se activa al iniciar el monitor."
+                snapshot.speedKmh != null -> "Informativa; nunca bloquea golpes."
+                else -> "Solo la aporta el GPS con cielo visible; la posicion por red no la trae. " +
+                    "Informativa: nunca bloquea golpes."
+            }
         )
         ServiceRow(
             "INTERCOM",
