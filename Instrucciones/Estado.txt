@@ -1060,6 +1060,20 @@ Verificacion:
 - APK generado: app-release.apk (1.28s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
+1.29s (versionCode 21)
+Fecha: 2026-02-20
+Cambios funcionales:
+- La linea NIVEL DE AUDIO pasa a verde: barra, fondo de barra y valor numerico (antes naranja cuando habia ruido).
+- La sensibilidad se muestra en una sola linea: "SENSIBILIDAD A LOS GOLPES =" y a la derecha el valor ajustado en g.
+- Se elimina la linea "AJUSTE: ..." que repetia ese mismo valor.
+Verificacion:
+- Detenido: NIVEL DE AUDIO en gris ("EN ESPERA") con barra verde vacia, "SENSIBILIDAD A LOS GOLPES = 3.5 g" en una sola fila y punto del deslizador naranja.
+- En marcha: "NIVEL DE AUDIO -37 dB" en verde con barra verde, misma fila de sensibilidad y punto del deslizador verde.
+- Sin rastro de naranja en las barras de audio ni del texto "AJUSTE".
+- APK generado: app-release.apk (1.29s).
+Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
+
+
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

@@ -2014,11 +2014,7 @@ private fun AudioLevelLine(audioLevel: AudioLevelReading) {
             Spacer(Modifier.weight(1f))
             Text(
                 audioLevel.label,
-                color = when {
-                    audioLevel.fromVoice -> StrongGreen
-                    audioLevel.active -> HarleyOrange
-                    else -> Color(0xFF6B7280)
-                },
+                color = if (audioLevel.active || audioLevel.fromVoice) StrongGreen else Color(0xFF6B7280),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -2026,8 +2022,8 @@ private fun AudioLevelLine(audioLevel: AudioLevelReading) {
         LinearProgressIndicator(
             progress = { audioLevel.progress },
             modifier = Modifier.fillMaxWidth(),
-            color = if (audioLevel.fromVoice) StrongGreen else HarleyOrange,
-            trackColor = if (audioLevel.fromVoice) Color(0xFFB9F6CA) else Color(0xFFFFD7B0)
+            color = StrongGreen,
+            trackColor = Color(0xFFB9F6CA)
         )
     }
 }
@@ -2487,17 +2483,20 @@ private fun SensitivityControl(
     onSensitivityChange: (Float) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            "SENSIBILIDAD A LOS GOLPES",
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            "AJUSTE: ${String.format(Locale.US, "%.1f", sensitivityG)} g",
-            color = thumbColorFor(sensitivityG),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "SENSIBILIDAD A LOS GOLPES =",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                "${String.format(Locale.US, "%.1f", sensitivityG)} g",
+                color = thumbColorFor(sensitivityG),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
+            )
+        }
         SegmentedSensitivitySlider(
             value = sensitivityG,
             enabled = enabled,
