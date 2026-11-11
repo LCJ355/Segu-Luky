@@ -67,10 +67,10 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 7. Re-enable `FUNCIONALIDAD SOS` only when the contacts are verified. There is no
    debug-only simulation of the contact protocol.
 
-For the global gesture, open `Configuracion` -> `GESTO GLOBAL 2 DEDOS` and enable
-`Segu-Luky: gesto SOS` in Android Accessibility settings (Android 12+). The service
-does not read other apps' content and cannot receive touches while the screen is
-off.
+The global accessibility gesture (two fingers anywhere on screen) was removed: on
+some OPPO/ColorOS builds its input filter left the whole screen unresponsive to
+touch. SOS is still triggered by the in-app `S O S` control, the shake sensor and
+the voice keyword.
 
 ## Battery notes
 

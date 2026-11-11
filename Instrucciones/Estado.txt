@@ -917,6 +917,29 @@ PENDIENTES DE SOFTWARE:
 - Solo despues estudiar integracion V-3.9S en InterCOM-Luky.
 
 ======================================================================
+2026-11-11 - 1.22s (versionCode 14)
+======================================================================
+
+Fecha: 2026-11-11
+Version: 1.22s (versionCode 14)
+Cambio: eliminado el gesto global de dos dedos por accesibilidad.
+Motivo: en este OPPO/ColorOS el filtro de entrada del servicio bloqueaba todo el
+  tacto: la pantalla dejaba de responder aunque el panel seguia enviando eventos.
+  Desactivar el servicio devolvia el tacto al instante.
+  - Se borran GlobalTouchAccessibilityService, accessibility_service_config.xml,
+    el permiso WRITE_SECURE_SETTINGS, las cadenas del servicio y los scripts
+    tools\activar-gesto-global.cmd y tools\desactivar-gesto-global.cmd.
+  - BootReceiver ya no restaura nada; solo arranca el monitor si estaba activo.
+  - La tarjeta GESTO GLOBAL 2 DEDOS de Configuracion desaparece.
+  - Se mantiene el gesto de dos dedos DENTRO de la app (multiTouchEmergency),
+    que no intercepta eventos del sistema.
+Prueba realizada: assembleRelease + install -r en el OPPO; solo queda activo el
+  servicio "Envio SOS WhatsApp".
+Resultado: OK; tacto normal y sin avisos nuevos de compilacion.
+APK generado: app-release.apk (1.22s).
+Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
+
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

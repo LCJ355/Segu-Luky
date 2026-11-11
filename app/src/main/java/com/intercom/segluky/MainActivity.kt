@@ -84,7 +84,6 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -652,9 +651,6 @@ private fun EmergencySettingsScreen(
     val exactAlarmReady = remember(automationRefresh) {
         SafetyMonitorService.canScheduleExactAlarms(context)
     }
-    val globalGestureReady = remember(automationRefresh) {
-        GlobalTouchAccessibilityService.isEnabled(context)
-    }
     var addingContact by remember { mutableStateOf(false) }
     var editingContact by remember { mutableStateOf<EmergencyContact?>(null) }
     var smsAuto by remember { mutableStateOf(SafetyMonitorService.loadSmsAuto(context)) }
@@ -738,84 +734,6 @@ private fun EmergencySettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("AUTORIZAR ALARMAS EXACTAS")
-                    }
-                }
-            }
-        }
-        item {
-            val supported = GlobalTouchAccessibilityService.isSupported()
-            val selfEnable = GlobalTouchAccessibilityService.canEnableByItself(context)
-            SeguCard(
-                title = "GESTO GLOBAL 2 DEDOS",
-                status = when {
-                    !supported -> "NO DISPONIBLE"
-                    globalGestureReady -> "ACTIVADO"
-                    else -> "DESACTIVADO"
-                },
-                tone = when {
-                    !supported -> Tone.OFF
-                    globalGestureReady -> Tone.OK
-                    else -> Tone.BAD
-                },
-                description = when {
-                    !supported -> "Necesita Android 12 o superior."
-                    globalGestureReady ->
-                        "Manten dos dedos 5 s en cualquier pantalla para lanzar el SOS. AVISO: en algunos " +
-                            "OPPO/ColorOS el movil deja de responder al tacto mientras este activo; si pasa, " +
-                            "desactivalo en Ajustes > Accesibilidad."
-                    else ->
-                        "Manten dos dedos 5 s en cualquier pantalla inicia el SOS. No lee el contenido de " +
-                            "otras apps. AVISO: en algunos OPPO/ColorOS el movil deja de responder al tacto " +
-                            "mientras este activo; si pasa, desactivalo en Ajustes > Accesibilidad."
-                }
-            ) {
-                if (supported && !globalGestureReady) {
-                    if (selfEnable) {
-                        Button(
-                            onClick = {
-                                val enabled = GlobalTouchAccessibilityService.enableByItself(context)
-                                val message = if (enabled) {
-                                    "Gesto global activado. Comprueba el tacto y, si no responde, desactivalo en Accesibilidad."
-                                } else {
-                                    "Android no permitio el cambio. Activalo en Accesibilidad."
-                                }
-                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-                                calibrationScope.launch {
-                                    delay(400)
-                                    automationRefresh++
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("ACTIVAR EN UN TOQUE")
-                        }
-                        TextButton(
-                            onClick = { GlobalTouchAccessibilityService.openSettings(context) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("ABRIR AJUSTES DE ACCESIBILIDAD")
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = { GlobalTouchAccessibilityService.openSettings(context) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("ABRIR ACCESIBILIDAD")
-                        }
-                        Text(
-                            "En este modelo puede dejar la pantalla sin respuesta al tacto. Si lo activas, " +
-                                "prueba el tacto enseguida; para deshacerlo ejecuta tools\\desactivar-gesto-global.cmd " +
-                                "o desactivalo en Ajustes > Accesibilidad.",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Tone.BAD.text
-                        )
-                        Text(
-                            "adb shell settings put secure enabled_accessibility_services " +
-                                "\"<actual>:com.intercom.segluky/" +
-                                "com.intercom.segluky.GlobalTouchAccessibilityService\"",
-                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
                     }
                 }
             }
