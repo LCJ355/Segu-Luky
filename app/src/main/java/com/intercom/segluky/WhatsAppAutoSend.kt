@@ -119,7 +119,16 @@ object WhatsAppAutoSend {
     }
 
     fun isSupportedPackage(packageName: String): Boolean =
-        packageName == WHATSAPP_PACKAGE || packageName == WHATSAPP_BUSINESS_PACKAGE
+        packageName == WHATSAPP_PACKAGE ||
+            packageName == WHATSAPP_BUSINESS_PACKAGE ||
+            packageName == TelegramSos.PACKAGE
+
+    private fun resolveRecipient(expectedPackage: String, recipient: String): String? =
+        if (expectedPackage == TelegramSos.PACKAGE) {
+            TelegramSos.normalizeUsername(recipient)
+        } else {
+            ContactsRepository.canonicalPhoneNumber(recipient)
+        }
 
     /**
      * Adds one identity-bound authorization to the tail of the persisted FIFO.
@@ -149,11 +158,11 @@ object WhatsAppAutoSend {
         if (canonicalRequestId.isEmpty() || canonicalRequestId.length > MAX_ID_LENGTH) {
             return@synchronized WhatsAppEnqueueResult(WhatsAppEnqueueStatus.INVALID_REQUEST_ID)
         }
-        val canonicalRecipient = ContactsRepository.canonicalPhoneNumber(recipient)
-            ?: return@synchronized WhatsAppEnqueueResult(WhatsAppEnqueueStatus.INVALID_RECIPIENT)
         if (!isSupportedPackage(expectedPackage)) {
             return@synchronized WhatsAppEnqueueResult(WhatsAppEnqueueStatus.INVALID_PACKAGE)
         }
+        val canonicalRecipient = resolveRecipient(expectedPackage, recipient)
+            ?: return@synchronized WhatsAppEnqueueResult(WhatsAppEnqueueStatus.INVALID_RECIPIENT)
         val normalizedMessage = normalizeMessage(message)
         if (normalizedMessage.isEmpty() || normalizedMessage.length > MAX_MESSAGE_LENGTH) {
             return@synchronized WhatsAppEnqueueResult(WhatsAppEnqueueStatus.INVALID_MESSAGE)
@@ -517,8 +526,8 @@ object WhatsAppAutoSend {
     private fun isStructurallyValid(request: WhatsAppSendRequest): Boolean {
         if (request.eventId.isBlank() || request.eventId.length > MAX_ID_LENGTH) return false
         if (request.requestId.isBlank() || request.requestId.length > MAX_ID_LENGTH) return false
-        if (ContactsRepository.canonicalPhoneNumber(request.recipient) != request.recipient) return false
         if (!isSupportedPackage(request.expectedPackage)) return false
+        if (resolveRecipient(request.expectedPackage, request.recipient) != request.recipient) return false
         if (request.normalizedMessage.isEmpty() ||
             request.normalizedMessage.length > MAX_MESSAGE_LENGTH ||
             normalizeMessage(request.normalizedMessage) != request.normalizedMessage

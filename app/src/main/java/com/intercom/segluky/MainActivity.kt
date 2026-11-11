@@ -944,7 +944,7 @@ private fun EmergencySettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("ENVIO AUTO WHATSAPP", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("ENVIO AUTO MENSAJES", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(
                                 if (whatsappAutoSend) "ACTIVADO" else "DESACTIVADO",
                                 color = if (whatsappAutoSend) StrongGreen else Color(0xFF6B7280),
@@ -960,9 +960,9 @@ private fun EmergencySettingsScreen(
                     }
                     Text(
                         if (whatsappAutoSend) {
-                            "Al completar el SOS, WhatsApp se abre y Enviar se pulsa automaticamente, sin confirmacion."
+                            "Al completar el SOS, WhatsApp y los enlaces t.me se abren y se pulsa Enviar automaticamente, sin confirmacion."
                         } else {
-                            "WhatsApp se abre con el mensaje y el enlace listos; el envio es manual."
+                            "WhatsApp y Telegram se abren con el mensaje y el enlace listos; el envio es manual."
                         },
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -1013,6 +1013,119 @@ private fun EmergencySettingsScreen(
                         ) {
                             Text("PERMITIR SOBRE OTRAS APPS")
                         }
+                    }
+                }
+            }
+        }
+        item {
+            val telegramRepository = remember { ContactsRepository(context) }
+            var telegramToken by remember { mutableStateOf(telegramRepository.telegramBotToken()) }
+            var telegramFeedback by remember { mutableStateOf("") }
+            var telegramTesting by remember { mutableStateOf(false) }
+            val telegramContacts = remember(automationRefresh) {
+                telegramRepository.load().filter { it.telegramEnabled }
+            }
+            val telegramInstalled = remember(automationRefresh) { TelegramSos.isInstalled(context) }
+            val botConfigured = TelegramSos.normalizeBotToken(telegramToken) != null
+            val botTargets = telegramContacts.filter { it.telegramReadyForBot }
+            val linkTargets = telegramContacts.filter {
+                !it.telegramReadyForBot && it.telegramUsername.isNotEmpty()
+            }
+            val telegramScope = androidx.compose.runtime.rememberCoroutineScope()
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = if (botConfigured) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("TELEGRAM SOS", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        when {
+                            botConfigured -> "BOT LISTO: el aviso se envia sin abrir Telegram"
+                            telegramInstalled -> "SIN BOT: se abrira Telegram y se pulsara Enviar"
+                            else -> "SIN BOT NI TELEGRAM: no se enviara nada"
+                        },
+                        color = if (botConfigured) StrongGreen else Color(0xFF6B7280),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "Bot conectado: ${botTargets.size} de ${telegramContacts.size} contactos con chat id. " +
+                            "Enlace t.me: ${linkTargets.size} contacto(s) por accesibilidad.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedTextField(
+                        value = telegramToken,
+                        onValueChange = { telegramToken = it.trim() },
+                        label = { Text("Token del bot (@BotFather)") },
+                        singleLine = true,
+                        enabled = !criticalSettingsLocked,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            enabled = !criticalSettingsLocked,
+                            onClick = {
+                                val normalized = TelegramSos.normalizeBotToken(telegramToken)
+                                if (normalized == null) {
+                                    telegramFeedback = "Token no valido: debe ser 123456789:AAAA..."
+                                } else {
+                                    telegramRepository.setTelegramBotToken(normalized)
+                                    telegramToken = normalized
+                                    telegramFeedback = "Token guardado"
+                                }
+                            }
+                        ) { Text("GUARDAR TOKEN") }
+                        OutlinedButton(
+                            enabled = !criticalSettingsLocked && !telegramTesting && botTargets.isNotEmpty(),
+                            onClick = {
+                                val target = botTargets.firstOrNull() ?: return@OutlinedButton
+                                val token = TelegramSos.normalizeBotToken(telegramToken)
+                                if (token == null) {
+                                    telegramFeedback = "Guarda primero un token valido"
+                                    return@OutlinedButton
+                                }
+                                telegramTesting = true
+                                telegramFeedback = "Enviando prueba..."
+                                telegramScope.launch {
+                                    val result = withContext(Dispatchers.IO) {
+                                        TelegramSos.sendViaBot(
+                                            token,
+                                            target.telegramChatId,
+                                            "Segu-Luky: mensaje de prueba para ${target.name}"
+                                        )
+                                    }
+                                    telegramTesting = false
+                                    telegramFeedback = if (result.ok) {
+                                        "Prueba enviada a ${target.name}"
+                                    } else {
+                                        "Fallo: ${result.detail}"
+                                    }
+                                }
+                            }
+                        ) { Text("ENVIAR PRUEBA") }
+                    }
+                    if (telegramFeedback.isNotEmpty()) {
+                        Text(telegramFeedback, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    }
+                    Text(
+                        "1) Crea el bot en @BotFather y copia el token. " +
+                            "2) Cada contacto debe escribir /start al bot. " +
+                            "3) Pega su chat id en el contacto (o el enlace t.me como respaldo). " +
+                            "El bot envia sin abrir Telegram ni desbloquear; el enlace t.me necesita ENVIO AUTO MENSAJES. " +
+                            "El token se guarda solo en este movil.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (telegramContacts.isNotEmpty() && botTargets.isEmpty()) {
+                        Text(
+                            "Ningun contacto de Telegram tiene chat id: ahora mismo solo funcionaria el enlace t.me.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }
@@ -1312,10 +1425,20 @@ private fun EmergencyContactEditor(
     var whatsappMessage by remember(contact) {
         mutableStateOf(contact?.whatsappMessage ?: DEFAULT_WHATSAPP_MESSAGE)
     }
+    var telegramEnabled by remember(contact) { mutableStateOf(contact?.telegramEnabled ?: false) }
+    var telegramUsername by remember(contact) { mutableStateOf(contact?.telegramUsername.orEmpty()) }
+    var telegramChatId by remember(contact) { mutableStateOf(contact?.telegramChatId.orEmpty()) }
     var saveAttempted by remember(contact) { mutableStateOf(false) }
     var saveError by remember(contact) { mutableStateOf<String?>(null) }
     val phoneValid = isValidEmergencyPhone(phone)
-    val actionSelected = callEnabled || whatsappEnabled
+    val telegramUsernameInvalid = telegramEnabled &&
+        telegramUsername.isNotBlank() &&
+        TelegramSos.normalizeUsername(telegramUsername) == null
+    val telegramChatIdInvalid = telegramEnabled &&
+        telegramChatId.isNotBlank() &&
+        TelegramSos.normalizeChatId(telegramChatId) == null
+    val telegramInputValid = !telegramUsernameInvalid && !telegramChatIdInvalid
+    val actionSelected = callEnabled || whatsappEnabled || telegramEnabled
 
     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1385,8 +1508,50 @@ private fun EmergencyContactEditor(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+            EmergencyActionSwitch(
+                label = "ENVIAR TELEGRAM",
+                detail = "Bot (si hay chat id y token) o enlace t.me como respaldo.",
+                checked = telegramEnabled,
+                enabled = editable,
+                onCheckedChange = { telegramEnabled = it }
+            )
+            if (telegramEnabled) {
+                OutlinedTextField(
+                    value = telegramUsername,
+                    onValueChange = { telegramUsername = it },
+                    enabled = editable,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Usuario de Telegram (opcional)") },
+                    placeholder = { Text("@nombre o https://t.me/nombre") },
+                    isError = saveAttempted && telegramUsernameInvalid,
+                    supportingText = {
+                        Text(
+                            if (telegramUsernameInvalid) "Usuario no valido"
+                            else "Respaldo: abre el chat y pulsa Enviar por accesibilidad."
+                        )
+                    },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = telegramChatId,
+                    onValueChange = { telegramChatId = it },
+                    enabled = editable,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Chat id del bot (opcional)") },
+                    placeholder = { Text("123456789") },
+                    isError = saveAttempted && telegramChatIdInvalid,
+                    supportingText = {
+                        Text(
+                            if (telegramChatIdInvalid) "Chat id no valido (solo digitos)"
+                            else "Vacio = sin envio automatico por bot para este contacto."
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+            }
             if (saveAttempted && !actionSelected) {
-                Text("Activa llamada, WhatsApp o ambas acciones.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                Text("Activa llamada, WhatsApp, Telegram o una combinacion.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
             saveError?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -1397,14 +1562,17 @@ private fun EmergencyContactEditor(
                     onClick = {
                         saveAttempted = true
                         saveError = null
-                        if (name.isNotBlank() && phoneValid && actionSelected) {
+                        if (name.isNotBlank() && phoneValid && actionSelected && telegramInputValid) {
                             val saved = onSave(
                                 EmergencyContact(
                                     name = name,
                                     phone = phone,
                                     callEnabled = callEnabled,
                                     whatsappEnabled = whatsappEnabled,
-                                    whatsappMessage = whatsappMessage
+                                    whatsappMessage = whatsappMessage,
+                                    telegramEnabled = telegramEnabled,
+                                    telegramUsername = telegramUsername,
+                                    telegramChatId = telegramChatId
                                 )
                             )
                             if (saved) onDone() else saveError = "Ya existe un contacto con este telefono."
@@ -1447,6 +1615,9 @@ private fun EmergencyContactCard(
     val actions = buildList {
         if (contact.callEnabled) add("Llamada")
         if (contact.whatsappEnabled) add("WhatsApp")
+        if (contact.telegramEnabled) {
+            add(if (contact.telegramReadyForBot) "Telegram bot" else "Telegram enlace")
+        }
     }.joinToString(" + ")
     Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -1493,7 +1664,7 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "1. Configura los contactos",
-                text = "Pulsa el engranaje y activa FUNCIONALIDAD SOS para habilitar todos los avisos. Para cada telefono elige llamada, WhatsApp o ambas acciones. El texto de WhatsApp puede personalizarse y {MAPA} insertara el enlace Google Maps."
+                text = "Pulsa el engranaje y activa FUNCIONALIDAD SOS para habilitar todos los avisos. Para cada telefono elige llamada, WhatsApp, Telegram o una combinacion. El texto de WhatsApp puede personalizarse y {MAPA} insertara el enlace Google Maps; ese mismo texto se usa en Telegram."
             )
         }
         item {
@@ -1522,6 +1693,12 @@ private fun InstructionsScreen(
         }
         item {
             UsageInstruction(
+                title = "6. Avisos por WhatsApp y Telegram",
+                text = "SMS SOS sale aunque la pantalla este bloqueada. WhatsApp y el enlace t.me necesitan la Accesibilidad activada para pulsar Enviar; si el movil tiene PIN, la pantalla se enciende y pide desbloqueo. El bot de Telegram no necesita nada de eso: guarda el token en la tarjeta TELEGRAM SOS, pon el chat id de cada contacto y el aviso sale solo con el movil bloqueado."
+            )
+        }
+        item {
+            UsageInstruction(
                 title = "Estados GPS",
                 text = "DETENIDO: monitor apagado. PENDIENTE: ajuste guardado. BUSCANDO FIX: espera la primera posicion. FIX CADUCADO: supera 60 s. OK: posicion GPS precisa y reciente. El SOS manual (boton 5 s, dos dedos o voz) si funciona sin GPS; el enlace de ubicacion indicara que no hay posicion reciente."
             )
@@ -1529,7 +1706,7 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "Importante",
-                text = "Al completar la cuenta atras y con FUNCIONALIDAD SOS activada, Segu-Luky inicia llamadas a los contactos con llamada habilitada y abre WhatsApp con su mensaje y el enlace Google Maps de la ultima posicion. Comprueba siempre contactos, GPS, bateria y permisos antes de circular."
+                text = "Al completar la cuenta atras y con FUNCIONALIDAD SOS activada, Segu-Luky inicia llamadas a los contactos con llamada habilitada y abre WhatsApp o Telegram con su mensaje y el enlace Google Maps de la ultima posicion. Comprueba siempre contactos, GPS, bateria y permisos antes de circular."
             )
         }
         item {

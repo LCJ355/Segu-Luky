@@ -1080,22 +1080,62 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             SafetyStateStore.log("ENVIO AUTO activo pero Accesibilidad desactivada: se ofrecera WhatsApp manual")
         }
 
+        // Telegram: bot si hay token configurado (no necesita pantalla) y enlace
+        // t.me por accesibilidad como respaldo para quien solo tenga usuario.
+        val telegramContacts = contacts.filter { it.telegramEnabled }
+        val telegramBotToken = contactsRepository.telegramBotToken()
+            .takeIf { contactsRepository.isTelegramBotConfigured() }
+        val telegramBotContacts = if (telegramBotToken == null) {
+            emptyList()
+        } else {
+            telegramContacts.filter { it.telegramReadyForBot }
+        }
+        val telegramLinkContacts = telegramContacts.filter {
+            !it.telegramReadyForBot && it.telegramUsername.isNotEmpty()
+        }
+        val telegramLinkAuto = autoSendRequested &&
+            accessibilityReady &&
+            telegramLinkContacts.isNotEmpty() &&
+            TelegramSos.isInstalled(this)
+        if (telegramBotToken == null && telegramContacts.any { it.telegramChatId.isNotEmpty() }) {
+            SafetyStateStore.log("TELEGRAM: falta el token del bot; se usara el enlace t.me")
+        }
+
         // SMS automatico: funciona con pantalla apagada/bloqueada, sin accesibilidad.
         if (loadSmsAuto(this)) {
             sendSosSms(contacts, mapLink)
         }
 
-        if (autoSend && whatsappPackage != null && whatsappContacts.isNotEmpty()) {
+        if (telegramBotContacts.isNotEmpty() && telegramBotToken != null) {
+            dispatchTelegramBot(telegramBotToken, telegramBotContacts, mapLink)
+        }
+
+        if ((autoSend && whatsappPackage != null && whatsappContacts.isNotEmpty()) || telegramLinkAuto) {
             WhatsAppAutoSend.disarmAll(this)
-            val queued = whatsappContacts.count { contact ->
-                WhatsAppAutoSend.enqueue(
-                    context = this,
-                    eventId = completedEventId,
-                    recipient = contact.phone,
-                    expectedPackage = whatsappPackage,
-                    message = contact.whatsappMessageFor(mapLink),
-                    ttlMillis = WhatsAppAutoSend.MAX_REQUEST_TTL_MILLIS
-                ).queued
+            var queued = 0
+            if (autoSend && whatsappPackage != null) {
+                queued += whatsappContacts.count { contact ->
+                    WhatsAppAutoSend.enqueue(
+                        context = this,
+                        eventId = completedEventId,
+                        recipient = contact.phone,
+                        expectedPackage = whatsappPackage,
+                        message = contact.whatsappMessageFor(mapLink),
+                        ttlMillis = WhatsAppAutoSend.MAX_REQUEST_TTL_MILLIS
+                    ).queued
+                }
+            }
+            if (telegramLinkAuto) {
+                queued += telegramLinkContacts.count { contact ->
+                    WhatsAppAutoSend.enqueue(
+                        context = this,
+                        eventId = completedEventId,
+                        recipient = contact.telegramUsername,
+                        expectedPackage = TelegramSos.PACKAGE,
+                        message = contact.sosMessageFor(mapLink),
+                        ttlMillis = WhatsAppAutoSend.MAX_REQUEST_TTL_MILLIS
+                    ).queued
+                }
             }
             if (queued > 0 && EmergencyDispatchRepository(this).save(
                     PendingEmergencyDispatch(
@@ -1117,7 +1157,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 stopTicker()
                 scheduleDispatchWatchdog(DISPATCH_WATCHDOG_INITIAL_MS)
                 launchQueuedWhatsAppHead()
-                SafetyStateStore.log("WhatsApp SOS en cola: $queued; llamadas en orden al terminar los envios")
+                SafetyStateStore.log("Avisos automaticos en cola: $queued; llamadas en orden al terminar los envios")
                 return
             }
             WhatsAppAutoSend.disarmAll(this)
@@ -1128,6 +1168,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         // ready, enqueue failure or a failed dispatch persistence), so every
         // contact with WhatsApp must still get its manual action.
         postManualWhatsAppActions(whatsappContacts, mapLink)
+        postManualTelegramActions(telegramLinkContacts, mapLink)
 
         if (callPhones.isNotEmpty()) {
             if (EmergencyDispatchRepository(this).save(
@@ -1607,12 +1648,16 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private fun launchQueuedWhatsAppHead(): Boolean {
         val request = WhatsAppAutoSend.peek(this) ?: return false
         if (request.status != WhatsAppRequestStatus.PENDING) return false
-        val target = buildWhatsAppIntent(
-            request.expectedPackage,
-            request.recipient.filter(Char::isDigit),
-            request.normalizedMessage
-        ) ?: run {
-            SafetyStateStore.log("WhatsApp SOS: ninguna actividad puede abrir el chat")
+        val target = if (request.expectedPackage == TelegramSos.PACKAGE) {
+            buildTelegramIntent(request.recipient, request.normalizedMessage)
+        } else {
+            buildWhatsAppIntent(
+                request.expectedPackage,
+                request.recipient.filter(Char::isDigit),
+                request.normalizedMessage
+            )
+        } ?: run {
+            SafetyStateStore.log("Aviso SOS: ninguna actividad puede abrir el chat")
             return false
         }
         // The accessibility click only lands while the screen is on: keep it awake
@@ -1635,6 +1680,27 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         )
         for (url in candidates) {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).setPackage(pkg)
+            val resolvable = runCatching {
+                packageManager.queryIntentActivities(intent, 0).isNotEmpty()
+            }.getOrDefault(false)
+            if (resolvable) return intent
+        }
+        return null
+    }
+
+    /**
+     * Para Telegram se prefiere el esquema `tg://`, que solo resuelve en Telegram;
+     * el enlace https tambien lo captura el navegador del sistema.
+     */
+    private fun buildTelegramIntent(username: String, message: String): Intent? {
+        val user = TelegramSos.normalizeUsername(username) ?: return null
+        val encoded = Uri.encode(message)
+        val candidates = listOf(
+            "tg://resolve?domain=$user&text=$encoded",
+            "https://t.me/$user?text=$encoded"
+        )
+        for (url in candidates) {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).setPackage(TelegramSos.PACKAGE)
             val resolvable = runCatching {
                 packageManager.queryIntentActivities(intent, 0).isNotEmpty()
             }.getOrDefault(false)
@@ -1688,6 +1754,68 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             .build()
         getSystemService(NotificationManager::class.java)
             .notify(MANUAL_WHATSAPP_NOTIFICATION_ID + index, notification)
+    }
+
+    /**
+     * Via principal de Telegram: Bot API. No abre ninguna app ni necesita la
+     * pantalla desbloqueada, pero requiere token del bot y chat id del contacto.
+     * Corre en segundo plano para no retrasar llamadas ni WhatsApp.
+     */
+    private fun dispatchTelegramBot(
+        token: String,
+        contacts: List<EmergencyContact>,
+        mapLink: String?
+    ) {
+        if (contacts.isEmpty()) return
+        val targets = contacts.map { it.telegramChatId to it.sosMessageFor(mapLink) }
+        val label = contacts.size
+        Thread {
+            val powerManager = getSystemService(PowerManager::class.java)
+            val wakeLock = powerManager?.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "Segu-Luky:telegram-bot"
+            )?.apply { runCatching { acquire(TELEGRAM_BOT_WAKE_LOCK_MS) } }
+            try {
+                var sent = 0
+                val problems = mutableListOf<String>()
+                targets.forEach { (chatId, message) ->
+                    val result = TelegramSos.sendViaBot(token, chatId, message)
+                    if (result.ok) {
+                        sent += 1
+                    } else {
+                        problems += "$chatId (${result.detail})"
+                    }
+                }
+                val detail = if (problems.isEmpty()) "" else ": ${problems.joinToString("; ")}"
+                SafetyStateStore.log("TELEGRAM bot: $sent/$label avisos enviados$detail")
+            } finally {
+                runCatching { if (wakeLock?.isHeld == true) wakeLock.release() }
+            }
+        }.apply { isDaemon = true }.start()
+    }
+
+    private fun postManualTelegramActions(contacts: List<EmergencyContact>, mapLink: String?) {
+        contacts.take(MAX_MANUAL_WHATSAPP_NOTIFICATIONS).forEachIndexed { index, contact ->
+            val intent = buildTelegramIntent(contact.telegramUsername, contact.sosMessageFor(mapLink))
+                ?: return@forEachIndexed
+            val pending = PendingIntent.getActivity(
+                this,
+                MANUAL_TELEGRAM_REQUEST_CODE + index,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val notification = NotificationCompat.Builder(this, EMERGENCY_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle("Segu-Luky: Telegram SOS para ${contact.name}")
+                .setContentText("Pulsa para abrir el chat y enviar el mensaje de emergencia")
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(pending)
+                .addAction(android.R.drawable.ic_menu_send, "ABRIR TELEGRAM", pending)
+                .build()
+            getSystemService(NotificationManager::class.java)
+                .notify(MANUAL_TELEGRAM_NOTIFICATION_ID + index, notification)
+        }
     }
 
     private fun sendSosSms(contacts: List<EmergencyContact>, mapLink: String?) {
@@ -2181,6 +2309,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         /** Keeps the screen awake while a fall candidate may still be confirmed. */
         private const val CANDIDATE_SCREEN_WAKE_MS = 20_000L
         private const val WHATSAPP_SCREEN_WAKE_MS = 40_000L
+        private const val TELEGRAM_BOT_WAKE_LOCK_MS = 120_000L
         private const val UPRIGHT_ABORT_SAMPLES = 12
         private const val SENSOR_STALE_MS = 5_000L
         private const val MAX_RESTORED_COUNTDOWN_LATENESS_MS = 2 * 60_000L
@@ -2188,6 +2317,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         private const val SOS_ALARM_REQUEST_CODE = 2001
         private const val MANUAL_WHATSAPP_REQUEST_CODE = 2002
         private const val MANUAL_WHATSAPP_NOTIFICATION_ID = 1003
+        private const val MANUAL_TELEGRAM_REQUEST_CODE = 2012
+        private const val MANUAL_TELEGRAM_NOTIFICATION_ID = 1013
         private const val MAX_MANUAL_WHATSAPP_NOTIFICATIONS = 5
         private const val ESCALATION_ALARM_REQUEST_CODE = 2003
         private const val CALL_ESCALATION_TIMEOUT_MS = 60_000L

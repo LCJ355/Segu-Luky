@@ -5,5 +5,5 @@
     android:accessibilityFlags="flagDefault|flagReportViewIds"
     android:canRetrieveWindowContent="true"
     android:notificationTimeout="100"
-    android:packageNames="com.whatsapp,com.whatsapp.w4b"
+    android:packageNames="com.whatsapp,com.whatsapp.w4b,org.telegram.messenger"
     android:description="@string/whatsapp_auto_send_service_description" />

@@ -43,16 +43,27 @@ data class EmergencyContact(
     val phone: String,
     val callEnabled: Boolean = true,
     val whatsappEnabled: Boolean = true,
-    val whatsappMessage: String = DEFAULT_WHATSAPP_MESSAGE
+    val whatsappMessage: String = DEFAULT_WHATSAPP_MESSAGE,
+    val telegramEnabled: Boolean = false,
+    val telegramUsername: String = "",
+    val telegramChatId: String = ""
 ) {
     fun normalized(): EmergencyContact = copy(
         name = name.trim(),
         phone = phone.trim(),
-        whatsappMessage = ensureMapLinkToken(whatsappMessage)
+        whatsappMessage = ensureMapLinkToken(whatsappMessage),
+        telegramUsername = TelegramSos.normalizeUsername(telegramUsername).orEmpty(),
+        telegramChatId = TelegramSos.normalizeChatId(telegramChatId).orEmpty()
     )
 
     fun whatsappMessageFor(mapLink: String?): String =
         ensureMapLinkToken(whatsappMessage).replace(MAP_LINK_TOKEN, mapLink ?: "ubicacion GPS no disponible")
+
+    /** El mismo texto sirve para WhatsApp y para Telegram. */
+    fun sosMessageFor(mapLink: String?): String = whatsappMessageFor(mapLink)
+
+    val telegramReadyForBot: Boolean
+        get() = telegramEnabled && telegramChatId.isNotEmpty()
 }
 
 fun ensureMapLinkToken(template: String): String {

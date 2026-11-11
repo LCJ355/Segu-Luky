@@ -1,6 +1,7 @@
 package com.intercom.segluky
 
 import android.accessibilityservice.AccessibilityService
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.accessibility.AccessibilityEvent
@@ -9,9 +10,10 @@ import android.content.Intent
 import androidx.core.content.ContextCompat
 
 /**
- * Presses WhatsApp's send button once when an SOS auto-send request exists in
- * the structured queue. It only acts on the queue head, verifies exact package,
- * full normalized message match, and reports SENT/FAILED per request.
+ * Presses the send button of WhatsApp or Telegram once when an SOS auto-send
+ * request exists in the structured queue. It only acts on the queue head,
+ * verifies exact package and full normalized message match, and reports
+ * SENT/FAILED per request.
  */
 class WhatsAppAutoSendService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
@@ -34,7 +36,7 @@ class WhatsAppAutoSendService : AccessibilityService() {
             return
         }
         val pkg = event.packageName?.toString() ?: return
-        if (pkg != WHATSAPP_PACKAGE && pkg != WHATSAPP_BUSINESS_PACKAGE) return
+        if (!WhatsAppAutoSend.isSupportedPackage(pkg)) return
         if (pkg != head.expectedPackage) return
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
             event.eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
@@ -101,16 +103,24 @@ class WhatsAppAutoSendService : AccessibilityService() {
         if (request.requestId != requestId) return false
         val root = rootInActiveWindow ?: return false
         val rootPkg = root.packageName?.toString()
-        if (rootPkg != WHATSAPP_PACKAGE && rootPkg != WHATSAPP_BUSINESS_PACKAGE) return false
+        if (rootPkg == null || !WhatsAppAutoSend.isSupportedPackage(rootPkg)) return false
         if (rootPkg != request.expectedPackage) return false
         val input = findInputField(root, request)
         val messageText = input?.text?.toString().orEmpty()
-        if (messageText.isBlank()) {
-            logProblemOnce("sin campo de texto con el mensaje")
-            return false
-        }
         if (!WhatsAppAutoSend.messageMatches(request, messageText)) {
-            logProblemOnce("el mensaje del campo no coincide con el autorizado")
+            // Telegram no siempre prerrellena el campo del enlace t.me, asi que
+            // se escribe el mensaje autorizado y se confirma en el siguiente ciclo.
+            if (input != null &&
+                rootPkg == TelegramSos.PACKAGE &&
+                fillComposer(input, request.normalizedMessage)
+            ) {
+                logProblemOnce("mensaje escrito por accesibilidad")
+                return false
+            }
+            logProblemOnce(
+                if (messageText.isBlank()) "sin campo de texto con el mensaje"
+                else "el mensaje del campo no coincide con el autorizado"
+            )
             return false
         }
         val sendButton = findSendButton(root, rootPkg)
@@ -124,7 +134,7 @@ class WhatsAppAutoSendService : AccessibilityService() {
     private fun logProblemOnce(problem: String) {
         if (problem == lastLoggedProblem) return
         lastLoggedProblem = problem
-        SafetyStateStore.log("WhatsApp autoeenvio: $problem")
+        SafetyStateStore.log("Aviso automatico: $problem")
     }
 
     private fun notifyQueueAdvanced() {
@@ -138,15 +148,33 @@ class WhatsAppAutoSendService : AccessibilityService() {
         request: WhatsAppSendRequest
     ): AccessibilityNodeInfo? {
         val fields = collectByTraversal(root) { node ->
-            node.className?.toString()?.contains("EditText") == true &&
-                !node.text.isNullOrBlank()
+            node.className?.toString()?.contains("EditText") == true && node.isEditable
         }
         if (fields.isEmpty()) return null
         // The composer is the field holding our message. Without an exact match
-        // fall back to the last one, which is where WhatsApp places it.
+        // fall back to the last non-empty one: the composer sits at the bottom.
         return fields.firstOrNull { node ->
             WhatsAppAutoSend.messageMatches(request, node.text?.toString().orEmpty())
-        } ?: fields.last()
+        } ?: fields.lastOrNull { !it.text?.toString().isNullOrBlank() }
+            ?: fields.lastOrNull()
+    }
+
+    /**
+     * Escribe el mensaje autorizado en el campo del chat. Solo se usa cuando el
+     * campo esta vacio: nunca sobrescribe texto que el usuario haya escrito.
+     */
+    private fun fillComposer(field: AccessibilityNodeInfo, message: String): Boolean {
+        if (!field.isEditable) return false
+        if (!field.text?.toString().isNullOrBlank()) return false
+        val arguments = Bundle().apply {
+            putCharSequence(
+                AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
+                message
+            )
+        }
+        return runCatching {
+            field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
+        }.getOrDefault(false)
     }
 
     private fun findSendButton(root: AccessibilityNodeInfo, pkg: String): AccessibilityNodeInfo? {
@@ -210,8 +238,6 @@ class WhatsAppAutoSendService : AccessibilityService() {
     }
 
     companion object {
-        private const val WHATSAPP_PACKAGE = "com.whatsapp"
-        private const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"
         private const val INITIAL_DELAY_MS = 1_200L
         private const val RETRY_DELAY_MS = 800L
         private const val RETRY_BACKOFF_STEP_MS = 120L
@@ -222,8 +248,14 @@ class WhatsAppAutoSendService : AccessibilityService() {
             "send",
             "send_btn",
             "send_button",
-            "btn_send"
+            "btn_send",
+            "chat_send_button"
         )
-        private val SEND_DESCRIPTIONS = listOf("enviar", "send", "send message")
+        private val SEND_DESCRIPTIONS = listOf(
+            "enviar",
+            "send",
+            "send message",
+            "enviar mensaje"
+        )
     }
 }

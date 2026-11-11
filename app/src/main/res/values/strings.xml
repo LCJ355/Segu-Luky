@@ -3,5 +3,5 @@
     <string name="accessibility_service_description">Detecta el gesto SOS de dos o mas dedos para Segu-Luky. No lee el contenido de las aplicaciones.</string>
     <string name="global_touch_service_label">Segu-Luky: gesto SOS</string>
     <string name="whatsapp_auto_send_service_label">Envio SOS WhatsApp</string>
-    <string name="whatsapp_auto_send_service_description">Pulsa Enviar en WhatsApp para enviar el mensaje de emergencia de Segu-Luky cuando hay un envio pendiente. Solo actua al completar un SOS y mientras exista el aviso pendiente; no lee conversaciones en otros momentos.</string>
+    <string name="whatsapp_auto_send_service_description">Pulsa Enviar en WhatsApp o Telegram para enviar el mensaje de emergencia de Segu-Luky cuando hay un envio pendiente. Solo actua al completar un SOS y mientras exista el aviso pendiente; no lee conversaciones en otros momentos.</string>
 </resources>

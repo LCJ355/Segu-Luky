@@ -54,6 +54,17 @@ class ContactsRepository(context: Context) {
         preferences.edit().putBoolean(KEY_SOS_ACTIONS_ENABLED, enabled).apply()
     }
 
+    /** Token del bot de Telegram usado para enviar el SOS sin intervencion. */
+    fun telegramBotToken(): String =
+        preferences.getString(KEY_TELEGRAM_BOT_TOKEN, "").orEmpty()
+
+    fun setTelegramBotToken(token: String) {
+        preferences.edit().putString(KEY_TELEGRAM_BOT_TOKEN, token.trim()).apply()
+    }
+
+    fun isTelegramBotConfigured(): Boolean =
+        TelegramSos.normalizeBotToken(telegramBotToken()) != null
+
     private fun migrateLegacyContacts(): List<EmergencyContact> {
         val contacts = preferences.getStringSet(KEY_LEGACY_CONTACTS, emptySet())
             .orEmpty()
@@ -83,7 +94,10 @@ class ContactsRepository(context: Context) {
                             phone = phone,
                             callEnabled = item.optBoolean(KEY_CALL_ENABLED, true),
                             whatsappEnabled = item.optBoolean(KEY_WHATSAPP_ENABLED, true),
-                            whatsappMessage = item.optString(KEY_WHATSAPP_MESSAGE, DEFAULT_WHATSAPP_MESSAGE)
+                            whatsappMessage = item.optString(KEY_WHATSAPP_MESSAGE, DEFAULT_WHATSAPP_MESSAGE),
+                            telegramEnabled = item.optBoolean(KEY_TELEGRAM_ENABLED, false),
+                            telegramUsername = item.optString(KEY_TELEGRAM_USERNAME, ""),
+                            telegramChatId = item.optString(KEY_TELEGRAM_CHAT_ID, "")
                         )
                     )
                 }
@@ -101,6 +115,9 @@ class ContactsRepository(context: Context) {
                     .put(KEY_CALL_ENABLED, contact.callEnabled)
                     .put(KEY_WHATSAPP_ENABLED, contact.whatsappEnabled)
                     .put(KEY_WHATSAPP_MESSAGE, contact.whatsappMessage)
+                    .put(KEY_TELEGRAM_ENABLED, contact.telegramEnabled)
+                    .put(KEY_TELEGRAM_USERNAME, contact.telegramUsername)
+                    .put(KEY_TELEGRAM_CHAT_ID, contact.telegramChatId)
             )
         }
         preferences.edit().putString(KEY_CONTACTS_JSON, array.toString()).apply()
@@ -114,7 +131,11 @@ class ContactsRepository(context: Context) {
         const val KEY_CALL_ENABLED = "call_enabled"
         const val KEY_WHATSAPP_ENABLED = "whatsapp_enabled"
         const val KEY_WHATSAPP_MESSAGE = "whatsapp_message"
+        const val KEY_TELEGRAM_ENABLED = "telegram_enabled"
+        const val KEY_TELEGRAM_USERNAME = "telegram_username"
+        const val KEY_TELEGRAM_CHAT_ID = "telegram_chat_id"
         const val KEY_SOS_ACTIONS_ENABLED = "sos_actions_enabled"
+        const val KEY_TELEGRAM_BOT_TOKEN = "telegram_bot_token"
 
         /**
          * Canonicalizes a phone number to digits-only form for WhatsApp URLs.
