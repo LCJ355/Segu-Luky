@@ -1278,6 +1278,8 @@ Verificacion:
 - ARCHIVOS DE CALIBRACION: EXPORTAR en [126,958][290,993] y WHATSAPP en [424,958][600,993], ambos de 35 px de alto (una linea) dentro de botones de 288 px.
 - INTERCOM-LUKY (Instrucciones): ACTUALIZAR en [109,1084][307,1119] y ABRIR en [466,1084][559,1119], texto de 110 a 305 dentro del boton [64,351].
 - Sin registros nuevos en logcat -b crash.
+- lintDebug sin errores: se silencia con justificacion el aviso MissingPermission de seedFromLastKnownLocation (la ubicacion se consulta solo con permiso concedido y dentro de runCatching).
+- APK compartible publicada en APK´s/Segu-Luky-1.44s.apk (5,22 MB) y copiada al equipo.
 - APK generado: app-release.apk (1.44s).
 
 FORMATO PARA FUTURAS ENTRADAS

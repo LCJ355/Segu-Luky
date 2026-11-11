@@ -1,6 +1,7 @@
 package com.intercom.segluky
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.ActivityOptions
 import android.app.KeyguardManager
@@ -941,7 +942,11 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
     // Bajo techo el GPS puede tardar minutos o no fijar nunca; la ultima posicion
     // conocida mantiene informado al usuario y el mapa solo la usa si es reciente.
+    @SuppressLint("MissingPermission") // Se comprueba el permiso y ademas se captura SecurityException.
     private fun seedFromLastKnownLocation() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) !=
+            PackageManager.PERMISSION_GRANTED
+        ) return
         val best = availableLocationProviders()
             .mapNotNull { provider ->
                 runCatching { locationManager.getLastKnownLocation(provider) }.getOrNull()
