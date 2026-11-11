@@ -283,6 +283,13 @@ class MainActivity : ComponentActivity() {
                     PhaseHeroCard(
                         snapshot = snapshot,
                         audioLevel = audioLevel,
+                        sensitivityG = sensitivityG,
+                        onSensitivityChange = { g ->
+                            sensitivityG = g
+                            if (snapshot.phase == SafetyPhase.STOPPED) {
+                                SafetyMonitorService.saveSensitivity(context, g)
+                            }
+                        },
                         sosActionsEnabled = sosActionsEnabled,
                         intercomInstalled = installation.installed,
                         onStart = { startMonitoring() },
@@ -314,26 +321,6 @@ class MainActivity : ComponentActivity() {
                 }
                 item {
                     SosPanel(onSos = { SafetyMonitorService.confirm(context) })
-                }
-                item {
-                    SeguCard(
-                        description = if (snapshot.phase == SafetyPhase.STOPPED) {
-                            "Desliza para ajustar el golpe que dispara el SOS."
-                        } else {
-                            null
-                        }
-                    ) {
-                        SensitivityControl(
-                            sensitivityG = sensitivityG,
-                            enabled = snapshot.phase == SafetyPhase.STOPPED,
-                            onSensitivityChange = { g ->
-                                sensitivityG = g
-                                if (snapshot.phase == SafetyPhase.STOPPED) {
-                                    SafetyMonitorService.saveSensitivity(context, g)
-                                }
-                            }
-                        )
-                    }
                 }
                 item { Spacer(Modifier.height(6.dp)) }
                 }
@@ -1807,6 +1794,8 @@ private fun PermissionRow(
 private fun PhaseHeroCard(
     snapshot: SafetySnapshot,
     audioLevel: AudioLevelReading,
+    sensitivityG: Float,
+    onSensitivityChange: (Float) -> Unit,
     sosActionsEnabled: Boolean,
     intercomInstalled: Boolean,
     onStart: () -> Unit,
@@ -1930,6 +1919,11 @@ private fun PhaseHeroCard(
             )
             AudioLevelLine(audioLevel)
             MovementLevelLine(snapshot.movementLevel)
+            SensitivityControl(
+                sensitivityG = sensitivityG,
+                enabled = phase == SafetyPhase.STOPPED,
+                onSensitivityChange = onSensitivityChange
+            )
             if (monitoring && !sosActionsEnabled) {
                 SosDisabledWarning(onOpenSettings = onOpenSettings)
             }

@@ -1047,6 +1047,19 @@ APK generado: app-release.apk (1.27s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
 ======================================================================
+
+1.28s (versionCode 20)
+Fecha: 2026-02-20
+Cambios funcionales:
+- Se elimina la tarjeta independiente de sensibilidad y el texto "Desliza para ajustar el golpe que dispara el SOS.".
+- SENSIBILIDAD A LOS GOLPES, AJUSTE y la barra de ajuste pasan a estar dentro de la tarjeta del monitor, justo debajo de MOVIMIENTO DEL MOVIL y antes del aviso de SOS.
+- La barra sigue deshabilitada mientras el monitor esta en marcha (punto verde) y ajustable con el monitor detenido (punto naranja).
+Verificacion:
+- Detenido: INICIAR MONITOR, luces, NIVEL DE AUDIO, MOVIMIENTO DEL MOVIL, SENSIBILIDAD A LOS GOLPES, AJUSTE: 3.5 g, 0..7, sin leyendas de ayuda.
+- En marcha: DETENER MONITOR, NIVEL DE AUDIO en vivo, MOVIMIENTO DEL MOVIL, sensibilidad con punto verde y AVISOS SOS DESACTIVADOS al final.
+- APK generado: app-release.apk (1.28s).
+Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
+
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 
