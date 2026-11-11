@@ -1008,6 +1008,26 @@ Resultado: OK; tests unitarios y lint vital sin errores; monitor dejado detenido
 APK generado: app-release.apk (1.25s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
+Fecha: 2026-11-11
+Version: 1.26s (versionCode 18)
+Cambio: (1) Se quita de la tarjeta de sensibilidad la primera linea SENSIBILIDAD Y
+  NIVELES y su valor (AJUSTE 3.5 g / BLOQUEADA) por ser redundante con el titulo
+  SENSIBILIDAD A LOS GOLPES y con AJUSTE: 3.5 g. (2) El punto que se desliza para
+  ajustar la sensibilidad ahora se pinta naranja cuando el monitor esta detenido
+  (se puede ajustar) y verde cuando el monitor esta en marcha (ajuste fijado),
+  usando los mismos colores que el boton del monitor.
+Motivo: Pedido del usuario: la primera linea era redundante y el punto del ajuste
+  debe indicar de un vistazo si el ajuste se puede tocar o ya esta fijado.
+Prueba realizada: assembleRelease + install -r en el OPPO. Monitor detenido: la
+  tarjeta muestra solo Desliza para ajustar..., SENSIBILIDAD A LOS GOLPES,
+  AJUSTE: 3.5 g y la barra 0..7, sin SENSIBILIDAD Y NIVELES; el punto es naranja
+  (x=319..358, y=1321..1360) y no hay ningun pixel verde en pantalla. Monitor
+  iniciado: el punto pasa a verde (x=319..358, y=1445..1484) y el boton DETENER
+  MONITOR tambien se ve verde.
+Resultado: OK; tests unitarios en verde; monitor dejado detenido.
+APK generado: app-release.apk (1.26s).
+Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
+
 ======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================

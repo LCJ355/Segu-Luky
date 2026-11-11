@@ -316,17 +316,6 @@ class MainActivity : ComponentActivity() {
                 }
                 item {
                     SeguCard(
-                        title = "SENSIBILIDAD Y NIVELES",
-                        status = if (snapshot.phase == SafetyPhase.STOPPED) {
-                            "AJUSTE " + String.format(Locale.US, "%.1f", sensitivityG) + " g"
-                        } else {
-                            "BLOQUEADA"
-                        },
-                        tone = when {
-                            snapshot.phase != SafetyPhase.STOPPED -> Tone.OFF
-                            sensitivityG < 1.5f -> Tone.WARN
-                            else -> Tone.OK
-                        },
                         description = if (snapshot.phase == SafetyPhase.STOPPED) {
                             "Desliza para ajustar el golpe que dispara el SOS."
                         } else {
@@ -1697,9 +1686,9 @@ private fun toneOf(state: IndicatorState): Tone = when (state) {
     IndicatorState.OFF -> Tone.OFF
 }
 
-/** Tinta del boton del monitor: naranja = desactivado, verde = activado. */
-private val MonitorOffInk = Color(0xFFE2660C)
-private val MonitorOnInk = Color(0xFF1E8E3E)
+/** Naranja = desactivado / se puede ajustar; verde = activado / ajuste fijado. */
+private val StateOffInk = Color(0xFFE2660C)
+private val StateOnInk = Color(0xFF1E8E3E)
 
 @androidx.compose.runtime.Composable
 private fun StatusPill(text: String, tone: Tone) {
@@ -1729,7 +1718,7 @@ private fun SectionHeader(text: String) {
  */
 @androidx.compose.runtime.Composable
 private fun SeguCard(
-    title: String,
+    title: String? = null,
     status: String? = null,
     tone: Tone = Tone.OFF,
     description: String? = null,
@@ -1748,24 +1737,28 @@ private fun SeguCard(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (trailing == null) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                    if (status != null) StatusPill(status, tone)
-                }
-            } else {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(title, style = MaterialTheme.typography.titleSmall)
+            if (title != null || status != null) {
+                if (trailing == null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (title != null) {
+                            Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        }
                         if (status != null) StatusPill(status, tone)
                     }
-                    trailing()
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (title != null) Text(title, style = MaterialTheme.typography.titleSmall)
+                            if (status != null) StatusPill(status, tone)
+                        }
+                        trailing()
+                    }
                 }
             }
             if (description != null) {
@@ -1913,7 +1906,7 @@ private fun PhaseHeroCard(
             }
             if (!phase.locksCriticalSettings()) {
                 val starting = phase == SafetyPhase.STOPPED
-                val stateInk = if (starting) MonitorOffInk else MonitorOnInk
+                val stateInk = if (starting) StateOffInk else StateOnInk
                 Button(
                     onClick = if (starting) onStart else onStop,
                     modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -2420,7 +2413,8 @@ private fun SegmentedSensitivitySlider(
             steps = 12,
             modifier = Modifier.fillMaxWidth(),
             colors = SliderDefaults.colors(
-                thumbColor = if (enabled) Color(0xFF263238) else Color(0xFF9E9E9E),
+                thumbColor = StateOffInk,
+                disabledThumbColor = StateOnInk,
                 activeTrackColor = Color.Transparent,
                 inactiveTrackColor = Color.Transparent,
                 disabledActiveTrackColor = Color.Transparent,
