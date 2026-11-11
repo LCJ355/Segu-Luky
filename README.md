@@ -1,4 +1,4 @@
-# Segu-Luky V-1.43s
+# Segu-Luky V-1.44s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing

@@ -758,6 +758,24 @@ private val AboutIconBlueFg = Color(0xFF1A73E8)
 private val AboutIconOrangeBg = Color(0xFFFFF1E6)
 private val AboutIconOrangeFg = Color(0xFFC2410C)
 
+// Botones que comparten fila: menos relleno lateral para que la etiqueta quepa en una linea.
+private val CompactButtonPadding = androidx.compose.foundation.layout.PaddingValues(
+    horizontal = 4.dp,
+    vertical = 8.dp
+)
+
+// Etiqueta de boton estrecho: una sola linea y tamano reducido para que nunca se recorte.
+@androidx.compose.runtime.Composable
+private fun TightButtonLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        maxLines = 1
+    )
+}
+
 @androidx.compose.runtime.Composable
 private fun AboutRow(
     iconRes: Int,
@@ -1415,9 +1433,11 @@ private fun EmergencySettingsScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                     modifier = Modifier.fillMaxWidth()
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(
                         enabled = !criticalSettingsLocked,
+                        modifier = Modifier.weight(1f),
+                        contentPadding = CompactButtonPadding,
                         onClick = {
                             val normalized = TelegramSos.normalizeBotToken(telegramToken)
                             if (normalized == null) {
@@ -1428,9 +1448,11 @@ private fun EmergencySettingsScreen(
                                 telegramFeedback = "Token guardado"
                             }
                         }
-                    ) { Text("GUARDAR TOKEN") }
+                    ) { TightButtonLabel("GUARDAR") }
                     OutlinedButton(
                         enabled = !criticalSettingsLocked && !telegramTesting && botTargets.isNotEmpty(),
+                        modifier = Modifier.weight(1f),
+                        contentPadding = CompactButtonPadding,
                         onClick = {
                             val target = botTargets.firstOrNull() ?: return@OutlinedButton
                             val token = TelegramSos.normalizeBotToken(telegramToken)
@@ -1456,7 +1478,7 @@ private fun EmergencySettingsScreen(
                                 }
                             }
                         }
-                    ) { Text("ENVIAR PRUEBA") }
+                    ) { TightButtonLabel("ENVIAR PRUEBA") }
                 }
                 if (telegramToken.isNotBlank()) {
                     TextButton(
@@ -1624,9 +1646,10 @@ private fun EmergencySettingsScreen(
                                     }
                                 }
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            contentPadding = CompactButtonPadding
                         ) {
-                            Text("EXPORTAR", fontWeight = FontWeight.Bold)
+                            TightButtonLabel("EXPORTAR")
                         }
                         Button(
                             onClick = {
@@ -1645,12 +1668,13 @@ private fun EmergencySettingsScreen(
                                 }
                             },
                             modifier = Modifier.weight(1f),
+                            contentPadding = CompactButtonPadding,
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                                 containerColor = Color(0xFF25D366),
                                 contentColor = Color.White
                             )
                         ) {
-                            Text("WHATSAPP", fontWeight = FontWeight.Bold)
+                            TightButtonLabel("WHATSAPP")
                         }
                     }
                     if (calibration.files.isEmpty()) {
@@ -2138,10 +2162,18 @@ private fun InstructionsScreen(
                         },
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = onRefreshIntercom) { Text("ACTUALIZAR") }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = onRefreshIntercom,
+                            modifier = Modifier.weight(1f),
+                            contentPadding = CompactButtonPadding
+                        ) { TightButtonLabel("ACTUALIZAR") }
                         if (installation.installed) {
-                            Button(onClick = onOpenIntercom) { Text("ABRIR INTERCOM") }
+                            Button(
+                                onClick = onOpenIntercom,
+                                modifier = Modifier.weight(1f),
+                                contentPadding = CompactButtonPadding
+                            ) { TightButtonLabel("ABRIR") }
                         }
                     }
                 }

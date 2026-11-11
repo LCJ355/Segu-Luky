@@ -1264,6 +1264,22 @@ Verificacion:
 - APK generado: app-release.apk (1.43s).
 
 
+V-1.44s (versionCode 36)
+Fecha: 2026-11-11
+Botoneras con la etiqueta en una sola linea:
+- Las filas de dos botones que comparten anchura (Telegram, ARCHIVOS DE CALIBRACION e INTERCOM-LUKY) usan Modifier.fillMaxWidth() en la fila y Modifier.weight(1f) en cada boton, con un relleno lateral compacto (4 dp) en lugar de los 24 dp por defecto de Material3.
+- Nueva etiqueta TightButtonLabel: tipografia labelMedium en negrita, centrada y a una sola linea, para que el texto quepa en el boton sin cambiar el tamano del resto de la interfaz.
+- Se acortan dos etiquetas que no cabian: GUARDAR TOKEN pasa a GUARDAR y ABRIR INTERCOM pasa a ABRIR (el contexto ya lo indica).
+Motivo: el usuario veia "ENVIAR PRUEBA" partido en varias lineas dentro del circulo del boton y, tras el primer intento, recortado por la derecha.
+Verificacion:
+- Compilacion y pruebas unitarias correctas (BUILD SUCCESSFUL), 70 tareas, 0 fallos.
+- Instalado en el OPPO como V-1.44s (versionCode 36). Medido sobre captura: cada etiqueta ocupa una sola banda de texto y queda centrada con margen a ambos lados.
+- Telegram: GUARDAR en [133,1023][284,1058] dentro del boton [64,351] y ENVIAR PRUEBA en [388,1023][636,1058] dentro del boton [368,655]; texto de 135 a 283 y de 391 a 634.
+- ARCHIVOS DE CALIBRACION: EXPORTAR en [126,958][290,993] y WHATSAPP en [424,958][600,993], ambos de 35 px de alto (una linea) dentro de botones de 288 px.
+- INTERCOM-LUKY (Instrucciones): ACTUALIZAR en [109,1084][307,1119] y ABRIR en [466,1084][559,1119], texto de 110 a 305 dentro del boton [64,351].
+- Sin registros nuevos en logcat -b crash.
+- APK generado: app-release.apk (1.44s).
+
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 
