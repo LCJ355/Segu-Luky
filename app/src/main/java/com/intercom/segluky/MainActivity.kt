@@ -16,8 +16,10 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -37,6 +39,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -2073,31 +2076,65 @@ private fun LevelBar(progress: Float) {
 
 @androidx.compose.runtime.Composable
 private fun SosPanel(onSos: () -> Unit) {
+    var holdProgress by remember { mutableStateOf(0f) }
+    val fill by animateFloatAsState(
+        targetValue = holdProgress,
+        animationSpec = tween(durationMillis = 90, easing = LinearEasing)
+    )
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Box(
-                Modifier
-                    .size((SOS_BUTTON_SIZE + 24).dp)
-                    .clip(CircleShape)
-                    .background(Tone.BAD.soft)
-            )
-            RoundActionButton(
-                mainText = "S O S",
-                subText = "5 s",
-                color = Tone.BAD.text,
-                buttonSize = SOS_BUTTON_SIZE.dp,
-                onTap = { /* A short tap is intentionally harmless. */ },
-                onLongPress = onSos
-            )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(HOLD_COLUMN_GAP)
+        ) {
+            HoldProgressColumn(fill)
+            Box(contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .size((SOS_BUTTON_SIZE + 24).dp)
+                        .clip(CircleShape)
+                        .background(Tone.BAD.soft)
+                )
+                RoundActionButton(
+                    mainText = "S O S",
+                    subText = "5 s",
+                    color = Tone.BAD.text,
+                    buttonSize = SOS_BUTTON_SIZE.dp,
+                    onTap = { /* A short tap is intentionally harmless. */ },
+                    onLongPress = onSos,
+                    onHoldProgress = { holdProgress = it }
+                )
+            }
+            HoldProgressColumn(fill)
         }
         Text(
             "MANTEN PULSADO 5 SEGUNDOS",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/** Columna lateral del SOS: se rellena de abajo arriba con los 5 segundos de pulsacion. */
+@androidx.compose.runtime.Composable
+private fun HoldProgressColumn(fill: Float) {
+    Box(
+        modifier = Modifier
+            .width(HOLD_COLUMN_WIDTH)
+            .height(HOLD_COLUMN_HEIGHT)
+            .clip(RoundedCornerShape(HOLD_COLUMN_WIDTH / 2))
+            .background(HoldTrackGreen),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(fill.coerceIn(0f, 1f))
+                .clip(RoundedCornerShape(HOLD_COLUMN_WIDTH / 2))
+                .background(StrongGreen)
         )
     }
 }
@@ -2346,7 +2383,12 @@ private enum class PressEnd {
 
 private const val HOLD_DURATION_MS = 5_000L
 private const val SOS_BUTTON_SIZE = 210
+private const val HOLD_PROGRESS_STEPS = 100f
 private val SENSITIVITY_TRACK_HEIGHT = 8.dp
+private val HOLD_COLUMN_WIDTH = 12.dp
+private val HOLD_COLUMN_GAP = 10.dp
+private val HOLD_COLUMN_HEIGHT = (SOS_BUTTON_SIZE + 24).dp
+private val HoldTrackGreen = Color(0xFFB9F6CA)
 private const val SOS_MAIN_FONT_SIZE = 40
 private const val SOS_SUB_FONT_SIZE = 20
 
@@ -2357,7 +2399,8 @@ private fun RoundActionButton(
     buttonSize: androidx.compose.ui.unit.Dp,
     subText: String? = null,
     onTap: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onHoldProgress: (Float) -> Unit = {}
 ) {
     var pressed by remember { mutableStateOf(false) }
     val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_ALARM, 100) }
@@ -2384,6 +2427,7 @@ private fun RoundActionButton(
                         pressed = true
                         val pressStartAt = SystemClock.uptimeMillis()
                         var lastBeepIndex = -1
+                        var lastProgressStep = -1
                         var result: PressEnd? = null
 
                         while (result == null) {
@@ -2392,6 +2436,13 @@ private fun RoundActionButton(
                             if (remaining <= 0L) {
                                 result = PressEnd.LONG_PRESS
                                 break
+                            }
+
+                            val progressStep =
+                                (elapsed.toFloat() / HOLD_DURATION_MS * HOLD_PROGRESS_STEPS).toInt()
+                            if (progressStep != lastProgressStep) {
+                                lastProgressStep = progressStep
+                                onHoldProgress(progressStep / HOLD_PROGRESS_STEPS)
                             }
 
                             val beepWindowStart = HOLD_DURATION_MS - 3_000L
@@ -2436,6 +2487,7 @@ private fun RoundActionButton(
                         }
                     } finally {
                         pressed = false
+                        onHoldProgress(0f)
                     }
                 }
             },

@@ -1197,6 +1197,20 @@ Verificacion:
 - Instalado en el OPPO: arranca como V-1.39s, INICIAR MONITOR / DETENER MONITOR funcionan, el nivel de audio se mueve (-52 dB) y el servicio sigue vivo al detener el monitor.
 - APK generado: app-release.apk (1.39s).
 
+1.40s (versionCode 32)
+Fecha: 2026-11-11
+Mejora visual del boton SOS:
+- A izquierda y derecha del boton rojo S O S aparecen dos columnas verticales del alto del marco del boton (234 dp, 12 dp de ancho), separadas 10 dp del circulo y centradas con el.
+- En reposo se ven como pistas verde claro. Al mantener pulsado el SOS se rellenan de abajo arriba en verde (0xFF00C853) de forma lineal con los 5 segundos: la fraccion es el tiempo transcurrido dividido entre 5000 ms, al 1 % de resolucion.
+- Al soltar antes de tiempo las columnas vuelven a vaciarse (animacion de 90 ms) y no pasa nada; al llegar a los 5 segundos quedan llenas y salta la cuenta atras de siempre.
+- El progreso sale del mismo bucle que ya med?a la pulsacion larga y los pitidos de los ultimos 3 segundos, asi que no hay temporizadores nuevos ni gasto extra cuando no se pulsa. SosPanel solo se redibuja mientras hay un dedo encima, como mucho 20 veces por segundo.
+- Constantes nuevas: HOLD_COLUMN_WIDTH (12 dp), HOLD_COLUMN_GAP (10 dp), HOLD_COLUMN_HEIGHT (alto del marco), HoldTrackGreen y HOLD_PROGRESS_STEPS (100).
+Verificacion en el OPPO (capturas medidas pixel a pixel):
+- En reposo las dos pistas miden lo mismo y estan simetricas: x 82-105 y 614-637, y de alto 848 a 1313.
+- Manteniendo pulsado: 23,6 % de relleno hacia 1,2 s, 58,8 % hacia 2,9 s y 76,8 % hacia 3,8 s, siempre igual en las dos columnas y creciendo hacia arriba.
+- Con una pulsacion de 5,5 s salta la cuenta atras como antes (ESTADO SOS ACTIVO, 30 s) y se cancela sin problemas; al volver al inicio las columnas quedan vacias.
+- APK generado: app-release.apk (1.40s).
+
 
 
 FORMATO PARA FUTURAS ENTRADAS
