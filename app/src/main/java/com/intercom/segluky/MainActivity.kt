@@ -20,6 +20,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -33,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -242,6 +244,7 @@ class MainActivity : ComponentActivity() {
         BackHandler(enabled = screen != AppScreen.HOME) { screen = AppScreen.HOME }
 
         Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 SeguTopBar(
                     screen = screen,
@@ -275,59 +278,67 @@ class MainActivity : ComponentActivity() {
                             .multiTouchEmergency { SafetyMonitorService.confirm(context) },
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                item { Spacer(Modifier.height(6.dp)) }
                 item {
-                    Spacer(Modifier.height(8.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = {
-                                if (snapshot.phase == SafetyPhase.STOPPED) {
-                                    startMonitoring()
-                                } else {
-                                    SafetyMonitorService.stop(context)
+                    PhaseHeroCard(
+                        snapshot = snapshot,
+                        sosActionsEnabled = sosActionsEnabled,
+                        onStart = { startMonitoring() },
+                        onStop = { SafetyMonitorService.stop(context) },
+                        onOpenSettings = { screen = AppScreen.SETTINGS }
+                    )
+                }
+                if (showGpsOffWarning) {
+                    item {
+                        GpsOffWarning(
+                            onOpenGpsSettings = {
+                                runCatching {
+                                    context.startActivity(
+                                        Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    )
                                 }
-                            },
-                            enabled = snapshot.phase == SafetyPhase.STOPPED ||
-                                snapshot.phase == SafetyPhase.MONITORING ||
-                                snapshot.phase == SafetyPhase.FALL_CANDIDATE ||
-                                snapshot.phase == SafetyPhase.COUNTDOWN,
-                            modifier = Modifier.fillMaxWidth().height(54.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text(
-                                text = when (snapshot.phase) {
-                                    SafetyPhase.STOPPED -> "INICIAR"
-                                    SafetyPhase.MONITORING -> "DETENER"
-                                    SafetyPhase.FALL_CANDIDATE -> "DETENER"
-                                    SafetyPhase.COUNTDOWN -> "DETENER"
-                                    else -> "MONITOR ACTIVO"
-                                },
-                                fontWeight = FontWeight.Bold
-                            )
+                            }
+                        )
+                    }
+                }
+                if (permissionWarnings.isNotEmpty()) {
+                    item {
+                        PermissionReadinessWarning(
+                            messages = permissionWarnings,
+                            onRequestPermissions = ::requestConfiguredFeaturePermissions
+                        )
+                    }
+                }
+                item {
+                    SosPanel(onSos = { SafetyMonitorService.confirm(context) })
+                }
+                item {
+                    MonitorCard(
+                        snapshot = snapshot,
+                        intercomInstalled = installation.installed,
+                        sensitivityG = sensitivityG
+                    )
+                }
+                item {
+                    SeguCard(
+                        title = "SENSIBILIDAD Y NIVELES",
+                        status = if (snapshot.phase == SafetyPhase.STOPPED) {
+                            "AJUSTE " + String.format(Locale.US, "%.1f", sensitivityG) + " g"
+                        } else {
+                            "BLOQUEADA"
+                        },
+                        tone = when {
+                            snapshot.phase != SafetyPhase.STOPPED -> Tone.OFF
+                            sensitivityG < 1.5f -> Tone.WARN
+                            else -> Tone.OK
+                        },
+                        description = if (snapshot.phase == SafetyPhase.STOPPED) {
+                            "Desliza para ajustar el golpe que dispara el SOS."
+                        } else {
+                            "Cambia el ajuste con el monitor detenido."
                         }
-                        if (snapshot.phase == SafetyPhase.COUNTDOWN) {
-                            CountdownNumbers(
-                                countdownEndsAt = snapshot.countdownEndsAt,
-                                onCancel = { SafetyMonitorService.cancel(context) }
-                            )
-                        }
-                        if (showGpsOffWarning) {
-                            GpsOffWarning(
-                                onOpenGpsSettings = {
-                                    runCatching {
-                                        context.startActivity(
-                                            Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        )
-                                    }
-                                }
-                            )
-                        }
-                        if (permissionWarnings.isNotEmpty()) {
-                            PermissionReadinessWarning(
-                                messages = permissionWarnings,
-                                onRequestPermissions = ::requestConfiguredFeaturePermissions
-                            )
-                        }
+                    ) {
                         SensitivityControl(
                             sensitivityG = sensitivityG,
                             movementLevel = snapshot.movementLevel,
@@ -341,29 +352,8 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        RoundActionButton(
-                            mainText = "S O S",
-                            subText = "5 s",
-                            color = Color(0xFFB3261E),
-                            buttonSize = SOS_BUTTON_SIZE.dp,
-                            onTap = { /* A short tap is intentionally harmless. */ },
-                            onLongPress = { SafetyMonitorService.confirm(context) }
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    StatusCard(
-                        snapshot = snapshot,
-                        intercomInstalled = installation.installed,
-                        sosActionsEnabled = sosActionsEnabled,
-                        sensitivityG = sensitivityG,
-                        onCancel = { SafetyMonitorService.cancel(context) }
-                    )
                 }
+                item { Spacer(Modifier.height(6.dp)) }
                 }
                 }
                 AppScreen.SETTINGS -> EmergencySettingsScreen(
@@ -472,18 +462,27 @@ private fun SeguTopBar(
     when (screen) {
         AppScreen.HOME -> CenteredSeguTopBar(
             title = "Segu-Luky",
-            titleColor = HarleyOrange,
+            titleColor = MaterialTheme.colorScheme.primary,
             navigation = {
                 IconButton(
                     onClick = onSettings,
                     modifier = Modifier.semantics { contentDescription = "Abrir configuracion" }
                 ) {
-                    Text("\u2699", color = HarleyOrange, fontSize = 26.sp, lineHeight = 26.sp)
+                    Text(
+                        "\u2699",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 24.sp,
+                        lineHeight = 24.sp
+                    )
                 }
             },
             action = {
                 TextButton(onClick = onInstructions) {
-                        Text(appVersionLabel(), fontWeight = FontWeight.Bold)
+                    Text(
+                        appVersionLabel(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 }
             }
         )
@@ -506,73 +505,29 @@ private fun CenteredSeguTopBar(
     action: @androidx.compose.runtime.Composable () -> Unit = {}
 ) {
     Surface(color = MaterialTheme.colorScheme.surface) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .height(64.dp)
-        ) {
-            Text(
-                text = title,
-                modifier = Modifier.align(Alignment.Center),
-                color = titleColor,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center
-            )
-            Box(Modifier.align(Alignment.CenterStart)) { navigation() }
-            Box(Modifier.align(Alignment.CenterEnd)) { action() }
-        }
-    }
-}
-
-@androidx.compose.runtime.Composable
-private fun CountdownNumbers(countdownEndsAt: Long?, onCancel: () -> Unit) {
-    if (countdownEndsAt == null) return
-    var seconds by remember { mutableStateOf(countdownRemainingSeconds(countdownEndsAt)) }
-    LaunchedEffect(countdownEndsAt) {
-        while (isActive) {
-            seconds = countdownRemainingSeconds(countdownEndsAt)
-            delay(200L)
-            if (countdownEndsAt - SystemClock.elapsedRealtime() <= 0L) break
-        }
-    }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFFFEBEE),
-        contentColor = Color(0xFFC62828)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = "$seconds",
-                style = MaterialTheme.typography.displayLarge,
-                fontSize = 88.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFFC62828),
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = if (seconds == 1L) "segundo para el SOS" else "segundos para el SOS",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFFB3261E)
-            )
-            Spacer(Modifier.height(8.dp))
-            Button(
-                onClick = onCancel,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(52.dp),
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFC62828),
-                    contentColor = Color.White
-                )
+        Column {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .height(60.dp)
             ) {
-                Text("CANCELAR SOS", fontWeight = FontWeight.Bold)
+                Text(
+                    text = title,
+                    modifier = Modifier.align(Alignment.Center),
+                    color = titleColor,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Box(Modifier.align(Alignment.CenterStart)) { navigation() }
+                Box(Modifier.align(Alignment.CenterEnd)) { action() }
             }
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+            )
         }
     }
 }
@@ -583,37 +538,32 @@ private fun countdownRemainingSeconds(endAt: Long): Long =
 @androidx.compose.runtime.Composable
 private fun ActiveSafetyCancelBar(snapshot: SafetySnapshot, onCancel: () -> Unit) {
     if (!snapshot.phase.locksCriticalSettings()) return
+    val countdown = snapshot.phase == SafetyPhase.COUNTDOWN
+    val tone = if (countdown) Tone.BAD else Tone.WARN
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (snapshot.phase == SafetyPhase.COUNTDOWN) Color(0xFFFFEBEE) else Color(0xFFFFF8E1),
-        contentColor = StatusTextColor,
-        shadowElevation = 8.dp
+        color = tone.soft,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shadowElevation = 10.dp
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+        Button(
+            onClick = onCancel,
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .height(54.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                containerColor = Tone.BAD.text,
+                contentColor = Color.White
+            )
         ) {
-            if (snapshot.phase == SafetyPhase.VALIDATING) {
-                Text(
-                    "VALIDACION DE SEGURIDAD ACTIVA",
-                    color = Color(0xFFC62828),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Button(
-                onClick = onCancel,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFC62828),
-                    contentColor = Color.White
-                )
-            ) {
-                Text(
-                    if (snapshot.phase == SafetyPhase.COUNTDOWN) "CANCELAR SOS" else "CANCELAR VALIDACION",
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            Text(
+                if (countdown) "CANCELAR SOS" else "CANCELAR VALIDACION",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
@@ -726,293 +676,221 @@ private fun EmergencySettingsScreen(
         }
         item {
             if (!criticalSettingsLocked) Spacer(Modifier.height(8.dp))
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (sosActionsEnabled) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("FUNCIONALIDAD SOS", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            when {
-                                !sosActionsEnabled -> "AVISOS SOS DESACTIVADOS"
-                                callPermissionRequired && !callPermissionGranted -> "LLAMADAS SOS SIN PERMISO"
-                                else -> "AVISOS SOS ACTIVADOS"
-                            },
-                            color = when {
-                                callPermissionRequired && !callPermissionGranted -> MaterialTheme.colorScheme.error
-                                sosActionsEnabled -> StrongGreen
-                                else -> Color(0xFF6B7280)
-                            },
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            if (sosActionsEnabled) {
-                                "Las llamadas y WhatsApp configurados quedan habilitados para un SOS."
-                            } else {
-                                "No se realizaran llamadas ni WhatsApp a ningun contacto."
-                            } + " Desactivalos para probar sensores sin avisar a contactos.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        if (callPermissionRequired && !callPermissionGranted) {
-                            Text(
-                                "Las llamadas no estan listas hasta conceder el permiso; los mensajes configurados no se bloquean.",
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+            SectionHeader("AVISOS SOS")
+        }
+        item {
+            val callsBlocked = callPermissionRequired && !callPermissionGranted
+            SeguCard(
+                title = "FUNCIONALIDAD SOS",
+                status = when {
+                    !sosActionsEnabled -> "DESACTIVADO"
+                    callsBlocked -> "LLAMADAS SIN PERMISO"
+                    else -> "ACTIVADO"
+                },
+                tone = when {
+                    callsBlocked -> Tone.BAD
+                    sosActionsEnabled -> Tone.OK
+                    else -> Tone.OFF
+                },
+                trailing = {
                     Switch(
                         checked = sosActionsEnabled,
                         enabled = !criticalSettingsLocked,
                         onCheckedChange = onSosActionsEnabledChange
                     )
                 }
+            ) {
+                Text(
+                    if (sosActionsEnabled) {
+                        "Las llamadas y los mensajes configurados quedan habilitados para un SOS."
+                    } else {
+                        "No se realizaran llamadas ni mensajes a ningun contacto."
+                    } + " Desactivalo para probar los sensores sin avisar a nadie.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (callsBlocked) {
+                    Text(
+                        "Las llamadas no estan listas hasta conceder el permiso; los mensajes configurados no se bloquean.",
+                        color = Tone.BAD.text,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
         item {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (exactAlarmReady) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant
-                )
+            SectionHeader("PERMISOS DEL SISTEMA")
+        }
+        item {
+            SeguCard(
+                title = "ALARMAS EXACTAS",
+                status = if (exactAlarmReady) "AUTORIZADAS" else "NO AUTORIZADAS",
+                tone = if (exactAlarmReady) Tone.OK else Tone.BAD,
+                description = "Android puede retrasar el final del SOS y el paso al siguiente contacto si no las permite. " +
+                    "Autorizalas para que el aviso sea puntual."
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text("ALARMAS EXACTAS", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(
-                        if (exactAlarmReady) "AUTORIZADAS" else "NO AUTORIZADAS",
-                        color = if (exactAlarmReady) StrongGreen else MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        "Android puede retrasar la finalizacion del SOS y el paso al siguiente contacto si no permite alarmas exactas. " +
-                            "Autorizalas para que el respaldo sea puntual.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    if (!exactAlarmReady) {
-                        OutlinedButton(
-                            onClick = { AutomationPermissions.openExactAlarmSettings(context) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("AUTORIZAR ALARMAS EXACTAS")
-                        }
+                if (!exactAlarmReady) {
+                    OutlinedButton(
+                        onClick = { AutomationPermissions.openExactAlarmSettings(context) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("AUTORIZAR ALARMAS EXACTAS")
                     }
                 }
             }
         }
         item {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (globalGestureReady) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant
-                )
+            val supported = GlobalTouchAccessibilityService.isSupported()
+            SeguCard(
+                title = "GESTO GLOBAL 2 DEDOS",
+                status = when {
+                    !supported -> "NO DISPONIBLE"
+                    globalGestureReady -> "ACTIVADO"
+                    else -> "DESACTIVADO"
+                },
+                tone = when {
+                    !supported -> Tone.OFF
+                    globalGestureReady -> Tone.OK
+                    else -> Tone.BAD
+                },
+                description = if (supported) {
+                    "Mantener dos dedos 5 s en cualquier pantalla inicia el SOS. Android exige activarlo a mano " +
+                        "en Accesibilidad; no lee el contenido de otras apps."
+                } else {
+                    "Necesita Android 12 o superior."
+                }
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text("GESTO GLOBAL 2 DEDOS", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    val supported = GlobalTouchAccessibilityService.isSupported()
-                    Text(
-                        when {
-                            !supported -> "NO DISPONIBLE (Android 12 o superior)"
-                            globalGestureReady -> "ACTIVADO"
-                            else -> "DESACTIVADO"
-                        },
-                        color = when {
-                            !supported -> Color(0xFF6B7280)
-                            globalGestureReady -> StrongGreen
-                            else -> MaterialTheme.colorScheme.error
-                        },
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        "Mantener dos dedos 5 s en cualquier pantalla inicia el SOS. Android exige activarlo a mano en Accesibilidad; " +
-                            "no lee el contenido de otras apps.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    if (supported && !globalGestureReady) {
-                        OutlinedButton(
-                            onClick = { GlobalTouchAccessibilityService.openSettings(context) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("ABRIR ACCESIBILIDAD")
-                        }
+                if (supported && !globalGestureReady) {
+                    OutlinedButton(
+                        onClick = { GlobalTouchAccessibilityService.openSettings(context) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("ABRIR ACCESIBILIDAD")
                     }
                 }
             }
         }
         item {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (fallOrientationGate) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("CAIDA / ORIENTACION", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            if (fallOrientationGate) "MODO MOTO ACTIVADO" else "GOLPE DIRECTO",
-                            color = if (fallOrientationGate) StrongGreen else Color(0xFF6B7280),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            if (fallOrientationGate) {
-                                "Un golpe fuerte inicia un candidato de 15 s: si el movil queda inclinado >= 55 grados durante 4 s (gravedad a baja tasa), salta el SOS. Un bache que no tumba la moto no avisa; la sacudida y los botones siguen siendo inmediatos."
-                            } else {
-                                "Todo golpe al nivel elegido inicia la cuenta atras directamente (como agitar el movil), sin confirmar inclinacion."
-                            } + " Se aplica al iniciar el monitor.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+            SectionHeader("SENSORES")
+        }
+        item {
+            SeguCard(
+                title = "CAIDA / ORIENTACION",
+                status = if (fallOrientationGate) "MODO MOTO" else "GOLPE DIRECTO",
+                tone = if (fallOrientationGate) Tone.OK else Tone.OFF,
+                trailing = {
                     Switch(
                         checked = fallOrientationGate,
                         enabled = !criticalSettingsLocked,
                         onCheckedChange = onFallOrientationGateChange
                     )
                 }
+            ) {
+                Text(
+                    if (fallOrientationGate) {
+                        "Un golpe fuerte abre un candidato de 15 s: si el movil queda inclinado 55 grados o mas durante 4 s, " +
+                            "salta el SOS. Un bache no tumba la moto y no avisa; la sacudida y los botones siguen siendo inmediatos."
+                    } else {
+                        "Todo golpe al nivel elegido inicia la cuenta atras directamente, como agitar el movil, " +
+                            "sin confirmar inclinacion."
+                    } + " Se aplica al iniciar el monitor.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
         item {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (voiceKeywordsGate) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("VOZ AYUDA / SOCORRO", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            when {
-                                voiceKeywordsGate && !audioPermissionGranted -> "SIN PERMISO DE MICROFONO"
-                                voiceKeywordsGate -> "ACTIVADA"
-                                else -> "DESACTIVADA"
-                            },
-                            color = when {
-                                voiceKeywordsGate && !audioPermissionGranted -> MaterialTheme.colorScheme.error
-                                voiceKeywordsGate -> StrongGreen
-                                else -> Color(0xFF6B7280)
-                            },
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            if (voiceKeywordsGate) {
-                                "Con el monitor activo (INICIAR) y el microfono autorizado, decir AYUDA o SOCORRO inicia la cuenta atras aunque la pantalla este apagada."
-                            } else {
-                                "No se escuchan palabras de emergencia; el microfono queda libre."
-                            } + " Requiere permiso de microfono.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+            val voiceBlocked = voiceKeywordsGate && !audioPermissionGranted
+            SeguCard(
+                title = "VOZ AYUDA / SOCORRO",
+                status = when {
+                    voiceBlocked -> "SIN MICROFONO"
+                    voiceKeywordsGate -> "ACTIVADA"
+                    else -> "DESACTIVADA"
+                },
+                tone = when {
+                    voiceBlocked -> Tone.BAD
+                    voiceKeywordsGate -> Tone.OK
+                    else -> Tone.OFF
+                },
+                trailing = {
                     Switch(
                         checked = voiceKeywordsGate,
                         enabled = !criticalSettingsLocked,
                         onCheckedChange = onVoiceKeywordsGateChange
                     )
                 }
+            ) {
+                Text(
+                    if (voiceKeywordsGate) {
+                        "Con el monitor activo y el microfono autorizado, decir AYUDA o SOCORRO inicia la cuenta atras " +
+                            "aunque la pantalla este apagada. No se graba ni se guarda sonido."
+                    } else {
+                        "No se escuchan palabras de emergencia; el microfono queda libre."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
         item {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (whatsappAutoSend) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("ENVIO AUTO MENSAJES", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text(
-                                if (whatsappAutoSend) "ACTIVADO" else "DESACTIVADO",
-                                color = if (whatsappAutoSend) StrongGreen else Color(0xFF6B7280),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Switch(
-                            checked = whatsappAutoSend,
-                            enabled = !criticalSettingsLocked,
-                            onCheckedChange = onWhatsappAutoSendChange
-                        )
-                    }
-                    Text(
-                        if (whatsappAutoSend) {
-                            "Al completar el SOS, WhatsApp y los enlaces t.me se abren y se pulsa Enviar automaticamente, sin confirmacion."
-                        } else {
-                            "WhatsApp y Telegram se abren con el mensaje y el enlace listos; el envio es manual."
-                        },
-                        style = MaterialTheme.typography.bodySmall
+            SectionHeader("ENVIO AUTOMATICO")
+        }
+        item {
+            SeguCard(
+                title = "ENVIO AUTO MENSAJES",
+                status = if (whatsappAutoSend) "ACTIVADO" else "DESACTIVADO",
+                tone = if (whatsappAutoSend) Tone.OK else Tone.OFF,
+                trailing = {
+                    Switch(
+                        checked = whatsappAutoSend,
+                        enabled = !criticalSettingsLocked,
+                        onCheckedChange = onWhatsappAutoSendChange
                     )
-                    if (whatsappAutoSend) {
-                        val whatsappLifecycle = LocalLifecycleOwner.current
-                        var whatsappRefresh by remember { mutableStateOf(0) }
-                        DisposableEffect(whatsappLifecycle) {
-                            val observer = LifecycleEventObserver { _, event ->
-                                if (event == Lifecycle.Event.ON_RESUME) whatsappRefresh++
-                            }
-                            whatsappLifecycle.lifecycle.addObserver(observer)
-                            onDispose { whatsappLifecycle.lifecycle.removeObserver(observer) }
+                },
+                description = if (whatsappAutoSend) {
+                    "Al terminar el SOS, WhatsApp y los enlaces t.me se abren y se pulsa Enviar sin confirmacion."
+                } else {
+                    "WhatsApp y Telegram se abren con el mensaje listo; el envio es manual."
+                }
+            ) {
+                if (whatsappAutoSend) {
+                    val whatsappLifecycle = LocalLifecycleOwner.current
+                    var whatsappRefresh by remember { mutableStateOf(0) }
+                    DisposableEffect(whatsappLifecycle) {
+                        val observer = LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_RESUME) whatsappRefresh++
                         }
-                        val accessibilityReady = remember(whatsappRefresh) {
-                            AutomationPermissions.isAccessibilityEnabled(context)
-                        }
-                        val overlayReady = remember(whatsappRefresh) {
-                            AutomationPermissions.canDrawOverlays(context)
-                        }
+                        whatsappLifecycle.lifecycle.addObserver(observer)
+                        onDispose { whatsappLifecycle.lifecycle.removeObserver(observer) }
+                    }
+                    val accessibilityReady = remember(whatsappRefresh) {
+                        AutomationPermissions.isAccessibilityEnabled(context)
+                    }
+                    val overlayReady = remember(whatsappRefresh) {
+                        AutomationPermissions.canDrawOverlays(context)
+                    }
+                    PermissionRow(
+                        label = "Accesibilidad (pulsar Enviar)",
+                        status = if (accessibilityReady) "ACTIVADA" else "DESACTIVADA",
+                        tone = if (accessibilityReady) Tone.OK else Tone.BAD,
+                        actionLabel = if (accessibilityReady) null else "ABRIR",
+                        onAction = { AutomationPermissions.openAccessibilitySettings(context) }
+                    )
+                    PermissionRow(
+                        label = "Abrir sobre otras apps",
+                        status = if (overlayReady) "PERMITIDO" else "DENEGADO",
+                        tone = if (overlayReady) Tone.OK else Tone.BAD,
+                        actionLabel = if (overlayReady) null else "PERMITIR",
+                        onAction = { AutomationPermissions.openOverlaySettings(context) }
+                    )
+                    if (!accessibilityReady || !overlayReady) {
                         Text(
-                            "Accesibilidad (pulsar Enviar): " + if (accessibilityReady) "ACTIVADA" else "DESACTIVADA",
-                            color = if (accessibilityReady) StrongGreen else MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold
+                            "Sin ambos permisos no puede ser automatico; se ofrecera WhatsApp manual como respaldo.",
+                            color = Tone.BAD.text,
+                            style = MaterialTheme.typography.bodySmall
                         )
-                        Text(
-                            "Abrir WhatsApp en 2o plano (sobre otras apps): " + if (overlayReady) "PERMITIDO" else "DENEGADO",
-                            color = if (overlayReady) StrongGreen else MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (!accessibilityReady || !overlayReady) {
-                            Text(
-                                "Sin ambos permisos el envio no puede ser automatico; se ofrecera WhatsApp manual como respaldo.",
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = { AutomationPermissions.openAccessibilitySettings(context) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("ABRIR ACCESIBILIDAD")
-                        }
-                        OutlinedButton(
-                            onClick = { AutomationPermissions.openOverlaySettings(context) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("PERMITIR SOBRE OTRAS APPS")
-                        }
                     }
                 }
             }
@@ -1032,139 +910,119 @@ private fun EmergencySettingsScreen(
                 !it.telegramReadyForBot && it.telegramUsername.isNotEmpty()
             }
             val telegramScope = androidx.compose.runtime.rememberCoroutineScope()
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (botConfigured) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant
-                )
+            SeguCard(
+                title = "TELEGRAM SOS",
+                status = when {
+                    botConfigured -> "BOT LISTO"
+                    telegramInstalled -> "SIN BOT"
+                    else -> "SIN TELEGRAM"
+                },
+                tone = when {
+                    botConfigured -> Tone.OK
+                    telegramInstalled -> Tone.WARN
+                    else -> Tone.BAD
+                },
+                description = when {
+                    botConfigured -> "El aviso sale solo, sin abrir Telegram ni desbloquear el movil."
+                    telegramInstalled -> "Se abrira Telegram y se pulsara Enviar; necesita ENVIO AUTO MENSAJES."
+                    else -> "Ni bot ni app de Telegram: ahora mismo no se enviaria nada."
+                }
             ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text("TELEGRAM SOS", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(
-                        when {
-                            botConfigured -> "BOT LISTO: el aviso se envia sin abrir Telegram"
-                            telegramInstalled -> "SIN BOT: se abrira Telegram y se pulsara Enviar"
-                            else -> "SIN BOT NI TELEGRAM: no se enviara nada"
-                        },
-                        color = if (botConfigured) StrongGreen else Color(0xFF6B7280),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        "Bot conectado: ${botTargets.size} de ${telegramContacts.size} contactos con chat id. " +
-                            "Enlace t.me: ${linkTargets.size} contacto(s) por accesibilidad.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    OutlinedTextField(
-                        value = telegramToken,
-                        onValueChange = { telegramToken = it.trim() },
-                        label = { Text("Token del bot (@BotFather)") },
-                        singleLine = true,
+                Text(
+                    "Bot conectado: ${botTargets.size} de ${telegramContacts.size} contactos con chat id. " +
+                        "Enlace t.me: ${linkTargets.size} contacto(s) por accesibilidad.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = telegramToken,
+                    onValueChange = { telegramToken = it.trim() },
+                    label = { Text("Token del bot (@BotFather)") },
+                    singleLine = true,
+                    enabled = !criticalSettingsLocked,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
                         enabled = !criticalSettingsLocked,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            enabled = !criticalSettingsLocked,
-                            onClick = {
-                                val normalized = TelegramSos.normalizeBotToken(telegramToken)
-                                if (normalized == null) {
-                                    telegramFeedback = "Token no valido: debe ser 123456789:AAAA..."
+                        onClick = {
+                            val normalized = TelegramSos.normalizeBotToken(telegramToken)
+                            if (normalized == null) {
+                                telegramFeedback = "Token no valido: debe ser 123456789:AAAA..."
+                            } else {
+                                telegramRepository.setTelegramBotToken(normalized)
+                                telegramToken = normalized
+                                telegramFeedback = "Token guardado"
+                            }
+                        }
+                    ) { Text("GUARDAR TOKEN") }
+                    OutlinedButton(
+                        enabled = !criticalSettingsLocked && !telegramTesting && botTargets.isNotEmpty(),
+                        onClick = {
+                            val target = botTargets.firstOrNull() ?: return@OutlinedButton
+                            val token = TelegramSos.normalizeBotToken(telegramToken)
+                            if (token == null) {
+                                telegramFeedback = "Guarda primero un token valido"
+                                return@OutlinedButton
+                            }
+                            telegramTesting = true
+                            telegramFeedback = "Enviando prueba..."
+                            telegramScope.launch {
+                                val result = withContext(Dispatchers.IO) {
+                                    TelegramSos.sendViaBot(
+                                        token,
+                                        target.telegramChatId,
+                                        "Segu-Luky: mensaje de prueba para ${target.name}"
+                                    )
+                                }
+                                telegramTesting = false
+                                telegramFeedback = if (result.ok) {
+                                    "Prueba enviada a ${target.name}"
                                 } else {
-                                    telegramRepository.setTelegramBotToken(normalized)
-                                    telegramToken = normalized
-                                    telegramFeedback = "Token guardado"
+                                    "Fallo: ${result.detail}"
                                 }
                             }
-                        ) { Text("GUARDAR TOKEN") }
-                        OutlinedButton(
-                            enabled = !criticalSettingsLocked && !telegramTesting && botTargets.isNotEmpty(),
-                            onClick = {
-                                val target = botTargets.firstOrNull() ?: return@OutlinedButton
-                                val token = TelegramSos.normalizeBotToken(telegramToken)
-                                if (token == null) {
-                                    telegramFeedback = "Guarda primero un token valido"
-                                    return@OutlinedButton
-                                }
-                                telegramTesting = true
-                                telegramFeedback = "Enviando prueba..."
-                                telegramScope.launch {
-                                    val result = withContext(Dispatchers.IO) {
-                                        TelegramSos.sendViaBot(
-                                            token,
-                                            target.telegramChatId,
-                                            "Segu-Luky: mensaje de prueba para ${target.name}"
-                                        )
-                                    }
-                                    telegramTesting = false
-                                    telegramFeedback = if (result.ok) {
-                                        "Prueba enviada a ${target.name}"
-                                    } else {
-                                        "Fallo: ${result.detail}"
-                                    }
-                                }
-                            }
-                        ) { Text("ENVIAR PRUEBA") }
-                    }
-                    if (telegramToken.isNotBlank()) {
-                        TextButton(
-                            enabled = !criticalSettingsLocked,
-                            onClick = {
-                                telegramRepository.setTelegramBotToken("")
-                                telegramToken = ""
-                                telegramFeedback = "Token borrado"
-                            }
-                        ) { Text("BORRAR TOKEN") }
-                    }
-                    if (telegramFeedback.isNotEmpty()) {
-                        Text(telegramFeedback, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                    }
+                        }
+                    ) { Text("ENVIAR PRUEBA") }
+                }
+                if (telegramToken.isNotBlank()) {
+                    TextButton(
+                        enabled = !criticalSettingsLocked,
+                        onClick = {
+                            telegramRepository.setTelegramBotToken("")
+                            telegramToken = ""
+                            telegramFeedback = "Token borrado"
+                        }
+                    ) { Text("BORRAR TOKEN") }
+                }
+                if (telegramFeedback.isNotEmpty()) {
+                    Text(telegramFeedback, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                }
+                Text(
+                    "1) Crea el bot en @BotFather y copia el token. " +
+                        "2) Cada contacto debe escribir /start al bot. " +
+                        "3) Pega su chat id en el contacto (o el enlace t.me como respaldo). " +
+                        "4) Pulsa ENVIAR PRUEBA para comprobar la entrega. " +
+                        "El detalle esta en INSTRUCCIONES DE USO, pasos 7 y 8.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (telegramContacts.isNotEmpty() && botTargets.isEmpty()) {
                     Text(
-                        "1) Crea el bot en @BotFather y copia el token. " +
-                            "2) Cada contacto debe escribir /start al bot. " +
-                            "3) Pega su chat id en el contacto (o el enlace t.me como respaldo). " +
-                            "4) Pulsa ENVIAR PRUEBA para comprobar la entrega. " +
-                            "El bot envia sin abrir Telegram ni desbloquear; el enlace t.me necesita ENVIO AUTO MENSAJES. " +
-                            "El detalle esta en INSTRUCCIONES DE USO, pasos 7 y 8.",
+                        "Ningun contacto de Telegram tiene chat id: ahora mismo solo funcionaria el enlace t.me.",
+                        color = Tone.BAD.text,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    if (telegramContacts.isNotEmpty() && botTargets.isEmpty()) {
-                        Text(
-                            "Ningun contacto de Telegram tiene chat id: ahora mismo solo funcionaria el enlace t.me.",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
                 }
             }
         }
         item {
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = if (smsAuto) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("SMS SOS AUTOMATICO", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            if (smsAuto) "ACTIVADO" else "DESACTIVADO",
-                            color = if (smsAuto) StrongGreen else Color(0xFF6B7280),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "Envia por SMS el mensaje con el enlace de Maps a TODOS los contactos, sin " +
-                                "confirmacion y con la pantalla apagada o bloqueada. Puede tener coste de operador.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+            SeguCard(
+                title = "SMS SOS AUTOMATICO",
+                status = if (smsAuto) "ACTIVADO" else "DESACTIVADO",
+                tone = if (smsAuto) Tone.OK else Tone.OFF,
+                trailing = {
                     Switch(
                         checked = smsAuto,
                         enabled = !criticalSettingsLocked,
@@ -1179,8 +1037,13 @@ private fun EmergencySettingsScreen(
                             }
                         }
                     )
-                }
-            }
+                },
+                description = "Envia por SMS el mensaje con el enlace de Maps a TODOS los contactos, sin confirmacion y " +
+                    "con la pantalla apagada o bloqueada. Puede tener coste de operador."
+            )
+        }
+        item {
+            SectionHeader("CALIBRACION")
         }
         item {
             val calibration by CalibrationStateStore.state.collectAsStateWithLifecycle()
@@ -1190,7 +1053,11 @@ private fun EmergencySettingsScreen(
                     it.copy(files = CalibrationRepository.listFiles(context))
                 }
             }
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            ) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1339,9 +1206,26 @@ private fun EmergencySettingsScreen(
             }
         }
         item {
-            Text("CONTACTOS SOS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            SectionHeader("CONTACTOS")
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    "CONTACTOS SOS",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                StatusPill(
+                    if (contacts.isEmpty()) "NINGUNO" else "${contacts.size}",
+                    if (contacts.isEmpty()) Tone.BAD else Tone.OK
+                )
+            }
             Text(
-                "La lista marca el orden de llamada: 1Âº, luego 2Âº si no responde en 1 minuto, luego 3Âº. " +
+                "La lista marca el orden de llamada: 1o, luego 2o si no responde en 1 minuto, luego 3o. " +
                     "El mensaje de WhatsApp se enviara a todos los contactos que lo tengan activado.",
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -1375,18 +1259,17 @@ private fun EmergencySettingsScreen(
                     enabled = !criticalSettingsLocked,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("AÃ‘ADIR CONTACTO")
+                    Text("ANADIR CONTACTO")
                 }
             }
             if (contacts.isEmpty()) {
                 item {
-                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        Text(
-                            "No hay contactos configurados. AÃ±ade al menos un contacto antes de usar el SOS.",
-                            modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                    SeguCard(
+                        title = "Sin contactos",
+                        status = "OBLIGATORIO",
+                        tone = Tone.BAD,
+                        description = "Anade al menos un contacto antes de usar el SOS: sin contactos no hay aviso."
+                    )
                 }
             }
             items(contacts, key = { "${it.name}|${it.phone}" }) { contact ->
@@ -1404,21 +1287,14 @@ private fun EmergencySettingsScreen(
             }
         }
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("UBICACION EN GOOGLE MAPS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                    Text(
-                        "El marcador {MAPA} se sustituye por un enlace Google Maps con la ultima posicion GPS precisa y reciente.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        "El interruptor FUNCIONALIDAD SOS debe estar activado para usar las acciones configuradas. Desactivalo para probar los sensores reales sin avisar a contactos.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-            Spacer(Modifier.height(24.dp))
+            SeguCard(
+                title = "COMO SE ENVIA LA UBICACION",
+                description = "El marcador {MAPA} se sustituye por un enlace Google Maps con la ultima posicion GPS " +
+                    "precisa y reciente. FUNCIONALIDAD SOS debe estar activada: desactivala para probar los sensores " +
+                    "reales sin avisar a nadie."
+            )
         }
+        item { Spacer(Modifier.height(24.dp)) }
     }
 }
 
@@ -1630,20 +1506,38 @@ private fun EmergencyContactCard(
             add(if (contact.telegramReadyForBot) "Telegram bot" else "Telegram enlace")
         }
     }.joinToString(" + ")
-    Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(contact.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(contact.phone, style = MaterialTheme.typography.bodyMedium)
-            Text(
-                if (actions.isBlank()) "Sin acciones activas" else actions,
-                color = if (actions.isBlank()) MaterialTheme.colorScheme.error else StrongGreen,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold
-            )
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(contact.name, style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        contact.phone,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                StatusPill(
+                    if (actions.isBlank()) "SIN ACCIONES" else actions,
+                    if (actions.isBlank()) Tone.BAD else Tone.OK
+                )
+            }
             if (contact.whatsappEnabled) {
                 Text(
                     ensureMapLinkToken(contact.whatsappMessage).replace(MAP_LINK_TOKEN, "enlace de Google Maps"),
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2
                 )
             }
@@ -1668,9 +1562,13 @@ private fun InstructionsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Spacer(Modifier.height(8.dp))
-            Text("INSTRUCCIONES DE USO", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text("Segu-Luky ${appVersionLabel()}", style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Segu-Luky ${appVersionLabel()}",
+                modifier = Modifier.padding(start = 4.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         item {
             UsageInstruction(
@@ -1781,127 +1679,379 @@ private fun InstructionsScreen(
 
 @androidx.compose.runtime.Composable
 private fun UsageInstruction(title: String, text: String) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(text, style = MaterialTheme.typography.bodyMedium)
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** One semantic tone per status (ok / attention / danger / idle). */
+private enum class Tone(val text: Color, val soft: Color, val line: Color) {
+    OK(Color(0xFF146C2E), Color(0xFFEAF6EC), Color(0xFFA9D9B6)),
+    WARN(Color(0xFF8A5A00), Color(0xFFFFF6E3), Color(0xFFE5C37E)),
+    BAD(Color(0xFFB3261E), Color(0xFFFFF0EE), Color(0xFFE7B0AB)),
+    OFF(Color(0xFF6B6259), Color(0xFFF3EEE8), Color(0xFFE0D7CC))
+}
+
+private fun toneOf(state: IndicatorState): Tone = when (state) {
+    IndicatorState.GOOD -> Tone.OK
+    IndicatorState.PENDING -> Tone.WARN
+    IndicatorState.ERROR -> Tone.BAD
+    IndicatorState.OFF -> Tone.OFF
+}
+
+@androidx.compose.runtime.Composable
+private fun StatusPill(text: String, tone: Tone) {
+    Surface(shape = RoundedCornerShape(50), color = tone.soft, contentColor = tone.text) {
+        Text(
+            text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1
+        )
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text,
+        modifier = Modifier.fillMaxWidth().padding(start = 4.dp, top = 4.dp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelSmall
+    )
+}
+
+/**
+ * Shared card used by the home screen and the settings list: one title, one
+ * status pill and one short line of copy, so every block reads the same way.
+ */
+@androidx.compose.runtime.Composable
+private fun SeguCard(
+    title: String,
+    status: String? = null,
+    tone: Tone = Tone.OFF,
+    description: String? = null,
+    trailing: (@androidx.compose.runtime.Composable () -> Unit)? = null,
+    content: (@androidx.compose.runtime.Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit)? = null
+) {
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (trailing == null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    if (status != null) StatusPill(status, tone)
+                }
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(title, style = MaterialTheme.typography.titleSmall)
+                        if (status != null) StatusPill(status, tone)
+                    }
+                    trailing()
+                }
+            }
+            if (description != null) {
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            content?.invoke(this)
+        }
+    }
+}
+
+/** Compact permission / capability line: name, state and an optional shortcut. */
+@androidx.compose.runtime.Composable
+private fun PermissionRow(
+    label: String,
+    status: String,
+    tone: Tone,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(Modifier.size(9.dp).clip(CircleShape).background(tone.text))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(label, style = MaterialTheme.typography.labelLarge)
+            Text(status, style = MaterialTheme.typography.bodySmall, color = tone.text, fontWeight = FontWeight.Bold)
+        }
+        if (actionLabel != null && onAction != null) {
+            TextButton(onClick = onAction) {
+                Text(actionLabel, style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
+}
+
+/**
+ * Home header: the only place that shows the state, the countdown and the
+ * start/stop control. Cancelling lives in the bottom bar.
+ */
+@androidx.compose.runtime.Composable
+private fun PhaseHeroCard(
+    snapshot: SafetySnapshot,
+    sosActionsEnabled: Boolean,
+    onStart: () -> Unit,
+    onStop: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
+    val visual = phaseVisual(snapshot.phase)
+    val tone = toneOf(visual.state)
+    val phase = snapshot.phase
+    val countdownEndsAt = snapshot.countdownEndsAt
+    var seconds by remember(countdownEndsAt) {
+        mutableStateOf(countdownEndsAt?.let(::countdownRemainingSeconds) ?: 0L)
+    }
+    LaunchedEffect(countdownEndsAt) {
+        if (countdownEndsAt == null) return@LaunchedEffect
+        while (isActive) {
+            seconds = countdownRemainingSeconds(countdownEndsAt)
+            if (countdownEndsAt - SystemClock.elapsedRealtime() <= 0L) break
+            delay(200L)
+        }
+    }
+    val gpsPill: Pair<String, Tone>? = when {
+        phase == SafetyPhase.STOPPED -> null
+        snapshot.gpsAvailable -> "GPS OK" to Tone.OK
+        snapshot.gpsFixAgeSeconds != null -> "GPS LENTO" to Tone.WARN
+        else -> "BUSCANDO GPS" to Tone.WARN
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = visual.background,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.dp, tone.line)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            if (!sosActionsEnabled) {
+                SosDisabledWarning(onOpenSettings = onOpenSettings)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(14.dp).clip(CircleShape).background(visual.state.color))
+                Spacer(Modifier.size(10.dp))
+                Text(
+                    "ESTADO ${visual.title}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.weight(1f)
+                )
+                if (gpsPill != null) StatusPill(gpsPill.first, gpsPill.second)
+            }
+            val detailText = snapshot.detail.takeIf {
+                it.isNotBlank() && (countdownEndsAt == null || !it.startsWith("Cuenta atras"))
+            }
+            if (detailText != null) {
+                Text(
+                    detailText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (snapshot.dispatchInProgress) {
+                Text(
+                    "AVISOS SOS EN CURSO",
+                    color = Tone.BAD.text,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            if (countdownEndsAt != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        String.format(Locale.US, "%02d", seconds),
+                        fontSize = 62.sp,
+                        lineHeight = 62.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Tone.BAD.text
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            "SEGUNDOS",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Tone.BAD.text
+                        )
+                        Text(
+                            "para cancelar el SOS. Cancela abajo.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            if (!phase.locksCriticalSettings()) {
+                val starting = phase == SafetyPhase.STOPPED
+                Button(
+                    onClick = if (starting) onStart else onStop,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    border = if (starting) null else BorderStroke(1.dp, tone.line),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = if (starting) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surface
+                        },
+                        contentColor = if (starting) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                ) {
+                    Text(
+                        if (starting) "INICIAR MONITOR" else "DETENER MONITOR",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
         }
     }
 }
 
 @androidx.compose.runtime.Composable
-private fun StatusCard(
+private fun SosPanel(onSos: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .size((SOS_BUTTON_SIZE + 24).dp)
+                    .clip(CircleShape)
+                    .background(Tone.BAD.soft)
+            )
+            RoundActionButton(
+                mainText = "S O S",
+                subText = "5 s",
+                color = Tone.BAD.text,
+                buttonSize = SOS_BUTTON_SIZE.dp,
+                onTap = { /* A short tap is intentionally harmless. */ },
+                onLongPress = onSos
+            )
+        }
+        Text(
+            "MANTEN PULSADO 5 SEGUNDOS",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun MonitorCard(
     snapshot: SafetySnapshot,
     intercomInstalled: Boolean,
-    sosActionsEnabled: Boolean,
-    sensitivityG: Float,
-    onCancel: () -> Unit
+    sensitivityG: Float
 ) {
-    val visual = phaseVisual(snapshot.phase)
-    val now = SystemClock.elapsedRealtime()
-    val countdown = snapshot.countdownEndsAt?.let {
-        ((it - now).coerceAtLeast(0L) + 999L) / 1_000L
-    }
+    val running = snapshot.phase != SafetyPhase.STOPPED
     val gpsLiveText = when {
-        snapshot.phase == SafetyPhase.STOPPED -> "DETENIDO"
+        !running -> "--"
         snapshot.gpsAvailable -> snapshot.gpsFixAgeSeconds?.let { "OK (${it}s)" } ?: "OK"
-        snapshot.gpsFixAgeSeconds != null -> "FIX CADUCADO (${snapshot.gpsFixAgeSeconds}s)"
-        else -> "BUSCANDO FIX"
+        snapshot.gpsFixAgeSeconds != null -> "LENTO (${snapshot.gpsFixAgeSeconds}s)"
+        else -> "BUSCANDO"
     }
     val gpsLiveState = when {
-        snapshot.phase == SafetyPhase.STOPPED -> IndicatorState.OFF
+        !running -> IndicatorState.OFF
         snapshot.gpsAvailable -> IndicatorState.GOOD
-        snapshot.gpsFixAgeSeconds != null -> IndicatorState.PENDING
-        else -> IndicatorState.GOOD
+        else -> IndicatorState.PENDING
     }
     val gpsStatusNote = when {
-        snapshot.phase == SafetyPhase.STOPPED -> "Inicia el monitor para solicitar una posicion GPS."
-        snapshot.gpsAvailable -> "Posicion GPS precisa y reciente."
-        snapshot.gpsFixAgeSeconds != null -> "El ultimo fix supera 60 s; esperando uno nuevo."
-        else -> "Esperando la primera posicion GPS precisa al aire libre."
+        !running -> "Se activa al iniciar el monitor."
+        snapshot.gpsAvailable -> "Posicion precisa y reciente. Solo aporta el mapa."
+        snapshot.gpsFixAgeSeconds != null -> "El ultimo fix supera 60 s. Solo aporta el mapa."
+        else -> "Esperando la primera posicion al aire libre."
     }
-    Card(colors = CardDefaults.cardColors(containerColor = visual.background, contentColor = StatusTextColor)) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (!sosActionsEnabled) {
-                SosDisabledWarning()
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.size(18.dp).clip(CircleShape).background(visual.state.color))
-                Column {
-                    Text("ESTADO ${visual.title}", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                }
-            }
-            if (snapshot.detail.isNotBlank()) {
-                Text(snapshot.detail, style = MaterialTheme.typography.bodyLarge)
-            }
-            if (snapshot.dispatchInProgress) {
-                Text(
-                    "AVISOS SOS EN CURSO: llamadas y mensajes configurados en ejecucion.",
-                    color = Color(0xFFC62828),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            if (countdown != null) {
-                Text(
-                    String.format(Locale.US, "%02d", countdown),
-                    fontSize = COUNTDOWN_FONT_SIZE.sp,
-                    lineHeight = COUNTDOWN_LINE_HEIGHT.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = visual.state.color
-                )
-                Text("segundos para cancelar el protocolo", style = MaterialTheme.typography.labelLarge)
-                Button(
-                    onClick = onCancel,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFC62828),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text("CANCELAR SOS", fontWeight = FontWeight.Bold)
-                }
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                ServiceRow(
-                    "SENSOR",
-                    "${snapshot.movementG?.let { String.format(Locale.US, "%.2f g", it) } ?: "--"} / " +
-                        String.format(Locale.US, "%.1f g", sensitivityG),
-                    if (snapshot.sensorAvailable) IndicatorState.GOOD else IndicatorState.PENDING,
-                    "Actual / ajuste Â· ${snapshot.sensorDetail}"
-                )
-                ServiceRow(
-                    "ORIENTACION",
-                    when {
-                        snapshot.orientationAvailable -> snapshot.orientationTiltDegrees?.let {
-                            String.format(Locale.US, "%.0f grados", it)
-                        } ?: "OK"
-                        snapshot.orientationDetail.startsWith("Desactivada") || snapshot.orientationDetail.startsWith("No necesaria") -> "DESACT."
-                        else -> "PENDIENTE"
-                    },
-                    when {
-                        snapshot.orientationAvailable -> IndicatorState.GOOD
-                        snapshot.orientationDetail.startsWith("Desactivada") || snapshot.orientationDetail.startsWith("No necesaria") -> IndicatorState.OFF
-                        else -> IndicatorState.PENDING
-                    },
-                    snapshot.orientationDetail
-                )
-                ServiceRow("GPS", gpsLiveText, gpsLiveState, "$gpsStatusNote Solo aporta mapa; nunca bloquea golpes.")
-                ServiceRow(
-                    "VELOCIDAD",
-                    snapshot.speedKmh?.let { String.format(Locale.US, "%.1f km/h", it) } ?: "--",
-                    if (snapshot.speedKmh != null) IndicatorState.GOOD else IndicatorState.PENDING,
-                    "Dato informativo; nunca bloquea golpes."
-                )
-                ServiceRow("INTERCOM", if (intercomInstalled) "OK" else "--", if (intercomInstalled) IndicatorState.GOOD else IndicatorState.PENDING)
-            }
-            if (snapshot.phase == SafetyPhase.VALIDATING) {
-                Text("Validacion de seguridad activa.", style = MaterialTheme.typography.bodySmall)
-                OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
-                    Text("CANCELAR VALIDACION")
-                }
-            }
-        }
+    SeguCard(
+        title = "MONITOR",
+        status = if (running) "ACTIVO" else "DETENIDO",
+        tone = if (running) Tone.OK else Tone.OFF,
+        description = "Los avisos nunca dependen del GPS: solo del golpe, la voz o el boton."
+    ) {
+        ServiceRow(
+            "SENSOR",
+            "${snapshot.movementG?.let { String.format(Locale.US, "%.2f g", it) } ?: "--"} / " +
+                String.format(Locale.US, "%.1f g", sensitivityG),
+            if (snapshot.sensorAvailable) IndicatorState.GOOD else IndicatorState.PENDING,
+            "Lectura actual / ajuste. ${snapshot.sensorDetail}"
+        )
+        ServiceRow(
+            "ORIENTACION",
+            when {
+                snapshot.orientationAvailable -> snapshot.orientationTiltDegrees?.let {
+                    String.format(Locale.US, "%.0f grados", it)
+                } ?: "OK"
+                snapshot.orientationDetail.startsWith("Desactivada") ||
+                    snapshot.orientationDetail.startsWith("No necesaria") -> "DESACT."
+                else -> "PENDIENTE"
+            },
+            when {
+                snapshot.orientationAvailable -> IndicatorState.GOOD
+                snapshot.orientationDetail.startsWith("Desactivada") ||
+                    snapshot.orientationDetail.startsWith("No necesaria") -> IndicatorState.OFF
+                else -> IndicatorState.PENDING
+            },
+            snapshot.orientationDetail
+        )
+        ServiceRow("GPS", gpsLiveText, gpsLiveState, gpsStatusNote)
+        ServiceRow(
+            "VELOCIDAD",
+            snapshot.speedKmh?.let { String.format(Locale.US, "%.1f km/h", it) } ?: "--",
+            if (snapshot.speedKmh != null) IndicatorState.GOOD else IndicatorState.PENDING,
+            "Informativa; nunca bloquea golpes."
+        )
+        ServiceRow(
+            "INTERCOM",
+            if (intercomInstalled) "OK" else "--",
+            if (intercomInstalled) IndicatorState.GOOD else IndicatorState.PENDING
+        )
     }
 }
 
@@ -1912,49 +2062,60 @@ private data class PhaseVisual(
 )
 
 @androidx.compose.runtime.Composable
-private fun SosDisabledWarning() {
+private fun SosDisabledWarning(onOpenSettings: () -> Unit) {
     val blinkAlpha by rememberInfiniteTransition(label = "sosDisabledBlink").animateFloat(
-        initialValue = 0.25f,
+        initialValue = 0.35f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(durationMillis = 600), RepeatMode.Reverse),
         label = "sosDisabledAlpha"
     )
-    Text(
-        "AVISOS SOS DESACTIVADOS",
-        modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = blinkAlpha },
-        textAlign = TextAlign.Center,
-        color = SosWarningRed,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold
-    )
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Tone.BAD.soft,
+        contentColor = Tone.BAD.text
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "AVISOS SOS DESACTIVADOS",
+                modifier = Modifier.weight(1f).graphicsLayer { alpha = blinkAlpha },
+                color = Tone.BAD.text,
+                style = MaterialTheme.typography.titleSmall
+            )
+            TextButton(onClick = onOpenSettings) {
+                Text("REVISAR", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
 }
-
-private val SosWarningRed = Color(0xFFC62828)
 
 @androidx.compose.runtime.Composable
 private fun GpsOffWarning(onOpenGpsSettings: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        color = Color(0xFFFFEBEE),
-        contentColor = StatusTextColor
+        shape = RoundedCornerShape(12.dp),
+        color = Tone.BAD.soft,
+        contentColor = Tone.BAD.text
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                "GPS APAGADO: el monitor detecta golpes, pero el SOS no incluira mapa ni velocidad.",
-                color = Color(0xFFC62828),
+                "GPS APAGADO: el SOS saldra sin mapa ni velocidad.",
+                color = Tone.BAD.text,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold
             )
             OutlinedButton(
                 onClick = onOpenGpsSettings,
                 modifier = Modifier.fillMaxWidth(),
-                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFC62828))
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Tone.BAD.text)
             ) {
-                Text("ABRIR AJUSTES GPS", fontWeight = FontWeight.Bold)
+                Text("ABRIR AJUSTES GPS", style = MaterialTheme.typography.labelSmall)
             }
         }
     }
@@ -1963,18 +2124,18 @@ private fun GpsOffWarning(onOpenGpsSettings: () -> Unit) {
 private enum class IndicatorState(val color: Color) {
     GOOD(StrongGreen),
     PENDING(Color(0xFFF9A825)),
-    ERROR(Color(0xFFC62828)),
-    OFF(Color(0xFF6B7280))
+    ERROR(Color(0xFFE53935)),
+    OFF(Color(0xFF9AA0A6))
 }
 
 private val StrongGreen = Color(0xFF00C853)
 
 private fun phaseVisual(phase: SafetyPhase): PhaseVisual = when (phase) {
-    SafetyPhase.STOPPED -> PhaseVisual("APAGADO", Color(0xFFE5E7EB), IndicatorState.OFF)
-    SafetyPhase.MONITORING -> PhaseVisual("OK", Color(0xFFE8F5E9), IndicatorState.GOOD)
-    SafetyPhase.VALIDATING -> PhaseVisual("PENDIENTE", Color(0xFFFFF8E1), IndicatorState.PENDING)
-    SafetyPhase.FALL_CANDIDATE -> PhaseVisual("POSIBLE CAIDA", Color(0xFFFFF3E0), IndicatorState.PENDING)
-    SafetyPhase.COUNTDOWN -> PhaseVisual("SOS ACTIVO", Color(0xFFFFEBEE), IndicatorState.ERROR)
+    SafetyPhase.STOPPED -> PhaseVisual("APAGADO", Tone.OFF.soft, IndicatorState.OFF)
+    SafetyPhase.MONITORING -> PhaseVisual("OK", Tone.OK.soft, IndicatorState.GOOD)
+    SafetyPhase.VALIDATING -> PhaseVisual("PENDIENTE", Tone.WARN.soft, IndicatorState.PENDING)
+    SafetyPhase.FALL_CANDIDATE -> PhaseVisual("POSIBLE CAIDA", Color(0xFFFFF0E0), IndicatorState.PENDING)
+    SafetyPhase.COUNTDOWN -> PhaseVisual("SOS ACTIVO", Tone.BAD.soft, IndicatorState.ERROR)
 }
 
 @androidx.compose.runtime.Composable
@@ -1982,24 +2143,27 @@ private fun ServiceRow(label: String, value: String, state: IndicatorState, note
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
-        color = Color.White.copy(alpha = 0.82f),
-        contentColor = StatusTextColor
+        color = Color(0xFFF8F5F1),
+        contentColor = MaterialTheme.colorScheme.onSurface
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(9.dp).clip(CircleShape).background(state.color))
                 Spacer(Modifier.size(8.dp))
-                Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.weight(1f))
-                Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                Text(value, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             }
-            if (note.isNotBlank()) Text(note, style = MaterialTheme.typography.labelSmall)
+            if (note.isNotBlank()) {
+                Text(
+                    note,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
-private const val COUNTDOWN_FONT_SIZE = 120
-private const val COUNTDOWN_LINE_HEIGHT = 132
 private val HarleyOrange = Color(0xFFF58220)
 private val StatusTextColor = Color(0xFF1F2937)
 
