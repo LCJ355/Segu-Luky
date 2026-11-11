@@ -1109,6 +1109,16 @@ private fun EmergencySettingsScreen(
                             }
                         ) { Text("ENVIAR PRUEBA") }
                     }
+                    if (telegramToken.isNotBlank()) {
+                        TextButton(
+                            enabled = !criticalSettingsLocked,
+                            onClick = {
+                                telegramRepository.setTelegramBotToken("")
+                                telegramToken = ""
+                                telegramFeedback = "Token borrado"
+                            }
+                        ) { Text("BORRAR TOKEN") }
+                    }
                     if (telegramFeedback.isNotEmpty()) {
                         Text(telegramFeedback, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                     }
@@ -1116,8 +1126,9 @@ private fun EmergencySettingsScreen(
                         "1) Crea el bot en @BotFather y copia el token. " +
                             "2) Cada contacto debe escribir /start al bot. " +
                             "3) Pega su chat id en el contacto (o el enlace t.me como respaldo). " +
+                            "4) Pulsa ENVIAR PRUEBA para comprobar la entrega. " +
                             "El bot envia sin abrir Telegram ni desbloquear; el enlace t.me necesita ENVIO AUTO MENSAJES. " +
-                            "El token se guarda solo en este movil.",
+                            "El detalle esta en INSTRUCCIONES DE USO, pasos 7 y 8.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     if (telegramContacts.isNotEmpty() && botTargets.isEmpty()) {
@@ -1694,7 +1705,29 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "6. Avisos por WhatsApp y Telegram",
-                text = "SMS SOS sale aunque la pantalla este bloqueada. WhatsApp y el enlace t.me necesitan la Accesibilidad activada para pulsar Enviar; si el movil tiene PIN, la pantalla se enciende y pide desbloqueo. El bot de Telegram no necesita nada de eso: guarda el token en la tarjeta TELEGRAM SOS, pon el chat id de cada contacto y el aviso sale solo con el movil bloqueado."
+                text = "SMS SOS sale aunque la pantalla este bloqueada. WhatsApp y el enlace t.me necesitan la Accesibilidad activada para pulsar Enviar; si el movil tiene PIN, la pantalla se enciende y pide desbloqueo. El bot de Telegram no necesita ni pantalla ni accesibilidad: guarda el token en la tarjeta TELEGRAM SOS, pon el chat id en cada contacto y el aviso sale solo con el movil bloqueado. Los pasos 7 y 8 explican como prepararlo."
+            )
+        }
+        item {
+            UsageInstruction(
+                title = "7. Telegram: crear el bot y guardar el token",
+                text = "1) En Telegram abre @BotFather y envia /newbot. " +
+                    "2) Elige un nombre visible y un usuario que termine en bot. " +
+                    "3) BotFather devuelve un token con forma 123456789:AAAA... Copialo entero. " +
+                    "4) En Segu-Luky pulsa el engranaje, baja hasta la tarjeta TELEGRAM SOS y pega el token en Token del bot. " +
+                    "5) Pulsa GUARDAR TOKEN: la tarjeta confirmara Token guardado. " +
+                    "6) En cuanto un contacto tenga chat id, pulsa ENVIAR PRUEBA para comprobar que el mensaje llega. " +
+                    "Si el token es incorrecto la tarjeta mostrara el motivo devuelto por Telegram."
+            )
+        }
+        item {
+            UsageInstruction(
+                title = "8. Telegram: chat id de cada contacto",
+                text = "Cada contacto debe abrir el bot y enviarle /start una vez; sin eso Telegram no deja escribirle. " +
+                    "Para obtener el numero abre en el navegador https://api.telegram.org/bot<TOKEN>/getUpdates y busca chat:{id:...}. " +
+                    "Pega ese numero en Chat id del bot del contacto (en grupos empieza por -). " +
+                    "Si prefieres no usar bot, deja el chat id vacio y escribe solo el usuario (@nombre): se usara el enlace t.me, que necesita Accesibilidad y el interruptor ENVIO AUTO MENSAJES. " +
+                    "El token se guarda en texto plano dentro de este movil: si prestas el telefono, pulsa BORRAR TOKEN y desactiva ENVIAR TELEGRAM en los contactos."
             )
         }
         item {
