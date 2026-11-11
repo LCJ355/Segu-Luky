@@ -45,7 +45,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -2017,12 +2016,7 @@ private fun AudioLevelLine(audioLevel: AudioLevelReading) {
                 fontWeight = FontWeight.Bold
             )
         }
-        LinearProgressIndicator(
-            progress = { audioLevel.progress },
-            modifier = Modifier.fillMaxWidth(),
-            color = StrongGreen,
-            trackColor = Color(0xFFB9F6CA)
-        )
+        LevelBar(audioLevel.progress)
     }
 }
 
@@ -2035,11 +2029,26 @@ private fun MovementLevelLine(movementLevel: Float) {
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold
         )
-        LinearProgressIndicator(
-            progress = { movementLevel },
-            modifier = Modifier.fillMaxWidth(),
-            color = StrongGreen,
-            trackColor = Color(0xFFB9F6CA)
+        LevelBar(movementLevel)
+    }
+}
+
+/** Barra de nivel; mismo grosor y redondeo que la barra del ajuste de golpes. */
+@androidx.compose.runtime.Composable
+private fun LevelBar(progress: Float) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(SENSITIVITY_TRACK_HEIGHT)
+            .clip(RoundedCornerShape(SENSITIVITY_TRACK_HEIGHT / 2))
+            .background(Color(0xFFB9F6CA))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                .clip(RoundedCornerShape(SENSITIVITY_TRACK_HEIGHT / 2))
+                .background(StrongGreen)
         )
     }
 }
@@ -2302,6 +2311,7 @@ private enum class PressEnd {
 
 private const val HOLD_DURATION_MS = 5_000L
 private const val SOS_BUTTON_SIZE = 210
+private val SENSITIVITY_TRACK_HEIGHT = 8.dp
 private const val SOS_MAIN_FONT_SIZE = 40
 private const val SOS_SUB_FONT_SIZE = 20
 
@@ -2436,7 +2446,7 @@ private fun SegmentedSensitivitySlider(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .height(8.dp)
+                .height(SENSITIVITY_TRACK_HEIGHT)
                 .align(Alignment.Center),
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {

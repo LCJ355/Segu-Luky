@@ -1097,6 +1097,19 @@ Verificacion en pantalla:
 - APK generado: app-release.apk (1.31s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
+1.32s (versionCode 24)
+Fecha: 2026-02-20
+Cambios visuales:
+- Las barras de NIVEL DE AUDIO y de MOVIMIENTO DEL MOVIL pasan a usar el mismo grosor y redondeo que la barra del ajuste de golpes (8 dp, extremos redondeados).
+- Se sustituye el LinearProgressIndicator de Material por una barra propia (LevelBar) para que el grosor sea identico al del ajuste.
+Verificacion en pantalla:
+- Las tres barras miden 16 px de alto (audio, movimiento y ajuste de golpes).
+- En marcha: barra de audio con relleno verde hasta el nivel real y fondo verde claro; barra de movimiento en reposo se queda sin relleno.
+- La pantalla sigue entrando completa: S O S, 5 s, MANTEN PULSADO 5 SEGUNDOS y AVISOS SOS DESACTIVADOS como ultima linea.
+- APK generado: app-release.apk (1.32s).
+Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
+
+
 
 
 
