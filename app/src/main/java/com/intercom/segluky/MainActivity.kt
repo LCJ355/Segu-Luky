@@ -285,6 +285,7 @@ class MainActivity : ComponentActivity() {
                     PhaseHeroCard(
                         snapshot = snapshot,
                         sosActionsEnabled = sosActionsEnabled,
+                        intercomInstalled = installation.installed,
                         onStart = { startMonitoring() },
                         onStop = { SafetyMonitorService.stop(context) },
                         onOpenSettings = { screen = AppScreen.SETTINGS }
@@ -1812,6 +1813,7 @@ private fun PermissionRow(
 private fun PhaseHeroCard(
     snapshot: SafetySnapshot,
     sosActionsEnabled: Boolean,
+    intercomInstalled: Boolean,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onOpenSettings: () -> Unit
@@ -1931,8 +1933,82 @@ private fun PhaseHeroCard(
                     )
                 }
             }
+            SensorStatusLine(
+                snapshot = snapshot,
+                intercomInstalled = intercomInstalled
+            )
         }
     }
+}
+
+/**
+ * Luces de estado de los sensores: gris = apagado, naranja = no funcional,
+ * verde = funcional. Se muestran siempre bajo el boton del monitor.
+ */
+@androidx.compose.runtime.Composable
+private fun SensorStatusLine(snapshot: SafetySnapshot, intercomInstalled: Boolean) {
+    val running = snapshot.phase != SafetyPhase.STOPPED
+    val orientationDisabled = snapshot.orientationDetail.startsWith("Desactivada") ||
+        snapshot.orientationDetail.startsWith("No necesaria")
+    val lights = listOf(
+        "GOLPE" to when {
+            !running -> IndicatorState.OFF
+            snapshot.sensorAvailable -> IndicatorState.GOOD
+            else -> IndicatorState.PENDING
+        },
+        "INCLIN." to when {
+            !running -> IndicatorState.OFF
+            snapshot.orientationAvailable -> IndicatorState.GOOD
+            orientationDisabled -> IndicatorState.OFF
+            else -> IndicatorState.PENDING
+        },
+        "GPS" to when {
+            !running -> IndicatorState.OFF
+            snapshot.gpsAvailable -> IndicatorState.GOOD
+            else -> IndicatorState.PENDING
+        },
+        "VELOC." to when {
+            !running -> IndicatorState.OFF
+            snapshot.speedKmh != null -> IndicatorState.GOOD
+            else -> IndicatorState.PENDING
+        },
+        "INTERCOM" to if (intercomInstalled) IndicatorState.GOOD else IndicatorState.PENDING
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        lights.forEach { (label, state) ->
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { contentDescription = "$label ${sensorStateLabel(state)}" },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Box(
+                    Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(state.color)
+                )
+                Text(
+                    label,
+                    fontSize = 9.sp,
+                    lineHeight = 11.sp,
+                    maxLines = 1,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+private fun sensorStateLabel(state: IndicatorState): String = when (state) {
+    IndicatorState.GOOD -> "funcional"
+    IndicatorState.PENDING -> "no funcional"
+    IndicatorState.ERROR -> "no funcional"
+    IndicatorState.OFF -> "apagado"
 }
 
 @androidx.compose.runtime.Composable

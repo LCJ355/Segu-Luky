@@ -965,6 +965,30 @@ APK generado: app-release.apk (1.23s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
 ======================================================================
+2026-11-11 - 1.24s (versionCode 16)
+======================================================================
+
+Fecha: 2026-11-11
+Version: 1.24s (versionCode 16)
+Cambio: luces de estado de los sensores bajo el boton del monitor.
+Motivo: ver de un vistazo que sensores estan funcionando sin abrir Sensores.
+  - Nueva linea de cinco indicadores dentro de la tarjeta de estado, justo
+    debajo de INICIAR/DETENER MONITOR: GOLPE, INCLIN., GPS, VELOC. e INTERCOM.
+  - Codigo de colores pedido: gris = apagado, naranja = no funcional,
+    verde = funcional (los mismos colores que ya usa la tarjeta MONITOR).
+  - Con el monitor detenido todo aparece en gris (salvo INTERCOM si esta
+    instalado, que es verde porque no depende del monitor).
+  - Cada luz anuncia su estado al lector de pantalla (por ejemplo
+    "GOLPE funcional" / "GPS no funcional").
+Prueba realizada: assembleRelease + install -r en el OPPO; monitor detenido:
+  GOLPE/INCLIN./GPS/VELOC. en gris e INTERCOM en verde; monitor iniciado:
+  GOLPE e INCLIN. en verde, GPS y VELOC. en naranja (sin fix bajo techo).
+  Linea dibujada en y=693..723, de x=81 a x=656.
+Resultado: OK; tests unitarios y lint vital sin errores; monitor dejado detenido.
+APK generado: app-release.apk (1.24s).
+Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
+
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 
