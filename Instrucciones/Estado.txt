@@ -1282,6 +1282,28 @@ Verificacion:
 - APK compartible publicada en APK´s/Segu-Luky-1.44s.apk (5,22 MB) y copiada al equipo.
 - APK generado: app-release.apk (1.44s).
 
+V-1.45s (versionCode 37)
+Fecha: 2026-11-12
+"Buscar actualizacion" encuentra lo publicado en GitHub:
+- Causa: el repositorio no tenia ninguna release ni etiqueta, /releases/latest
+  respondia 404 y la app lo mostraba como "no hay nada publicado".
+- UpdateChecker ya no se queda en ese 404: si no hay release mira el listado
+  /releases y, si esta vacio, las etiquetas /tags, de modo que una version solo
+  etiquetada tambien cuenta como publicada.
+- Del listado se elige la version mas alta comparando parte a parte, no la
+  primera del array, para que el orden de GitHub no cambie el resultado.
+- Si el release lleva un APK adjunto, ABRIR DESCARGA abre ese APK
+  (browser_download_url). Si no lo lleva, abre la pagina del release y, cuando
+  solo hay etiqueta, la carpeta APK´s del repositorio.
+- jsonObjects() parte el array JSON de releases en objetos de primer nivel sin
+  anadir dependencias y respeta las llaves que aparecen dentro de los textos.
+Verificacion:
+- Pruebas unitarias ampliadas (apkUrl, release sin APK, jsonObjects, llaves
+  anidadas en textos y highestTag desordenado): 76 pruebas, 0 fallos.
+- lintDebug sin errores y assembleRelease correcto.
+- APK compartible en APK´s/Segu-Luky-1.45s.apk (5,23 MB) y copiada al equipo.
+- APK generado: app-release.apk (1.45s).
+
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

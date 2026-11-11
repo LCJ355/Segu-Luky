@@ -1,4 +1,4 @@
-# Segu-Luky V-1.44s
+# Segu-Luky V-1.45s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -41,9 +41,11 @@ key; InterCOM is only inspected, never modified.
   **Creditos**. Each row carries its own vector icon in a tinted 34 dp circle,
   copied from RUTAS-MOTERAS.
 - `UpdateChecker` reads `releases/latest` from the public GitHub repository on
-  `Dispatchers.IO`, with 6 s timeouts and an unconditional `disconnect()`. The
-  repository has no published release yet, so the dialog reports that and offers
-  the releases page instead of a download link.
+  `Dispatchers.IO`, with 6 s timeouts and an unconditional `disconnect()`. When a
+  release exists it compares tags part by part and links the attached APK; if the
+  repository only has tags (no release) it falls back to `releases` and then
+  `tags`, and when there is really nothing published it says so and offers the
+  releases page instead of a download link.
 - **Sugerencias** can copy a short device report (version, model, Android,
   sensitivity, monitor state). It never contains contacts, the bot token or the
   location.
@@ -69,8 +71,15 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every version is published in `APK´s/` as
-`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.44s.apk`), ready to download
+`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.45s.apk`), ready to download
 and install on the phone without Android Studio.
+
+Every version is also published as a GitHub release tagged `V-<version>` with
+that same APK attached, because **Buscar actualizacion** reads the GitHub API:
+
+```text
+gh release create V-1.45s "APK´s/Segu-Luky-1.45s.apk" --title "Segu-Luky 1.45s" --notes "..."
+```
 
 ## Safe device test
 

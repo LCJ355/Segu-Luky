@@ -48,4 +48,55 @@ class UpdateCheckerTest {
         )
         assertNull(UpdateChecker.jsonString(body, "no_existe"))
     }
+
+    @Test
+    fun leeElApkAdjuntoAlRelease() {
+        val body = """
+            {"tag_name":"V-1.45s","html_url":"https://github.com/LCJ355/Segu-Luky/releases/tag/V-1.45s",
+             "assets":[{"name":"Segu-Luky-1.45s.apk",
+                        "browser_download_url":"https://github.com/LCJ355/Segu-Luky/releases/download/V-1.45s/Segu-Luky-1.45s.apk"}]}
+        """.trimIndent()
+        assertEquals(
+            "https://github.com/LCJ355/Segu-Luky/releases/download/V-1.45s/Segu-Luky-1.45s.apk",
+            UpdateChecker.apkUrl(body)
+        )
+    }
+
+    @Test
+    fun unReleaseSinApkNoTieneEnlaceDeDescarga() {
+        val body = """{"tag_name":"V-1.45s","assets":[]}"""
+        assertNull(UpdateChecker.apkUrl(body))
+    }
+
+    @Test
+    fun separaElListadoDeReleasesEnObjetos() {
+        val body = """[{"tag_name":"V-1.45s"},{"tag_name":"V-1.44s"}]"""
+        val objects = UpdateChecker.jsonObjects(body)
+        assertEquals(2, objects.size)
+        assertEquals("V-1.45s", UpdateChecker.jsonString(objects[0], "tag_name"))
+        assertEquals("V-1.44s", UpdateChecker.jsonString(objects[1], "tag_name"))
+        assertTrue(UpdateChecker.jsonObjects("[]").isEmpty())
+    }
+
+    @Test
+    fun lasLlavesDentroDeTextosNoRompenElListado() {
+        val body = """[{"body":"texto con { y } dentro"},{"tag_name":"V-1.45s"}]"""
+        val objects = UpdateChecker.jsonObjects(body)
+        assertEquals(2, objects.size)
+        assertEquals("V-1.45s", UpdateChecker.jsonString(objects[1], "tag_name"))
+    }
+
+    @Test
+    fun eligeLaEtiquetaMasAltaAunqueLlegueDesordenada() {
+        assertEquals(
+            "V-1.44s",
+            UpdateChecker.highestTag(listOf("V-1.9s", "V-1.10s", "V-1.44s", "sin-numeros", "V-1.8s"))
+        )
+        assertEquals(
+            "1.10",
+            UpdateChecker.highestTag(listOf("1.9", "1.10", "1.8"))
+        )
+        assertNull(UpdateChecker.highestTag(listOf("ultima", "principal")))
+        assertNull(UpdateChecker.highestTag(emptyList()))
+    }
 }
