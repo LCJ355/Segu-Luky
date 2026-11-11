@@ -290,11 +290,9 @@ class MainActivity : ComponentActivity() {
                                 SafetyMonitorService.saveSensitivity(context, g)
                             }
                         },
-                        sosActionsEnabled = sosActionsEnabled,
                         intercomInstalled = installation.installed,
                         onStart = { startMonitoring() },
-                        onStop = { SafetyMonitorService.stop(context) },
-                        onOpenSettings = { screen = AppScreen.SETTINGS }
+                        onStop = { SafetyMonitorService.stop(context) }
                     )
                 }
                 if (showGpsOffWarning) {
@@ -321,6 +319,11 @@ class MainActivity : ComponentActivity() {
                 }
                 item {
                     SosPanel(onSos = { SafetyMonitorService.confirm(context) })
+                }
+                if (sosActionsEnabled.not() && snapshot.phase != SafetyPhase.STOPPED) {
+                    item {
+                        SosDisabledWarning(onOpenSettings = { screen = AppScreen.SETTINGS })
+                    }
                 }
                 item { Spacer(Modifier.height(6.dp)) }
                 }
@@ -1796,11 +1799,9 @@ private fun PhaseHeroCard(
     audioLevel: AudioLevelReading,
     sensitivityG: Float,
     onSensitivityChange: (Float) -> Unit,
-    sosActionsEnabled: Boolean,
     intercomInstalled: Boolean,
     onStart: () -> Unit,
-    onStop: () -> Unit,
-    onOpenSettings: () -> Unit
+    onStop: () -> Unit
 ) {
     val visual = phaseVisual(snapshot.phase)
     val tone = toneOf(visual.state)
@@ -1924,9 +1925,6 @@ private fun PhaseHeroCard(
                 enabled = phase == SafetyPhase.STOPPED,
                 onSensitivityChange = onSensitivityChange
             )
-            if (monitoring && !sosActionsEnabled) {
-                SosDisabledWarning(onOpenSettings = onOpenSettings)
-            }
         }
     }
 }
@@ -2433,7 +2431,7 @@ private fun SegmentedSensitivitySlider(
     onValueChange: (Float) -> Unit
 ) {
     val v = value.coerceIn(0.5f, 7f)
-    Box(Modifier.fillMaxWidth().height(30.dp)) {
+    Box(Modifier.fillMaxWidth().height(28.dp)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2482,7 +2480,7 @@ private fun SensitivityControl(
     enabled: Boolean,
     onSensitivityChange: (Float) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+    Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "SENSIBILIDAD A LOS GOLPES =",
@@ -2497,6 +2495,7 @@ private fun SensitivityControl(
                 fontWeight = FontWeight.Bold
             )
         }
+        Spacer(Modifier.height(3.dp))
         SegmentedSensitivitySlider(
             value = sensitivityG,
             enabled = enabled,

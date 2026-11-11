@@ -1085,6 +1085,19 @@ Medidas en pantalla:
 - APK generado: app-release.apk (1.30s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
+1.31s (versionCode 23)
+Fecha: 2026-02-20
+Cambios visuales:
+- El hueco entre la barra de ajuste y los numeros 0..7 baja de 17 px a 9-10 px (caja del deslizador de 30 dp a 28 dp y sin espaciado extra bajo la barra).
+- El aviso "AVISOS SOS DESACTIVADOS / REVISAR" deja de estar dentro de la tarjeta del monitor y pasa a ser la ultima linea de la pantalla, justo debajo de "MANTEN PULSADO 5 SEGUNDOS".
+- Solo aparece mientras el monitor esta en marcha y los avisos SOS estan desactivados.
+Verificacion en pantalla:
+- Detenido: sin aviso SOS; sensibilidad con 14 px hasta la barra y 9 px hasta los numeros.
+- En marcha: el orden termina en S O S, 5 s, MANTEN PULSADO 5 SEGUNDOS y por ultimo AVISOS SOS DESACTIVADOS con REVISAR.
+- APK generado: app-release.apk (1.31s).
+Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
+
+
 
 
 FORMATO PARA FUTURAS ENTRADAS
