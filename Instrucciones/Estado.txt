@@ -1145,6 +1145,17 @@ Aclaracion de la VELOCIDAD y arranque con velocidad conocida:
 - Al arrancar, si la ultima posicion conocida trae velocidad valida, tambien se reutiliza (igual que la posicion), descartandola si supera los 60 s.
 - APK generado: app-release.apk (1.35s).
 
+1.36s (versionCode 28)
+Fecha: 2026-11-11
+Revision de "verde = seleccionado/activo":
+- El tema de la app usa el naranja (0xFFB24A00) como color primario, asi que los interruptores (Switch) de Material 3 se pintaban NARANJA al activarse: "ACCIONES SOS", "CAIDA / ORIENTACION", "PALABRAS CLAVE", "ENVIO AUTO MENSAJES", "SMS SOS AUTOMATICO" y los tres de cada contacto (LLAMADA, WHATSAPP, TELEGRAM).
+- Se crea un unico color de interruptor activo, activeSwitchColors(): pista verde 0xFF00C853 con el circulo blanco, igual que el resto de elementos activos de la app.
+- Se aplica a los seis interruptores de la pantalla Configuracion (incluido el de las acciones de cada contacto), asi que ya no queda ningun control naranja marcando una seleccion.
+- Comprobado en el OPPO con el APK nuevo: en los interruptores activos la pista mide (0,200,83) = 0xFF00C853 y el circulo (255,255,255); los desactivados quedan en gris (240,233,225), sin naranja.
+- Revisado el resto de selecciones y ya estaban en verde: boton INICIAR/DETENER MONITOR, bolita del ajuste a los golpes, barras de audio y movimiento, botones de actividad del registro de calibracion y puntos de estado de los sensores.
+- APK generado: app-release.apk (1.36s).
+
+
 
 
 

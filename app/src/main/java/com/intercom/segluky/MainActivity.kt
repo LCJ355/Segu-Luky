@@ -53,6 +53,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -684,7 +685,8 @@ private fun EmergencySettingsScreen(
                     Switch(
                         checked = sosActionsEnabled,
                         enabled = !criticalSettingsLocked,
-                        onCheckedChange = onSosActionsEnabledChange
+                        onCheckedChange = onSosActionsEnabledChange,
+                        colors = activeSwitchColors()
                     )
                 }
             ) {
@@ -740,7 +742,8 @@ private fun EmergencySettingsScreen(
                     Switch(
                         checked = fallOrientationGate,
                         enabled = !criticalSettingsLocked,
-                        onCheckedChange = onFallOrientationGateChange
+                        onCheckedChange = onFallOrientationGateChange,
+                        colors = activeSwitchColors()
                     )
                 }
             ) {
@@ -775,7 +778,8 @@ private fun EmergencySettingsScreen(
                     Switch(
                         checked = voiceKeywordsGate,
                         enabled = !criticalSettingsLocked,
-                        onCheckedChange = onVoiceKeywordsGateChange
+                        onCheckedChange = onVoiceKeywordsGateChange,
+                        colors = activeSwitchColors()
                     )
                 }
             ) {
@@ -803,7 +807,8 @@ private fun EmergencySettingsScreen(
                     Switch(
                         checked = whatsappAutoSend,
                         enabled = !criticalSettingsLocked,
-                        onCheckedChange = onWhatsappAutoSendChange
+                        onCheckedChange = onWhatsappAutoSendChange,
+                        colors = activeSwitchColors()
                     )
                 },
                 description = if (whatsappAutoSend) {
@@ -983,6 +988,7 @@ private fun EmergencySettingsScreen(
                     Switch(
                         checked = smsAuto,
                         enabled = !criticalSettingsLocked,
+                        colors = activeSwitchColors(),
                         onCheckedChange = { enabled ->
                             if (!SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
                                 if (enabled && !hasSendSmsPermission(context)) {
@@ -1432,6 +1438,14 @@ private fun EmergencyContactEditor(
     }
 }
 
+// Verde = activo: el naranja del tema nunca debe marcar un control seleccionado.
+@androidx.compose.runtime.Composable
+private fun activeSwitchColors() = SwitchDefaults.colors(
+    checkedThumbColor = Color.White,
+    checkedTrackColor = StrongGreen,
+    checkedBorderColor = StrongGreen
+)
+
 @androidx.compose.runtime.Composable
 private fun EmergencyActionSwitch(
     label: String,
@@ -1445,7 +1459,12 @@ private fun EmergencyActionSwitch(
             Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             Text(detail, style = MaterialTheme.typography.bodySmall)
         }
-        Switch(checked = checked, enabled = enabled, onCheckedChange = onCheckedChange)
+        Switch(
+            checked = checked,
+            enabled = enabled,
+            onCheckedChange = onCheckedChange,
+            colors = activeSwitchColors()
+        )
     }
 }
 
