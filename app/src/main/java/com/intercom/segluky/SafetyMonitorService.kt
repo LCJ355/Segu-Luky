@@ -873,20 +873,58 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             lastQualifiedLocationAt != null -> LOCATION_MIN_DISTANCE_ROUTINE_M
             else -> 0f
         }
-        try {
-            locationManager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER,
-                currentLocationIntervalMs,
-                currentLocationMinDistanceM,
-                this,
-                Looper.getMainLooper()
-            )
-            locationUpdatesRegistered = true
-        } catch (_: SecurityException) {
-            SafetyStateStore.log("Permiso de ubicacion revocado")
-        } catch (_: IllegalArgumentException) {
-            SafetyStateStore.log("Proveedor GPS no disponible")
+        seedFromLastKnownLocation()
+        var registeredProviders = 0
+        for (provider in availableLocationProviders()) {
+            try {
+                locationManager.requestLocationUpdates(
+                    provider,
+                    currentLocationIntervalMs,
+                    currentLocationMinDistanceM,
+                    this,
+                    Looper.getMainLooper()
+                )
+                registeredProviders++
+            } catch (_: SecurityException) {
+                SafetyStateStore.log("Permiso de ubicacion revocado")
+                break
+            } catch (_: IllegalArgumentException) {
+                SafetyStateStore.log("Proveedor de ubicacion no disponible")
+            }
         }
+        locationUpdatesRegistered = registeredProviders > 0
+    }
+
+    private fun availableLocationProviders(): List<String> {
+        val providers = mutableListOf<String>()
+        listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).forEach { provider ->
+            val enabled = runCatching { locationManager.isProviderEnabled(provider) }.getOrDefault(false)
+            if (enabled) providers += provider
+        }
+        return providers
+    }
+
+    // Bajo techo el GPS puede tardar minutos o no fijar nunca; la ultima posicion
+    // conocida mantiene informado al usuario y el mapa solo la usa si es reciente.
+    private fun seedFromLastKnownLocation() {
+        val best = availableLocationProviders()
+            .mapNotNull { provider ->
+                runCatching { locationManager.getLastKnownLocation(provider) }.getOrNull()
+            }
+            .filter { fix ->
+                fix.elapsedRealtimeNanos > 0L &&
+                    fix.hasAccuracy() &&
+                    fix.accuracy.isFinite() &&
+                    fix.accuracy <= MAX_QUALIFIED_GPS_ACCURACY_METERS
+            }
+            .maxByOrNull { it.elapsedRealtimeNanos }
+            ?: return
+        val seededAt = best.elapsedRealtimeNanos / 1_000_000L
+        lastQualifiedLocationAt?.let { existing -> if (seededAt <= existing) return }
+        lastQualifiedLocation = Location(best)
+        lastQualifiedLocationAt = seededAt
+        lastQualifiedLocationWallTime = best.time.takeIf { it > 0L } ?: System.currentTimeMillis()
+        lastAccuracy = best.accuracy
     }
 
     private fun setLocationUpdateInterval(intervalMs: Long, minDistanceM: Float = 0f) {

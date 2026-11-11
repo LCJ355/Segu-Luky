@@ -1588,7 +1588,7 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "Estados GPS",
-                text = "DETENIDO: monitor apagado. PENDIENTE: ajuste guardado. BUSCANDO FIX: espera la primera posicion. FIX CADUCADO: supera 60 s. OK: posicion GPS precisa y reciente. El SOS manual (boton 5 s, dos dedos o voz) si funciona sin GPS; el enlace de ubicacion indicara que no hay posicion reciente."
+                text = "DETENIDO: monitor apagado. BUSCANDO FIX: aun sin posicion; bajo techo el GPS puede no llegar y se usa la ubicacion por red o la ultima conocida. FIX CADUCADO (LENTO): la posicion supera 60 s y solo sirve de referencia. OK: posicion reciente. El SOS manual (boton 5 s, dos dedos o voz) si funciona sin GPS; el enlace de ubicacion solo se envia si la posicion tiene menos de 5 min."
             )
         }
         item {
@@ -2103,6 +2103,15 @@ private fun SensorGlyph(tint: Color) {
     }
 }
 
+private fun formatFixAge(seconds: Long?): String? {
+    if (seconds == null) return null
+    return when {
+        seconds < 60L -> "${seconds}s"
+        seconds < 3_600L -> "${seconds / 60L} min"
+        else -> "${seconds / 3_600L} h ${(seconds % 3_600L) / 60L} min"
+    }
+}
+
 @androidx.compose.runtime.Composable
 private fun SensorsScreen(
     modifier: Modifier,
@@ -2135,8 +2144,8 @@ private fun MonitorCard(
     val running = snapshot.phase != SafetyPhase.STOPPED
     val gpsLiveText = when {
         !running -> "--"
-        snapshot.gpsAvailable -> snapshot.gpsFixAgeSeconds?.let { "OK (${it}s)" } ?: "OK"
-        snapshot.gpsFixAgeSeconds != null -> "LENTO (${snapshot.gpsFixAgeSeconds}s)"
+        snapshot.gpsAvailable -> formatFixAge(snapshot.gpsFixAgeSeconds)?.let { "OK ($it)" } ?: "OK"
+        snapshot.gpsFixAgeSeconds != null -> "LENTO (${formatFixAge(snapshot.gpsFixAgeSeconds)})"
         else -> "BUSCANDO"
     }
     val gpsLiveState = when {
@@ -2147,8 +2156,10 @@ private fun MonitorCard(
     val gpsStatusNote = when {
         !running -> "Se activa al iniciar el monitor."
         snapshot.gpsAvailable -> "Posicion precisa y reciente. Solo aporta el mapa."
-        snapshot.gpsFixAgeSeconds != null -> "El ultimo fix supera 60 s. Solo aporta el mapa."
-        else -> "Esperando la primera posicion al aire libre."
+        snapshot.gpsFixAgeSeconds != null ->
+            "Ultima posicion hace ${formatFixAge(snapshot.gpsFixAgeSeconds)}. " +
+                "Solo cuenta si es de los ultimos 5 min."
+        else -> "Sin posicion todavia: al aire libre tarda unos segundos, bajo techo puede no llegar."
     }
     SeguCard(
         title = "MONITOR",

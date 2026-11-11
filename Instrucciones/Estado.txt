@@ -1121,6 +1121,22 @@ Verificacion en pantalla:
 - APK generado: app-release.apk (1.33s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
+1.34s (versionCode 26)
+Fecha: 2026-11-11
+Correccion de GPS:
+- Se pedia ubicacion solo al proveedor GPS. Bajo techo ese proveedor puede no fijar nunca y la pantalla Sensores se quedaba en "BUSCANDO / Esperando la primera posicion al aire libre" indefinidamente, aunque el telefono tuviera posiciones guardadas.
+- Ahora se registran GPS y RED (NETWORK_PROVIDER): en interior llega una posicion aproximada de red en segundos y el estado pasa a OK sin salir a la calle.
+- Al iniciar el monitor se lee la ultima posicion conocida (GPS o red) y se usa como referencia, de modo que el estado muestra la antiguedad real en lugar de "sin posicion".
+- La antiguedad se muestra legible: "OK (14s)", "LENTO (3 min)", "LENTO (2 h 5 min)".
+- Nota de la fila GPS: "Ultima posicion hace X. Solo cuenta si es de los ultimos 5 min." y, sin ninguna, "Sin posicion todavia: al aire libre tarda unos segundos, bajo techo puede no llegar."
+- Instrucciones de la app actualizadas en "Estados GPS".
+Verificacion en el OPPO:
+- Antes: registro unico GPSCLIENT, 1 posicion en 53 min, fila GPS en BUSCANDO.
+- Despues: dos registros (HIGH_ACCURACY y BALANCED) y 2 posiciones en 22 s; fila GPS en OK (14s) con el punto GPS del inicio en verde.
+- El enlace de Google Maps sigue exigi?ndose con menos de 5 min de antiguedad, asi que una posicion de red solo se usa si es reciente.
+- APK generado: app-release.apk (1.34s).
+
+
 
 
 
