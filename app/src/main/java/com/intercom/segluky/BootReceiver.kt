@@ -11,7 +11,7 @@ class BootReceiver : BroadcastReceiver() {
         val restoredGesture = runCatching {
             GlobalTouchAccessibilityService.restoreAfterBoot(context)
         }.onFailure {
-            Log.w("SeguLuky", "No se pudo restaurar el gesto global", it)
+            Log.w("SeguLuky", "No se pudo comprobar el gesto global", it)
         }.getOrDefault(false)
         if (restoredGesture) SafetyStateStore.log("Gesto global 2 dedos restaurado tras el reinicio")
         if (SafetyRuntimeRepository(context).wasMonitoringRequested()) {

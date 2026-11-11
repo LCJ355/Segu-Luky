@@ -198,11 +198,20 @@ class GlobalTouchAccessibilityService : AccessibilityService() {
             return enabled
         }
 
-        /** Re-asserts the gesture after a reboot or an update, when the user opted in. */
+        /**
+         * El servicio filtra todo el flujo tactil, y en algunas ROM OPPO/ColorOS eso deja la
+         * pantalla sin respuesta. Por eso no se reactiva solo tras reiniciar: el usuario tiene
+         * que volver a activarlo desde Ajustes > Accesibilidad o con tools\activar-gesto-global.cmd.
+         */
         fun restoreAfterBoot(context: Context): Boolean {
-            if (!isSupported() || !wasAutoEnableRequested(context)) return false
-            if (isEnabled(context)) return false
-            return enableByItself(context)
+            if (!isSupported() || isEnabled(context)) return false
+            if (wasAutoEnableRequested(context)) {
+                Log.w(
+                    LOG_TAG,
+                    "Gesto global sin reactivar: se activa a mano para no bloquear el tacto."
+                )
+            }
+            return false
         }
 
         /** Opens the exact toggle for this service when the OEM exposes it, else the full list. */

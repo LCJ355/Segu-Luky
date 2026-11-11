@@ -745,7 +745,6 @@ private fun EmergencySettingsScreen(
         item {
             val supported = GlobalTouchAccessibilityService.isSupported()
             val selfEnable = GlobalTouchAccessibilityService.canEnableByItself(context)
-            val autoRestored = selfEnable && GlobalTouchAccessibilityService.wasAutoEnableRequested(context)
             SeguCard(
                 title = "GESTO GLOBAL 2 DEDOS",
                 status = when {
@@ -760,15 +759,14 @@ private fun EmergencySettingsScreen(
                 },
                 description = when {
                     !supported -> "Necesita Android 12 o superior."
-                    globalGestureReady && autoRestored ->
-                        "Manten dos dedos 5 s en cualquier pantalla para lanzar el SOS. Lo activa la app y " +
-                            "se restaura sola tras reiniciar."
                     globalGestureReady ->
-                        "Manten dos dedos 5 s en cualquier pantalla para lanzar el SOS. Si lo desactivas " +
-                            "en Accesibilidad hay que volver a activarlo a mano."
+                        "Manten dos dedos 5 s en cualquier pantalla para lanzar el SOS. AVISO: en algunos " +
+                            "OPPO/ColorOS el movil deja de responder al tacto mientras este activo; si pasa, " +
+                            "desactivalo en Ajustes > Accesibilidad."
                     else ->
                         "Manten dos dedos 5 s en cualquier pantalla inicia el SOS. No lee el contenido de " +
-                            "otras apps."
+                            "otras apps. AVISO: en algunos OPPO/ColorOS el movil deja de responder al tacto " +
+                            "mientras este activo; si pasa, desactivalo en Ajustes > Accesibilidad."
                 }
             ) {
                 if (supported && !globalGestureReady) {
@@ -777,7 +775,7 @@ private fun EmergencySettingsScreen(
                             onClick = {
                                 val enabled = GlobalTouchAccessibilityService.enableByItself(context)
                                 val message = if (enabled) {
-                                    "Gesto global activado. Se mantiene tras reiniciar."
+                                    "Gesto global activado. Comprueba el tacto y, si no responde, desactivalo en Accesibilidad."
                                 } else {
                                     "Android no permitio el cambio. Activalo en Accesibilidad."
                                 }
@@ -805,10 +803,11 @@ private fun EmergencySettingsScreen(
                             Text("ABRIR ACCESIBILIDAD")
                         }
                         Text(
-                            "Para activarlo sin tocar menus: conecta el movil por USB una vez y ejecuta " +
-                                "tools\\activar-gesto-global.cmd (o el comando de abajo).",
+                            "En este modelo puede dejar la pantalla sin respuesta al tacto. Si lo activas, " +
+                                "prueba el tacto enseguida; para deshacerlo ejecuta tools\\desactivar-gesto-global.cmd " +
+                                "o desactivalo en Ajustes > Accesibilidad.",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Tone.BAD.text
                         )
                         Text(
                             "adb shell settings put secure enabled_accessibility_services " +
