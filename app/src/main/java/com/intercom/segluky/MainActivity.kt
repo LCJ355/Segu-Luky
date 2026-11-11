@@ -25,6 +25,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,7 +34,6 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -88,9 +88,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
@@ -265,7 +267,6 @@ class MainActivity : ComponentActivity() {
                     screen = screen,
                     onSettings = { screen = AppScreen.SETTINGS },
                     onSensors = { screen = AppScreen.SENSORS },
-                    onInstructions = { screen = AppScreen.INSTRUCTIONS },
                     onAbout = { showAbout = true },
                     onBack = { screen = AppScreen.HOME }
                 )
@@ -463,7 +464,6 @@ private fun SeguTopBar(
     screen: AppScreen,
     onSettings: () -> Unit,
     onSensors: () -> Unit,
-    onInstructions: () -> Unit,
     onAbout: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -502,16 +502,12 @@ private fun SeguTopBar(
                     ) {
                         InfoGlyph(tint = MaterialTheme.colorScheme.primary)
                     }
-                    TextButton(
-                        onClick = onInstructions,
-                        contentPadding = PaddingValues(start = 4.dp, end = 8.dp)
-                    ) {
-                        Text(
-                            appVersionLabel(),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
+                    Text(
+                        appVersionLabel(),
+                        modifier = Modifier.padding(start = 4.dp, end = 8.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 }
             }
         )
@@ -848,9 +844,13 @@ private fun CreditsPage() {
                 )
             }
         }
-        AboutParagraph(
-            "Diseno, desarrollo y pruebas en carretera: Luciano CJ. Apps hermanas del mismo autor: " +
-                "RUTAS-MOTERAS -Fuentes de Andalucia- e INTERCOM-LUKY."
+        Image(
+            painter = painterResource(R.drawable.credito_moto),
+            contentDescription = "Foto de la moto",
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp)),
+            contentScale = ContentScale.FillWidth
         )
         AboutParagraph(
             "Gracias a quienes prueban la app en moto y avisan de los fallos: cada version corrige algo que se " +

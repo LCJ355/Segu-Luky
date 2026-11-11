@@ -1233,6 +1233,20 @@ Verificacion:
 - Las filas del menu se compactaron (subtitulo de una linea y 7 dp de relleno vertical) para que las siete entren en pantalla sin desplazar.
 - APK generado: app-release.apk (1.41s).
 
+1.42s (versionCode 34)
+Fecha: 2026-11-11
+Ajustes en Informacion:
+- Creditos: se anade la foto de la moto (res/drawable-nodpi/credito_moto.png, la misma que usa RUTAS-MOTERAS), a ancho completo, con esquinas redondeadas, debajo de la tarjeta naranja.
+- Creditos: se borra el parrafo "Diseno, desarrollo y pruebas en carretera: Luciano CJ. Apps hermanas del mismo autor: RUTAS-MOTERAS ... INTERCOM-LUKY". Se mantienen el parrafo de agradecimiento y el de "Sin publicidad, sin cuentas y sin servidores propios".
+- La etiqueta de version V-1.42s de la barra superior ya no es un boton: al pulsarla no pasaba a Instrucciones, porque esas instrucciones ya estan en Informacion > Como usar. Se quita el parametro onInstructions de SeguTopBar.
+Motivo: peticion del usuario para completar los creditos con la foto de la moto, quitar el parrafo que no queria y dejar de duplicar el acceso a Instrucciones desde la version.
+Verificacion:
+- Compilacion y pruebas unitarias correctas (BUILD SUCCESSFUL), 71 pruebas y 0 fallos.
+- Instalado en el OPPO como V-1.42s (versionCode 34): en la barra solo queda pulsable el boton (i) en [508,95][604,191]; la etiqueta V-1.42s queda en [596,127][704,159] como texto y al pulsarla no cambia de pantalla.
+- Creditos muestra la foto en [88,739][632,1189] (544 x 450 px, sin deformar), el parrafo de agradecimiento y el de privacidad; el parrafo borrado ya no aparece y la cita "No me copies sino es para mejorarme" sigue visible.
+- Como usar sigue abriendo Instrucciones y VOLVER regresa al inicio.
+- APK generado: app-release.apk (1.42s).
+
 
 
 FORMATO PARA FUTURAS ENTRADAS
