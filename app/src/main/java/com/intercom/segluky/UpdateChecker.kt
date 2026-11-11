@@ -7,11 +7,11 @@ import java.net.URL
  * Comprobacion de la ultima version publicada en GitHub.
  *
  * Solo la usa el menu de informacion y siempre desde un hilo de trabajo: hace una
- * peticion HTTP que puede tardar. Primero mira la ultima release publicada; si el
- * proyecto todavia no tiene releases usa el listado de releases y despues las
- * etiquetas, asi una version recien etiquetada tambien cuenta. Cuando de verdad no
- * hay nada publicado se informa como tal, sin inventar una version nueva ni
- * bloquear la pantalla.
+ * peticion HTTP que puede tardar. Lee el listado de releases y se queda con la
+ * version mas alta; si el proyecto todavia no tiene releases mira las etiquetas,
+ * asi una version recien etiquetada tambien cuenta. Cuando de verdad no hay nada
+ * publicado se informa como tal, sin inventar una version nueva ni bloquear la
+ * pantalla.
  */
 object UpdateChecker {
 
@@ -20,7 +20,6 @@ object UpdateChecker {
     const val APK_FOLDER = "https://github.com/LCJ355/Segu-Luky/tree/main/APK%C2%B4s"
     const val ISSUES_PAGE = "https://github.com/LCJ355/Segu-Luky/issues/new"
     private const val API_ROOT = "https://api.github.com/repos/$REPOSITORY"
-    private const val LATEST_RELEASE_API = "$API_ROOT/releases/latest"
     private const val RELEASES_API = "$API_ROOT/releases"
     private const val TAGS_API = "$API_ROOT/tags"
     private const val TIMEOUT_MS = 6_000
@@ -39,43 +38,30 @@ object UpdateChecker {
     }
 
     /** Bloqueante: llamar siempre desde un hilo de trabajo. */
-    fun check(currentVersion: String): Status = runCatching {
-        val latest = get(LATEST_RELEASE_API)
-        when {
-            latest.code == HttpURLConnection.HTTP_NOT_FOUND -> publishedWithoutReleases(currentVersion)
-            latest.code !in 200..299 -> Status.Failed("HTTP ${latest.code}")
-            else -> {
-                val tag = jsonString(latest.body, "tag_name")
-                if (tag.isNullOrBlank()) {
-                    Status.Failed("respuesta sin version")
-                } else {
-                    evaluate(
-                        currentVersion,
-                        tag,
-                        apkUrl(latest.body) ?: jsonString(latest.body, "html_url") ?: RELEASES_PAGE
-                    )
-                }
-            }
-        }
-    }.getOrElse { Status.Failed(it.message?.take(80) ?: "sin conexion") }
+    fun check(currentVersion: String): Status =
+        runCatching { request(currentVersion) }
+            .getOrElse { Status.Failed(it.message?.take(80) ?: "sin conexion") }
 
-    /**
-     * Camino sin releases: usa el listado de releases (por si GitHub no da la
-     * ultima) y, si esta vacio, las etiquetas del repositorio.
-     */
-    private fun publishedWithoutReleases(currentVersion: String): Status {
+    private fun request(currentVersion: String): Status {
+        // Se lee el listado completo y se elige la version mas alta: /releases/latest
+        // depende del orden de creacion de las releases, no del numero de version.
         val releases = get(RELEASES_API)
         if (releases.code !in 200..299) return Status.Failed("HTTP ${releases.code}")
-        val latestRelease = jsonObjects(releases.body)
+        val published = jsonObjects(releases.body)
             .mapNotNull { body ->
                 val tag = jsonString(body, "tag_name") ?: return@mapNotNull null
                 tag to (apkUrl(body) ?: jsonString(body, "html_url") ?: RELEASES_PAGE)
             }
-            .let { published -> newestOf(published) { it.first } }
-        if (latestRelease != null) {
-            return evaluate(currentVersion, latestRelease.first, latestRelease.second)
+        val newest = newestOf(published) { it.first }
+        return if (newest != null) {
+            evaluate(currentVersion, newest.first, newest.second)
+        } else {
+            publishedFromTags(currentVersion)
         }
+    }
 
+    /** Sin releases: una etiqueta publicada tambien cuenta como version disponible. */
+    private fun publishedFromTags(currentVersion: String): Status {
         val tags = get(TAGS_API)
         if (tags.code !in 200..299) return Status.Failed("HTTP ${tags.code}")
         val newestTag = highestTag(
