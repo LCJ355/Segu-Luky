@@ -68,6 +68,10 @@ gradlew.bat assembleDebug
 
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
+The shareable build of every version is published in `APK´s/` as
+`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.44s.apk`), ready to download
+and install on the phone without Android Studio.
+
 ## Safe device test
 
 1. Install the debug APK without uninstalling InterCOM-Luky.

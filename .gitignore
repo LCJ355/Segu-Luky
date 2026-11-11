@@ -28,3 +28,6 @@ Instrucciones/Calibracion/*.csv
 
 # Historical binaries
 APK´s/_anterior/
+
+# Compartible builds: la APK de cada version se publica en APK´s/
+!APK´s/*.apk
