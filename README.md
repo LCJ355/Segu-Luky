@@ -21,11 +21,8 @@ key; InterCOM is only inspected, never modified.
   bump no longer lights the display.
 - GPS speed and signal never gate a configured impact. They refine the report and
   the map link. Missing GPS is neutral and the last valid fix is retained.
-- Long-press on the visible controls confirms a pending event.
-- Optional global gesture: two fingers held for five seconds confirms SOS from any
-  screen when the accessibility service is enabled; three or more fingers confirm
-  immediately. It requires Android 12+ and an explicit user action in Android
-  Accessibility settings.
+- Long-press on the visible controls confirms a pending event. There is no
+  two-finger gesture, in-app or global, in this build.
 - Optional voice trigger: saying AYUDA or SOCORRO starts the countdown while the
   monitor is active, even with the screen off. It can be enabled before or after
   starting the monitor.
@@ -67,10 +64,11 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 7. Re-enable `FUNCIONALIDAD SOS` only when the contacts are verified. There is no
    debug-only simulation of the contact protocol.
 
-The global accessibility gesture (two fingers anywhere on screen) was removed: on
-some OPPO/ColorOS builds its input filter left the whole screen unresponsive to
-touch. SOS is still triggered by the in-app `S O S` control, the shake sensor and
-the voice keyword.
+The two-finger gesture (two fingers anywhere on screen) was removed: on some
+OPPO/ColorOS builds its accessibility input filter left the whole screen
+unresponsive to touch, and the in-app variant was removed as well so the only
+manual paths stay explicit. SOS is triggered by the in-app `S O S` control, the
+shake sensor and the voice keyword.
 
 ## Battery notes
 

@@ -274,8 +274,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(padding)
-                            .padding(horizontal = 16.dp)
-                            .multiTouchEmergency { SafetyMonitorService.confirm(context) },
+                            .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                 item { Spacer(Modifier.height(6.dp)) }
@@ -1573,7 +1572,7 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "5. SOS manual y pruebas",
-                text = "Mantener pulsado el boton SOS durante 5 segundos inicia la cuenta atras real. Dentro de Segu-Luky tambien puedes mantener dos dedos 5 segundos. Antes de probar, desactiva FUNCIONALIDAD SOS para que la cuenta atras no llame ni envie mensajes a los contactos."
+                text = "Mantener pulsado el boton SOS durante 5 segundos inicia la cuenta atras real. Antes de probar, desactiva FUNCIONALIDAD SOS para que la cuenta atras no llame ni envie mensajes a los contactos."
             )
         }
         item {
@@ -1607,7 +1606,7 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "Estados GPS",
-                text = "DETENIDO: monitor apagado. BUSCANDO FIX: aun sin posicion; bajo techo el GPS puede no llegar y se usa la ubicacion por red o la ultima conocida. FIX CADUCADO (LENTO): la posicion supera 60 s y solo sirve de referencia. OK: posicion reciente. El SOS manual (boton 5 s, dos dedos o voz) si funciona sin GPS; el enlace de ubicacion solo se envia si la posicion tiene menos de 5 min."
+                text = "DETENIDO: monitor apagado. BUSCANDO FIX: aun sin posicion; bajo techo el GPS puede no llegar y se usa la ubicacion por red o la ultima conocida. FIX CADUCADO (LENTO): la posicion supera 60 s y solo sirve de referencia. OK: posicion reciente. El SOS manual (boton 5 s o voz) si funciona sin GPS; el enlace de ubicacion solo se envia si la posicion tiene menos de 5 min."
             )
         }
         item {
@@ -2603,40 +2602,6 @@ private fun thumbColorFor(g: Float): Color = when {
     g < 1.5f -> Color(0xFF00C853)
     g < 3.5f -> Color(0xFFF9A825)
     else -> Color(0xFFE53935)
-}
-
-private fun Modifier.multiTouchEmergency(onEmergency: () -> Unit): Modifier = pointerInput(Unit) {
-    val detector = MultiTouchEmergencyDetector()
-    awaitEachGesture {
-        val firstDown = awaitFirstDown(requireUnconsumed = false)
-        var pointerCount = 1
-        detector.update(pointerCount, firstDown.uptimeMillis)
-        while (true) {
-            val now = SystemClock.uptimeMillis()
-            val deadline = detector.nextDeadline()
-            val waitMs = deadline?.let { (it - now).coerceAtLeast(1L) }
-            val event = if (waitMs == null) {
-                awaitPointerEvent(PointerEventPass.Initial)
-            } else {
-                withTimeoutOrNull(waitMs) { awaitPointerEvent(PointerEventPass.Initial) }
-            }
-
-            if (event == null) {
-                if (detector.update(pointerCount, SystemClock.uptimeMillis())) onEmergency()
-                continue
-            }
-
-            val newPointerCount = event.changes.count { it.pressed }
-            if (pointerCount >= 2 || newPointerCount >= 2) {
-                event.changes.forEach { it.consume() }
-            }
-            pointerCount = newPointerCount
-            val timestamp = event.changes.maxOfOrNull { it.uptimeMillis } ?: SystemClock.uptimeMillis()
-            if (detector.update(pointerCount, timestamp)) onEmergency()
-            if (pointerCount == 0) break
-        }
-        detector.reset()
-    }
 }
 
 private fun isValidEmergencyPhone(value: String): Boolean {

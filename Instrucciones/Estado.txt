@@ -1173,14 +1173,29 @@ Verificacion en el OPPO (monitor activo):
 - Se apaga y enciende dos veces MODO MOTO: sin fallos, la pantalla Sensores sigue mostrando "Inclinacion 0 grados; caida si se mantiene >= 55 grados 4 s" y el nivel de audio sigue vivo (-39 dB).
 - La revision de bateria del 1.37s se mantiene: el servicio solo gasta cuando hay datos nuevos.
 - APK generado: app-release.apk (1.38s).
-Pendientes: decidir si se elimina el gesto de dos dedos dentro de la app.
-Pendientes: decidir si se elimina el gesto de dos dedos dentro de la app; revisar el aviso de palabras clave que puede quedarse pausado y el reinicio del bloqueo de orientacion al recargar la configuracion.
+Pendientes: resueltos. El aviso de palabras clave y el reinicio del bloqueo de orientacion se corrigieron en 1.38s; el gesto de dos dedos dentro de la app se elimina en 1.39s.
 
 
 
 
 
 
+1.39s (versionCode 31)
+Fecha: 2026-11-11
+Eliminado el gesto de dos dedos dentro de la app:
+- Se quita del inicio (MainActivity.kt) el modificador multiTouchEmergency que envolvia la lista de tarjetas, junto con toda la funcion que lo implementaba.
+- Se borran MultiTouchEmergencyDetector.kt y su prueba MultiTouchEmergencyDetectorTest.kt, que solo se usaban para ese gesto. Asi ya no queda ningun camino de emergencia por multitactil en la app; el gesto global por accesibilidad ya se habia eliminado antes.
+- Se corrigen los dos textos de ayuda que lo mencionaban: el de la prueba del boton SOS y el de la leyenda de estados de GPS, que ahora dice "El SOS manual (boton 5 s o voz) si funciona sin GPS".
+- Motivo: el filtro de entrada del gesto, igual que el del gesto global, dejaba la pantalla sin respuesta al tacto en algunos OPPO/ColorOS, y ademas consumia todos los eventos de puntero de dos dedos mientras estaba activo.
+- Los caminos manuales que quedan son explicitos: boton S O S mantenido 5 s y las palabras clave de voz. Los automaticos (sacudida y caida) no cambian.
+Documentacion actualizada:
+- APK\PROTOCOLO-SEGU-LUKY.txt: el apartado B) ya no lista "mantener dos dedos 5 segundos"; explica que el gesto multitactil no existe.
+- README.md: se quita la opcion del gesto global y se aclara que en esta version no hay gesto de dos dedos, ni dentro ni fuera de la app.
+Verificacion:
+- Compilacion y pruebas unitarias correctas (BUILD SUCCESSFUL), sin avisos de lint vital.
+- Comprobado en el APK generado que el codigo compilado ya no contiene multiTouchEmergency, MultiTouchEmergencyDetector ni el texto "dos dedos", y si el texto nuevo "boton 5 s o voz".
+- Instalado en el OPPO: arranca como V-1.39s, INICIAR MONITOR / DETENER MONITOR funcionan, el nivel de audio se mueve (-52 dB) y el servicio sigue vivo al detener el monitor.
+- APK generado: app-release.apk (1.39s).
 
 
 

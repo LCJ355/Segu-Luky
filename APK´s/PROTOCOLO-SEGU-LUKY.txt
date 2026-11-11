@@ -39,9 +39,9 @@ A) CAIDA / ORIENTACION ACTIVADA (valor por defecto, MODO MOTO):
 B) SOS DELIBERADO:
    - Sacudida: 2 picos fuertes dentro de 1,2 s.
    - Mantener el boton S O S 5 segundos.
-   - Mantener dos dedos 5 segundos dentro de la app.
-   - El gesto global de accesibilidad ya no existe: su filtro de entrada dejaba
-     la pantalla sin respuesta al tacto en algunos OPPO/ColorOS.
+   - El gesto de dos dedos (global y dentro de la app) ya no existe: el gesto
+     global dejaba la pantalla sin respuesta al tacto en algunos OPPO/ColorOS y
+     el de dentro de la app se retiro por la misma razon practica.
    - Decir "ayuda" o "socorro" (VOZ AYUDA / SOCORRO, desactivado por defecto):
      funciona con el monitor activo y con la pantalla apagada. Si se activa la
      voz con el monitor ya iniciado, la captura arranca sin reiniciar el
