@@ -1211,6 +1211,28 @@ Verificacion en el OPPO (capturas medidas pixel a pixel):
 - Con una pulsacion de 5,5 s salta la cuenta atras como antes (ESTADO SOS ACTIVO, 30 s) y se cancela sin problemas; al volver al inicio las columnas quedan vacias.
 - APK generado: app-release.apk (1.40s).
 
+1.41s (versionCode 33)
+Fecha: 2026-11-11
+Boton de informacion en la barra superior:
+- A la izquierda de la etiqueta V-1.41s aparece un boton con un "i" dibujado (circulo con borde, 20 dp), sin glifos de fuente. Abre el dialogo Segu-Luky con siete entradas: Buscar actualizacion, Como usar, Privacidad, Historial, Sugerencias, Compartir y Creditos.
+- Buscar actualizacion: consulta https://api.github.com/repos/LCJ355/Segu-Luky/releases/latest con Accept y User-Agent, espera maxima de 6 s y siempre disconnect(), lanzada desde Dispatchers.IO y nunca en el hilo de UI. Compara las partes numericas de la etiqueta publicada con la instalada. Como el repositorio todavia no tiene ninguna version publicada, responde "Todavia no hay ninguna version publicada en GitHub" y ofrece ABRIR GITHUB, COMPROBAR OTRA VEZ, VOLVER y CERRAR.
+- Como usar: cierra el dialogo y abre la pantalla de Instrucciones que ya existia.
+- Privacidad: resumen de lo que se guarda en el movil (contactos, textos de WhatsApp, token de Telegram, sensibilidad, interruptores) y de lo que sale del telefono (mensaje de SOS, avisos de Telegram y la consulta de version a GitHub). Sin analitica, sin publicidad y sin cuentas.
+- Historial: resumen de 1.41s a 1.31s con la version instalada arriba.
+- Sugerencias: enlace a las incidencias de GitHub y boton COPIAR DATOS DEL MOVIL, que copia version, modelo, Android, sensibilidad y estado del monitor; nunca contactos, token ni ubicacion.
+- Compartir: Intent ACTION_SEND con createChooser, igual que el resto de la app.
+- Creditos: tarjeta con degradado naranja (0xFFFFA22B a 0xFFDD4E00), IDEA ORIGINAL DE, LUCIANO CJ, la cita "No me copies sino es para mejorarme" y referencias a RUTAS-MOTERAS e INTERCOM-LUKY.
+- Codigo nuevo: UpdateChecker.kt (comprobacion y comparacion de versiones, lector de campos JSON con expresiones regulares, sin dependencias nuevas) y UpdateCheckerTest.kt con 5 pruebas. No se anade ninguna libreria al proyecto.
+- Los textos van sin acentos a proposito, porque en esta ROM los acentos salen como simbolos raros. El "i" del boton se dibuja con formas de Compose.
+Motivo: peticion del usuario para tener dentro de la app buscar actualizacion, ayuda, privacidad, historial, sugerencias, compartir y creditos, con el icono de informacion a la izquierda de la version.
+Verificacion:
+- Compilacion y pruebas unitarias correctas (BUILD SUCCESSFUL): 71 pruebas, 0 fallos, incluidas las 5 nuevas de UpdateChecker.
+- Instalado en el OPPO como V-1.41s (versionCode 33): el icono queda en [513,95][593,191] y la etiqueta V-1.41s en [593,95][720,191], sin mover el engranaje ni el icono de los sensores.
+- Recorridas las siete entradas: Buscar actualizacion avisa de que no hay versiones publicadas; ABRIR GITHUB abre el navegador y al volver la app sigue igual; Como usar abre Instrucciones y VOLVER regresa al inicio; Privacidad, Historial, Sugerencias y Creditos se leen enteros; Compartir abre el selector de Android y al volver se puede cerrar el dialogo sin fallos.
+- INICIAR MONITOR y DETENER MONITOR siguen funcionando despues de usar el dialogo, y el registro de fallos (logcat -b crash) queda vacio para la app.
+- Las filas del menu se compactaron (subtitulo de una linea y 7 dp de relleno vertical) para que las siete entren en pantalla sin desplazar.
+- APK generado: app-release.apk (1.41s).
+
 
 
 FORMATO PARA FUTURAS ENTRADAS

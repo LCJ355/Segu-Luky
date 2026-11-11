@@ -1,9 +1,12 @@
 ﻿package com.intercom.segluky
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Build
@@ -23,11 +26,14 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -35,6 +41,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -42,8 +49,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -66,6 +76,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -74,6 +85,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -125,6 +137,7 @@ class MainActivity : ComponentActivity() {
         var fallOrientationGate by remember { mutableStateOf(SafetyMonitorService.loadFallOrientationGate(context)) }
         var whatsappAutoSend by remember { mutableStateOf(WhatsAppAutoSend.isEnabled(context)) }
         var showGpsOffWarning by remember { mutableStateOf(false) }
+        var showAbout by remember { mutableStateOf(false) }
         var sosActionsEnabled by remember { mutableStateOf(repository.areSosActionsEnabled()) }
         var audioPermissionGranted by remember { mutableStateOf(hasAudioPermission(context)) }
         var callPermissionGranted by remember { mutableStateOf(hasCallPermission(context)) }
@@ -253,6 +266,7 @@ class MainActivity : ComponentActivity() {
                     onSettings = { screen = AppScreen.SETTINGS },
                     onSensors = { screen = AppScreen.SENSORS },
                     onInstructions = { screen = AppScreen.INSTRUCTIONS },
+                    onAbout = { showAbout = true },
                     onBack = { screen = AppScreen.HOME }
                 )
             },
@@ -410,6 +424,17 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+
+        if (showAbout) {
+            AboutDialog(
+                versionLabel = appVersionLabel(),
+                onDismiss = { showAbout = false },
+                onOpenInstructions = {
+                    showAbout = false
+                    screen = AppScreen.INSTRUCTIONS
+                }
+            )
+        }
     }
 }
 
@@ -421,15 +446,15 @@ private enum class AppScreen {
 }
 
 /** Version that the package manager reports, so the UI never drifts from build.gradle. */
+private fun installedVersionName(context: Context): String = runCatching {
+    context.packageManager.getPackageInfo(context.packageName, 0).versionName
+}.getOrNull() ?: "?"
+
 @androidx.compose.runtime.Composable
 private fun appVersionLabel(): String {
     val context = LocalContext.current
-    val name = androidx.compose.runtime.remember(context) {
-        runCatching {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName
-        }.getOrNull()
-    }
-    return "V-${name ?: "?"}"
+    val name = androidx.compose.runtime.remember(context) { installedVersionName(context) }
+    return "V-$name"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -439,6 +464,7 @@ private fun SeguTopBar(
     onSettings: () -> Unit,
     onSensors: () -> Unit,
     onInstructions: () -> Unit,
+    onAbout: () -> Unit,
     onBack: () -> Unit
 ) {
     when (screen) {
@@ -467,12 +493,25 @@ private fun SeguTopBar(
                 }
             },
             action = {
-                TextButton(onClick = onInstructions) {
-                    Text(
-                        appVersionLabel(),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onAbout,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .semantics { contentDescription = "Informacion de Segu-Luky" }
+                    ) {
+                        InfoGlyph(tint = MaterialTheme.colorScheme.primary)
+                    }
+                    TextButton(
+                        onClick = onInstructions,
+                        contentPadding = PaddingValues(start = 4.dp, end = 8.dp)
+                    ) {
+                        Text(
+                            appVersionLabel(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
                 }
             }
         )
@@ -524,6 +563,389 @@ private fun CenteredSeguTopBar(
             )
         }
     }
+}
+
+/** Icono de informacion dibujado a mano: circulo con una "i", sin depender de glifos de fuente. */
+@androidx.compose.runtime.Composable
+private fun InfoGlyph(tint: Color) {
+    Box(
+        modifier = Modifier
+            .size(20.dp)
+            .border(2.dp, tint, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            "i",
+            color = tint,
+            fontSize = 11.sp,
+            lineHeight = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+private enum class AboutPage {
+    MENU,
+    UPDATE,
+    PRIVACY,
+    HISTORY,
+    SUGGESTIONS,
+    CREDITS
+}
+
+private sealed class UpdateState {
+    data object Checking : UpdateState()
+    data class Done(val status: UpdateChecker.Status) : UpdateState()
+}
+
+/** Menu de informacion abierto desde el icono a la izquierda de la version. */
+@androidx.compose.runtime.Composable
+private fun AboutDialog(
+    versionLabel: String,
+    onDismiss: () -> Unit,
+    onOpenInstructions: () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var page by remember { mutableStateOf(AboutPage.MENU) }
+    var updateState by remember { mutableStateOf<UpdateState?>(null) }
+
+    fun checkUpdates() {
+        page = AboutPage.UPDATE
+        if (updateState is UpdateState.Checking) return
+        updateState = UpdateState.Checking
+        val current = versionLabel.removePrefix("V-")
+        scope.launch {
+            val status = withContext(Dispatchers.IO) { UpdateChecker.check(current) }
+            updateState = UpdateState.Done(status)
+        }
+    }
+
+    fun openPage(target: AboutPage) {
+        page = target
+    }
+
+    val title = when (page) {
+        AboutPage.MENU -> "Segu-Luky"
+        AboutPage.UPDATE -> "Buscar actualizacion"
+        AboutPage.PRIVACY -> "Privacidad"
+        AboutPage.HISTORY -> "Historial"
+        AboutPage.SUGGESTIONS -> "Sugerencias"
+        AboutPage.CREDITS -> "Creditos"
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    if (page == AboutPage.MENU) "Informacion, ayuda y creditos - $versionLabel" else versionLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 440.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                when (page) {
+                    AboutPage.MENU -> {
+                        AboutRow("Buscar actualizacion", "Comprobar version nueva", ::checkUpdates)
+                        AboutRow("Como usar", "Instrucciones paso a paso", onOpenInstructions)
+                        AboutRow("Privacidad", "Que se guarda y que se envia", { openPage(AboutPage.PRIVACY) })
+                        AboutRow("Historial", "Cambios recientes", { openPage(AboutPage.HISTORY) })
+                        AboutRow("Sugerencias", "Fallos o mejoras", { openPage(AboutPage.SUGGESTIONS) })
+                        AboutRow("Compartir", "Enlace de Segu-Luky", {
+                            shareApp(context)
+                            onDismiss()
+                        })
+                        AboutRow("Creditos", "Idea original y autor", { openPage(AboutPage.CREDITS) })
+                    }
+                    AboutPage.UPDATE -> UpdatePage(
+                        state = updateState,
+                        versionLabel = versionLabel,
+                        onOpenLink = { openLink(context, it) },
+                        onRetry = ::checkUpdates
+                    )
+                    AboutPage.PRIVACY -> AboutParagraph(privacyText())
+                    AboutPage.HISTORY -> AboutParagraph(historyText(versionLabel))
+                    AboutPage.SUGGESTIONS -> SuggestionsPage(context, versionLabel)
+                    AboutPage.CREDITS -> CreditsPage()
+                }
+            }
+        },
+        confirmButton = {
+            Row {
+                if (page != AboutPage.MENU) {
+                    TextButton(onClick = { page = AboutPage.MENU }) { Text("VOLVER") }
+                }
+                TextButton(onClick = onDismiss) { Text("CERRAR") }
+            }
+        }
+    )
+}
+
+@androidx.compose.runtime.Composable
+private fun AboutRow(title: String, subtitle: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            ">",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun AboutParagraph(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        lineHeight = 18.sp
+    )
+}
+
+@androidx.compose.runtime.Composable
+private fun UpdatePage(
+    state: UpdateState?,
+    versionLabel: String,
+    onOpenLink: (String) -> Unit,
+    onRetry: () -> Unit
+) {
+    val done = state as? UpdateState.Done
+    val available = done?.status as? UpdateChecker.Status.Available
+    AboutParagraph(
+        when {
+            state is UpdateState.Checking -> "Comprobando la ultima version publicada en GitHub..."
+            available != null -> "Hay una version nueva publicada: ${available.tag}.\nTu version instalada es la $versionLabel."
+            done?.status == UpdateChecker.Status.UpToDate ->
+                "Estas al dia: la $versionLabel es la ultima version publicada."
+            done?.status == UpdateChecker.Status.NoReleases ->
+                "Todavia no hay ninguna version publicada en GitHub, asi que no hay nada que descargar.\nTu version instalada es la $versionLabel."
+            done?.status is UpdateChecker.Status.Failed ->
+                "No se pudo comprobar ahora mismo (${(done.status as UpdateChecker.Status.Failed).detail}).\nRevisa la conexion e intentalo otra vez."
+            else -> "Pulsa COMPROBAR para mirar si hay una version nueva."
+        }
+    )
+    if (state !is UpdateState.Checking) {
+        if (available != null) {
+            Button(
+                onClick = { onOpenLink(available.url) },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("ABRIR DESCARGA") }
+        } else {
+            OutlinedButton(
+                onClick = { onOpenLink(UpdateChecker.RELEASES_PAGE) },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("ABRIR GITHUB") }
+        }
+        OutlinedButton(
+            onClick = onRetry,
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("COMPROBAR OTRA VEZ") }
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun SuggestionsPage(context: Context, versionLabel: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        AboutParagraph(
+            "Para fallos o mejoras: abre una incidencia en GitHub (hace falta cuenta) o envia los datos del movil " +
+                "a quien te mantiene la app. Con esos datos se puede reproducir el fallo."
+        )
+        AboutParagraph(
+            "Los datos copiados son version, modelo, Android, sensibilidad y estado del monitor. " +
+                "No incluyen contactos, token de Telegram ni ubicacion."
+        )
+        Button(
+            onClick = { openLink(context, UpdateChecker.ISSUES_PAGE) },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("ABRIR GITHUB") }
+        OutlinedButton(
+            onClick = { copyToClipboard(context, deviceInfoText(context, versionLabel)) },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("COPIAR DATOS DEL MOVIL") }
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun CreditsPage() {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Brush.linearGradient(listOf(Color(0xFFFFA22B), Color(0xFFDD4E00))))
+                .padding(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    "IDEA ORIGINAL DE",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "LUCIANO CJ",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(Color(0x66FFFFFF))
+                )
+                Text(
+                    "\"No me copies sino es para mejorarme\"",
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    "Segu-Luky - monitor de seguridad y SOS para moto",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
+        AboutParagraph(
+            "Diseno, desarrollo y pruebas en carretera: Luciano CJ. Apps hermanas del mismo autor: " +
+                "RUTAS-MOTERAS -Fuentes de Andalucia- e INTERCOM-LUKY."
+        )
+        AboutParagraph(
+            "Gracias a quienes prueban la app en moto y avisan de los fallos: cada version corrige algo que se " +
+                "detecto usando el movil de verdad."
+        )
+        AboutParagraph(
+            "Sin publicidad, sin cuentas y sin servidores propios. La app no vende ni comparte datos."
+        )
+    }
+}
+
+private fun privacyText(): String = buildString {
+    appendLine("Todo lo que configuras (contactos, telefonos, textos de WhatsApp, token del bot de Telegram, " +
+        "sensibilidad e interruptores) se guarda solo dentro de este movil.")
+    appendLine()
+    appendLine("Ubicacion: se usa unicamente para el monitor y el SOS. La ultima posicion no se envia a ningun " +
+        "servidor de Segu-Luky; viaja en el mensaje de SOS a tus contactos y solo si tiene menos de 5 minutos.")
+    appendLine()
+    appendLine("Microfono: con PALABRAS CLAVE activado, el reconocedor del telefono escucha AYUDA y SOCORRO. " +
+        "No se graba ni se guarda audio; NIVEL DE AUDIO solo muestra un numero en pantalla.")
+    appendLine()
+    appendLine("Telegram: si guardas un token, los avisos se envian a la API de Telegram con el token y el chat id " +
+        "que tu indiques. Sin bot ni chat id configurados no sale nada de la app.")
+    appendLine()
+    appendLine("Ninguna otra conexion: no hay analitica, ni publicidad, ni cuentas. Buscar actualizacion solo lee la " +
+        "pagina publica del proyecto en GitHub.")
+    appendLine()
+    append("Borrar datos: al desinstalar la app se borran contactos, token y registro.")
+}
+
+private fun historyText(versionLabel: String): String = buildString {
+    appendLine("Version instalada: $versionLabel")
+    appendLine()
+    appendLine("1.41s - Boton de informacion con buscar actualizacion, como usar, privacidad, historial, " +
+        "sugerencias, compartir y creditos.")
+    appendLine("1.40s - Columnas verdes a los lados del boton S O S que se llenan durante los 5 segundos.")
+    appendLine("1.39s - Se elimina el gesto de dos dedos dentro de la app.")
+    appendLine("1.38s - La voz vuelve tras parar el monitor y el bloqueo de orientacion ya no se reinicia al " +
+        "cambiar ajustes.")
+    appendLine("1.37s - Revision de bateria: el servicio solo publica datos nuevos.")
+    appendLine("1.36s - Todos los interruptores activos en verde.")
+    appendLine("1.35s - VELOCIDAD muestra SIN DATO y explica que necesita GPS.")
+    appendLine("1.34s - GPS con red: posicion bajo techo y antiguedad legible.")
+    appendLine("1.33s - Puntos de estado de los sensores mas grandes.")
+    appendLine("1.32s - Barras de audio y movimiento con el grosor del ajuste.")
+    append("1.31s - El aviso de avisos SOS desactivados pasa al final de la pantalla.")
+}
+
+/** Abre un enlace fuera de la app; si no hay navegador lo dice en vez de cerrarse. */
+private fun openLink(context: Context, url: String) {
+    val opened = runCatching {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+        true
+    }.getOrDefault(false)
+    if (!opened) Toast.makeText(context, "No hay ninguna app para abrir el enlace", Toast.LENGTH_SHORT).show()
+}
+
+private fun shareApp(context: Context) {
+    val text = "Segu-Luky: monitor de seguridad y SOS para moto. Si el movil detecta un golpe fuerte avisa a tus " +
+        "contactos con tu posicion.\nhttps://github.com/${UpdateChecker.REPOSITORY}"
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, "Segu-Luky")
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    val opened = runCatching {
+        context.startActivity(
+            Intent.createChooser(intent, "Compartir Segu-Luky").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+        true
+    }.getOrDefault(false)
+    if (!opened) Toast.makeText(context, "No hay ninguna app para compartir", Toast.LENGTH_SHORT).show()
+}
+
+private fun copyToClipboard(context: Context, text: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+    if (clipboard == null) {
+        Toast.makeText(context, "No se pudo copiar", Toast.LENGTH_SHORT).show()
+        return
+    }
+    clipboard.setPrimaryClip(ClipData.newPlainText("Segu-Luky", text))
+    Toast.makeText(context, "Datos del movil copiados", Toast.LENGTH_SHORT).show()
+}
+
+private fun deviceInfoText(context: Context, versionLabel: String): String = buildString {
+    appendLine("Segu-Luky $versionLabel")
+    appendLine("Modelo: ${CalibrationRepository.deviceModel()}")
+    appendLine("Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+    appendLine("Sensibilidad: ${SafetyMonitorService.loadSensitivity(context)} g")
+    append("Monitor: ")
+    append(
+        if (SafetyStateStore.snapshot.value.phase == SafetyPhase.STOPPED) "detenido" else "en marcha"
+    )
 }
 
 private fun countdownRemainingSeconds(endAt: Long): Long =

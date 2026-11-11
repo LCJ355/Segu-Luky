@@ -1,4 +1,4 @@
-# Segu-Luky V-1.12s
+# Segu-Luky V-1.41s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -30,6 +30,19 @@ key; InterCOM is only inspected, never modified.
   enabled and contacts are configured, a completed countdown sends SMS when
   enabled, queues WhatsApp messages, and calls contacts in order. Verify the
   configured contacts before enabling it.
+
+## Info menu
+
+- The top bar shows an `(i)` button immediately left of the `V-1.xxs` label. It
+  opens the Segu-Luky dialog with **Buscar actualizacion**, **Como usar**,
+  **Privacidad**, **Historial**, **Sugerencias**, **Compartir** and **Creditos**.
+- `UpdateChecker` reads `releases/latest` from the public GitHub repository on
+  `Dispatchers.IO`, with 6 s timeouts and an unconditional `disconnect()`. The
+  repository has no published release yet, so the dialog reports that and offers
+  the releases page instead of a download link.
+- **Sugerencias** can copy a short device report (version, model, Android,
+  sensitivity, monitor state). It never contains contacts, the bot token or the
+  location.
 
 ## Delivery pipeline
 
