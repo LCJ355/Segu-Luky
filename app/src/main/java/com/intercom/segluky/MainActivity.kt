@@ -1975,7 +1975,7 @@ private fun SensorStatusLine(snapshot: SafetySnapshot, intercomInstalled: Boolea
             ) {
                 Box(
                     Modifier
-                        .size(12.dp)
+                        .size(18.dp)
                         .clip(CircleShape)
                         .background(state.color)
                 )
@@ -2284,7 +2284,7 @@ private fun ServiceRow(label: String, value: String, state: IndicatorState, note
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(9.dp).clip(CircleShape).background(state.color))
+                Box(Modifier.size(14.dp).clip(CircleShape).background(state.color))
                 Spacer(Modifier.size(8.dp))
                 Text(label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
                 Text(value, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)

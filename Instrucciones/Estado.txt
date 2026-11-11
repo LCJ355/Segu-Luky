@@ -1109,6 +1109,19 @@ Verificacion en pantalla:
 - APK generado: app-release.apk (1.32s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
+1.33s (versionCode 25)
+Fecha: 2026-02-20
+Cambios visuales:
+- Los puntos de estado de los sensores bajo el boton del monitor pasan de 12 dp a 18 dp (de 24 a 36 px en pantalla).
+- Los puntos de la pantalla Sensores pasan de 9 dp a 14 dp (28 px) para que se lean mejor.
+Verificacion en pantalla:
+- Los 5 puntos de Inicio miden 36x36 px y las etiquetas quedan justo debajo, sin solaparse.
+- INTERCOM sigue en verde (funcional) y el resto en gris con el monitor detenido.
+- Toda la pantalla sigue entrando: el boton del monitor, las luces, audio, movimiento, sensibilidad y el panel SOS con MANTEN PULSADO 5 SEGUNDOS.
+- APK generado: app-release.apk (1.33s).
+Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
+
+
 
 
 
