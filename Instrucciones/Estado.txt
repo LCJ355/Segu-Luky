@@ -1073,6 +1073,19 @@ Verificacion:
 - APK generado: app-release.apk (1.29s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
+1.30s (versionCode 22)
+Fecha: 2026-02-20
+Cambios visuales:
+- Se reduce a la mitad el espacio vertical del bloque de sensibilidad: separacion entre la linea "SENSIBILIDAD A LOS GOLPES = x.x g" y la barra, y entre la barra y los numeros 0..7.
+- La altura de la caja del deslizador pasa de 44 dp a 30 dp y el espaciado interno de 6 dp a 3 dp.
+Medidas en pantalla:
+- Antes: 36 px entre la linea y el punto, 37 px entre el punto y los numeros.
+- Ahora: 16 px y 17 px (practicamente la mitad), en los dos estados.
+- El punto del deslizador y la barra siguen intactos (naranja detenido, verde en marcha) y el aviso de SOS queda mas cerca del bloque.
+- APK generado: app-release.apk (1.30s).
+Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
+
+
 
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================

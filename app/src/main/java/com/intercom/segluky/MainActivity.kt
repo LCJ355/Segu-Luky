@@ -2433,7 +2433,7 @@ private fun SegmentedSensitivitySlider(
     onValueChange: (Float) -> Unit
 ) {
     val v = value.coerceIn(0.5f, 7f)
-    Box(Modifier.fillMaxWidth().height(44.dp)) {
+    Box(Modifier.fillMaxWidth().height(30.dp)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2482,7 +2482,7 @@ private fun SensitivityControl(
     enabled: Boolean,
     onSensitivityChange: (Float) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "SENSIBILIDAD A LOS GOLPES =",
