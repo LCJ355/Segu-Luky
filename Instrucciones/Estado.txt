@@ -1154,6 +1154,17 @@ Revision de "verde = seleccionado/activo":
 - Comprobado en el OPPO con el APK nuevo: en los interruptores activos la pista mide (0,200,83) = 0xFF00C853 y el circulo (255,255,255); los desactivados quedan en gris (240,233,225), sin naranja.
 - Revisado el resto de selecciones y ya estaban en verde: boton INICIAR/DETENER MONITOR, bolita del ajuste a los golpes, barras de audio y movimiento, botones de actividad del registro de calibracion y puntos de estado de los sensores.
 - APK generado: app-release.apk (1.36s).
+1.37s (versionCode 29)
+Fecha: 2026-11-11
+Revision a fondo de bateria y caza de fallos:
+- El servicio del monitor pedia estado al detector de golpes en CADA muestra del sensor de movimiento (50 por segundo) durante toda la validacion, y cada peticion creaba un objeto nuevo y publicaba una actualizacion completa de la interfaz. Ahora solo se consulta si de verdad hay una validacion en marcha y, como mucho, cada 250 ms; si los datos no han cambiado no se publica nada.
+- El nivel de audio y el de movimiento se publicaban 5 veces por segundo aunque el telefono estuviera quieto. Ahora solo se publican cuando el valor redondeado cambia, asi que un telefono apoyado no genera nada.
+- El reconocedor de palabras clave publicaba el mismo estado 6-7 veces por segundo (texto y nivel identicos). Se descarta lo repetido y los limites bajan a 250 ms (estado) y 200 ms (nivel de audio).
+- Nuevo acceso directo AccidentDetector.currentPhase para leer la fase sin crear objetos, con prueba unitaria que comprueba que coincide con la instantanea completa.
+- Lo que se reviso y esta bien: los bloqueos de pantalla (wake locks) solo se toman durante la cuenta atras y se sueltan al terminar; las alarmas usan setExactAndAllowWhileIdle; el guardado en disco ya filtraba los cambios sin importancia; los sensores se piden con lote de 250 ms.
+- Medido en el OPPO con el monitor ACTIVO y la app en segundo plano (pantalla apagada o en el escritorio): 3,8 % de un nucleo en total (2,4 % el hilo principal y 1,2 % el de la voz). Con la app abierta el gasto es de la propia pantalla y del dibujado, no del servicio.
+- APK generado: app-release.apk (1.37s).
+Pendientes: decidir si se elimina el gesto de dos dedos dentro de la app; revisar el aviso de palabras clave que puede quedarse pausado y el reinicio del bloqueo de orientacion al recargar la configuracion.
 
 
 

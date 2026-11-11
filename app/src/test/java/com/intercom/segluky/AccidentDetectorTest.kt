@@ -35,6 +35,19 @@ class AccidentDetectorTest {
     }
 
     @Test
+    fun currentPhaseMirrorsTheRuntimeSnapshot() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        assertEquals(SafetyPhase.MONITORING, detector.currentPhase)
+
+        detector.setGolpeSensitivity(3f)
+        detector.onDynamicAcceleration(g(7.2f), 0f, 0f, timestamp = 2_000L)
+
+        assertEquals(SafetyPhase.COUNTDOWN, detector.currentPhase)
+        assertEquals(detector.runtimeState().phase, detector.currentPhase)
+    }
+
+    @Test
     fun subSevenGLinearMovementDoesNotStartAutomaticValidation() {
         val events = RecordingListener()
         val detector = AccidentDetector(events)

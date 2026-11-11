@@ -331,6 +331,10 @@ class VoiceKeywordMonitor(
         onState(levelDb, false, detail)
     }
 
+    private var lastPublishedDetail: String? = null
+    private var lastPublishedRecognizing = false
+    private var lastPublishedLevel = Int.MIN_VALUE
+
     private fun publishState() {
         val detail = when {
             !enabledByService -> "Voz desactivada"
@@ -339,6 +343,18 @@ class VoiceKeywordMonitor(
             recognizer == null -> "NO DISPONIBLE"
             else -> levelDb?.let { "${it.toInt()} dB" } ?: "EN ESPERA"
         }
+        // A quiet cabin keeps reporting the same rounded level: emitting an
+        // identical snapshot several times per second only wakes the UI for nothing.
+        val roundedLevel = levelDb?.toInt() ?: Int.MIN_VALUE
+        if (detail == lastPublishedDetail &&
+            recognizing == lastPublishedRecognizing &&
+            roundedLevel == lastPublishedLevel
+        ) {
+            return
+        }
+        lastPublishedDetail = detail
+        lastPublishedRecognizing = recognizing
+        lastPublishedLevel = roundedLevel
         onState(levelDb, recognizing, detail)
     }
 
@@ -359,8 +375,8 @@ class VoiceKeywordMonitor(
         private const val TRIGGER_COOLDOWN_MS = 20_000L
         private const val SESSION_TIMEOUT_MS = 8_000L
         private const val MIC_RELEASE_DELAY_MS = 250L
-        private const val STATE_THROTTLE_MS = 150L
-        private const val RMS_UI_THROTTLE_MS = 120L
+        private const val STATE_THROTTLE_MS = 250L
+        private const val RMS_UI_THROTTLE_MS = 200L
         private const val MAX_READ_SAMPLES = 8_192
         private const val CAPTURE_RETRY_DELAY_MS = 3_000L
         private const val MAX_CAPTURE_RETRIES = 5

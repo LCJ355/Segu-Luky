@@ -119,6 +119,11 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private var lastNotificationUpdateAt = 0L
     private var lastNotificationText: String? = null
     private var lastMovementUpdateAt = 0L
+    private var lastPublishedMovementLevel = Int.MIN_VALUE
+    private var lastPublishedMovementG = Int.MIN_VALUE
+    private var lastRuntimeSyncAt = 0L
+    private var lastSyncedValidationStart: Long? = null
+    private var lastSyncedImmobileSince: Long? = null
     private var lastTelemetryUpdateAt = 0L
     private var movementLevel = 0f
     private var tickerRunning = false
@@ -2004,16 +2009,30 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     }
 
     private fun syncDetectorRuntime() {
+        // Runs on every motion sensor callback (~50 Hz). Checking the phase is
+        // allocation free, so the snapshot is only rebuilt when a validation is
+        // actually running, at most RUNTIME_SYNC_INTERVAL_MS apart, and only when
+        // the mirrored values really changed. Publishing identical snapshots used
+        // to emit a StateFlow update 50 times per second during the whole
+        // five minute validation window.
+        if (detector.currentPhase != SafetyPhase.VALIDATING || countdownEndsAt != null) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastRuntimeSyncAt < RUNTIME_SYNC_INTERVAL_MS) return
+        lastRuntimeSyncAt = now
         val state = detector.runtimeState()
-        if (state.phase != SafetyPhase.COUNTDOWN && countdownEndsAt != null) return
-        if (state.phase == SafetyPhase.VALIDATING) {
-            SafetyStateStore.update {
-                it.copy(
-                    validationStartedAt = state.validationStartedAt,
-                    immobileSince = state.immobileSince,
-                    countdownEndsAt = null
-                )
-            }
+        if (state.validationStartedAt == lastSyncedValidationStart &&
+            state.immobileSince == lastSyncedImmobileSince
+        ) {
+            return
+        }
+        lastSyncedValidationStart = state.validationStartedAt
+        lastSyncedImmobileSince = state.immobileSince
+        SafetyStateStore.update {
+            it.copy(
+                validationStartedAt = state.validationStartedAt,
+                immobileSince = state.immobileSince,
+                countdownEndsAt = null
+            )
         }
     }
 
@@ -2113,11 +2132,17 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private fun updateMovementLevel(level: Float, dynamicG: Float) {
         val now = SystemClock.elapsedRealtime()
         movementLevel = maxOf(level, movementLevel * MOVEMENT_DECAY)
-        if (now - lastMovementUpdateAt >= MOVEMENT_UPDATE_INTERVAL_MS) {
-            SafetyStateStore.update {
-                it.copy(movementLevel = movementLevel, movementG = dynamicG)
-            }
-            lastMovementUpdateAt = now
+        if (now - lastMovementUpdateAt < MOVEMENT_UPDATE_INTERVAL_MS) return
+        // Standing still keeps producing the same rounded values; publishing them
+        // would wake the UI five times per second for no visible change.
+        val roundedLevel = (movementLevel * 100f).toInt()
+        val roundedG = (dynamicG * 10f).toInt()
+        if (roundedLevel == lastPublishedMovementLevel && roundedG == lastPublishedMovementG) return
+        lastMovementUpdateAt = now
+        lastPublishedMovementLevel = roundedLevel
+        lastPublishedMovementG = roundedG
+        SafetyStateStore.update {
+            it.copy(movementLevel = movementLevel, movementG = dynamicG)
         }
     }
 
@@ -2338,6 +2363,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         private const val SNAPSHOT_INTERVAL_MS = 1_000L
         private const val NOTIFICATION_INTERVAL_MS = 1_000L
         private const val MOVEMENT_UPDATE_INTERVAL_MS = 200L
+    private const val RUNTIME_SYNC_INTERVAL_MS = 250L
         private const val MOVEMENT_DECAY = 0.78f
         private const val BEEP_DURATION_MS = 120
         private const val LOCATION_INTERVAL_INITIAL_MS = 2_000L

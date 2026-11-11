@@ -323,6 +323,12 @@ class AccidentDetector(
         lastStrongHitAt = UNSET_TIME
     }
 
+    /**
+     * Cheap read for callers that run on every sensor callback. Building a
+     * [RuntimeState] there would allocate dozens of objects per second.
+     */
+    val currentPhase: SafetyPhase get() = phase
+
     fun runtimeState(): RuntimeState = RuntimeState(
         phase = phase,
         validationStartedAt = validationStartedAt,
