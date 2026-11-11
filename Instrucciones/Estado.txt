@@ -1303,6 +1303,16 @@ Verificacion:
   anidadas en textos y highestTag desordenado): 76 pruebas, 0 fallos.
 - lintDebug sin errores y assembleRelease correcto.
 - APK compartible en APK´s/Segu-Luky-1.45s.apk (5,23 MB) y copiada al equipo.
+- Publicadas las releases V-1.44s y V-1.45s con su APK adjunto; el APK de la
+  release descargado desde GitHub coincide con el del repositorio (SHA-256
+  E95600B5...5FE7C).
+- Instalado en el OPPO como V-1.45s (versionCode 37) y probado en pantalla:
+  Informacion > Buscar actualizacion muestra "Estas al dia: la V-1.45s es la
+  ultima version publicada." (antes decia que no habia nada publicado).
+- Deteccion de version nueva comprobada con una release temporal V-1.46s: la
+  pantalla paso a "Hay una version nueva publicada: V-1.46s" y mostro ABRIR
+  DESCARGA. Eliminada la release temporal, vuelve a "Estas al dia".
+- Sin registros nuevos en logcat -b crash.
 - APK generado: app-release.apk (1.45s).
 
 FORMATO PARA FUTURAS ENTRADAS
