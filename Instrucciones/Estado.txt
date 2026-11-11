@@ -1164,6 +1164,16 @@ Revision a fondo de bateria y caza de fallos:
 - Lo que se reviso y esta bien: los bloqueos de pantalla (wake locks) solo se toman durante la cuenta atras y se sueltan al terminar; las alarmas usan setExactAndAllowWhileIdle; el guardado en disco ya filtraba los cambios sin importancia; los sensores se piden con lote de 250 ms.
 - Medido en el OPPO con el monitor ACTIVO y la app en segundo plano (pantalla apagada o en el escritorio): 3,8 % de un nucleo en total (2,4 % el hilo principal y 1,2 % el de la voz). Con la app abierta el gasto es de la propia pantalla y del dibujado, no del servicio.
 - APK generado: app-release.apk (1.37s).
+1.38s (versionCode 30)
+Fecha: 2026-11-11
+Dos fallos de seguridad corregidos:
+- La escucha de palabras clave se quedaba MUERTA al parar y volver a iniciar el monitor. Al detenerlo se pausaba el microfono y al arrancar de nuevo no se reanudaba, asi que el aviso por voz ("ayuda", "socorro") y el nivel de audio dejaban de funcionar hasta reiniciar la app. Ahora al arrancar se limpia la pausa y el hilo de captura adopta el estado correcto desde la primera vuelta. Comprobado en el OPPO: primer arranque -42 dB, tras parar y volver a iniciar -27 dB (antes se quedaba en "EN ESPERA" para siempre).
+- Cambiar cualquier ajuste con el monitor en marcha reiniciaba la calibracion del bloqueo de orientacion: durante los 3 s siguientes una caida real no podia confirmarse y el SOS por golpe quedaba a medias. Ahora solo se vuelven a enlazar los sensores si la sensibilidad nueva exige un rango mayor; si no, se conserva la orientacion aprendida y solo se refresca el ajuste. Si se cambia el propio interruptor CAIDA / ORIENTACION si se recalibra, que es lo esperado.
+Verificacion en el OPPO (monitor activo):
+- Se apaga y enciende dos veces MODO MOTO: sin fallos, la pantalla Sensores sigue mostrando "Inclinacion 0 grados; caida si se mantiene >= 55 grados 4 s" y el nivel de audio sigue vivo (-39 dB).
+- La revision de bateria del 1.37s se mantiene: el servicio solo gasta cuando hay datos nuevos.
+- APK generado: app-release.apk (1.38s).
+Pendientes: decidir si se elimina el gesto de dos dedos dentro de la app.
 Pendientes: decidir si se elimina el gesto de dos dedos dentro de la app; revisar el aviso de palabras clave que puede quedarse pausado y el reinicio del bloqueo de orientacion al recargar la configuracion.
 
 

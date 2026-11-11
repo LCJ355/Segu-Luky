@@ -327,12 +327,24 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 if (!monitoringEnabled && g.isFinite()) detector.setGolpeSensitivity(g)
             }
             ACTION_RELOAD_CONFIG -> {
+                val wasOrientationConfigured = orientationConfigured
                 orientationConfigured = loadFallOrientationGate(this)
+                val sensitivity = loadSensitivity(this)
                 detector.setFallOrientationGateEnabled(orientationConfigured)
-                detector.setGolpeSensitivity(loadSensitivity(this))
+                detector.setGolpeSensitivity(sensitivity)
                 if (monitoringEnabled && foregroundMode != ForegroundMode.NONE) {
-                    unregisterSensors()
-                    registerSensors()
+                    val registered = primaryMotionSensor
+                    val needsRebind = registered == null ||
+                        registered.maximumRange < sensitivity * AccidentDetector.STANDARD_GRAVITY
+                    if (needsRebind) {
+                        unregisterSensors()
+                        registerSensors()
+                    } else {
+                        // Rebinding would discard the learned riding attitude and leave
+                        // the fall gate uncalibrated for a few seconds mid-journey, so a
+                        // settings change only refreshes the gate settings.
+                        bindAttitudeGate(keepCalibration = wasOrientationConfigured == orientationConfigured)
+                    }
                     restartVoiceMonitor()
                 } else if (countdownEndsAt == null) {
                     // Satisfy the startForegroundService contract and stop right away.
@@ -778,25 +790,37 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             SafetyStateStore.log("ADVERTENCIA: el sensor no alcanza la sensibilidad configurada")
         }
 
+        bindAttitudeGate(keepCalibration = false)
+    }
+
+    /**
+     * Wires the gravity sensor that feeds the fall gate. [keepCalibration] keeps the
+     * learned riding attitude: changing a setting mid-journey must not blind the
+     * fall confirmation for the length of a fresh calibration window.
+     */
+    private fun bindAttitudeGate(keepCalibration: Boolean) {
         gravitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY, true)
             ?: sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
         if (gravitySensor != null) {
             sensorManager.registerListener(this, gravitySensor, SensorManager.SENSOR_DELAY_NORMAL)
         }
+        val keepAttitude = keepCalibration && orientationConfigured
         if (orientationConfigured) {
             gravityAttitudeSensor = gravitySensor
             if (gravitySensor == null) {
                 orientationDescription = "Sin sensor de gravedad: la confirmacion de caida no esta disponible"
-                SafetyStateStore.log(orientationDescription)
+                if (!keepCalibration) SafetyStateStore.log(orientationDescription)
             } else {
                 orientationDescription =
                     "Gravedad: confirma caida con inclinacion >= ${AccidentDetector.FALL_TILT_THRESHOLD_DEGREES.toInt()} grados durante 4 s"
             }
-            fallOrientationDetector.reset()
-            uprightAbortCounter = 0
-            orientationCalibrated = false
-            orientationTiltDegrees = null
-            orientationAccuracyReliable = true
+            if (!keepAttitude) {
+                fallOrientationDetector.reset()
+                uprightAbortCounter = 0
+                orientationCalibrated = false
+                orientationTiltDegrees = null
+                orientationAccuracyReliable = true
+            }
             // The candidate phase must stay armed from the first sample. Waiting for
             // the accuracy callback would leave the configured fall gate silently
             // disabled on devices that never report a status change.
@@ -805,11 +829,17 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             gravityAttitudeSensor = null
             orientationDescription = "Desactivada en configuracion"
             setOrientationGateActive(false)
+            if (!keepAttitude) {
+                fallOrientationDetector.reset()
+                uprightAbortCounter = 0
+                orientationCalibrated = false
+                orientationTiltDegrees = null
+            }
         }
         SafetyStateStore.update {
             it.copy(
                 orientationAvailable = orientationConfigured && gravityAttitudeSensor != null,
-                orientationTiltDegrees = null,
+                orientationTiltDegrees = if (keepAttitude) it.orientationTiltDegrees else null,
                 orientationDetail = orientationDescription
             )
         }

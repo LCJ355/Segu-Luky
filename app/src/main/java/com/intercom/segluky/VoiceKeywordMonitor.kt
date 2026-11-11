@@ -60,6 +60,16 @@ class VoiceKeywordMonitor(
         }
         started = true
         destroyed = false
+        // stop() leaves the watchdog paused and without a session. Restarting the
+        // monitor reuses this instance, so both must be cleared here or the capture
+        // loop would stay in its paused branch forever and never listen again.
+        recognizing = false
+        watcherPaused = false
+        nextSessionAllowedAt = 0L
+        levelDb = null
+        lastPublishedDetail = null
+        lastPublishedRecognizing = false
+        lastPublishedLevel = Int.MIN_VALUE
         enabledByService = enabled
         permissionGranted = hasMicPermission
         ensureRecognizer(context)
@@ -109,8 +119,12 @@ class VoiceKeywordMonitor(
             // Reading a fixed window keeps the per-sample work predictable even
             // when a device reports a very large minimum buffer.
             val samples = ShortArray(((bufferSize / 2).coerceIn(1, MAX_READ_SAMPLES)))
-            var wasPaused = false
             var shoutSince: Long? = null
+            // The recorder starts active, so a session already in flight must be
+            // honoured before the loop begins: adopt the wanted state and stop the
+            // microphone instead of reading it.
+            var wasPaused = watcherPaused
+            if (wasPaused) runCatching { recorder.stop() }
             while (!destroyed && enabledByService && permissionGranted) {
                 if (watcherPaused != wasPaused) {
                     wasPaused = watcherPaused
