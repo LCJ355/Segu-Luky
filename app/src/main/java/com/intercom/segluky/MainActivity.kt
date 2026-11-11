@@ -449,6 +449,18 @@ private enum class AppScreen {
     INSTRUCTIONS
 }
 
+/** Version that the package manager reports, so the UI never drifts from build.gradle. */
+@androidx.compose.runtime.Composable
+private fun appVersionLabel(): String {
+    val context = LocalContext.current
+    val name = androidx.compose.runtime.remember(context) {
+        runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        }.getOrNull()
+    }
+    return "V-${name ?: "?"}"
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @androidx.compose.runtime.Composable
 private fun SeguTopBar(
@@ -471,7 +483,7 @@ private fun SeguTopBar(
             },
             action = {
                 TextButton(onClick = onInstructions) {
-                        Text("V-1.12s", fontWeight = FontWeight.Bold)
+                        Text(appVersionLabel(), fontWeight = FontWeight.Bold)
                 }
             }
         )
@@ -1476,7 +1488,7 @@ private fun InstructionsScreen(
         item {
             Spacer(Modifier.height(8.dp))
             Text("INSTRUCCIONES DE USO", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text("Segu-Luky V-1.12s", style = MaterialTheme.typography.bodyMedium)
+            Text("Segu-Luky ${appVersionLabel()}", style = MaterialTheme.typography.bodyMedium)
         }
         item {
             UsageInstruction(

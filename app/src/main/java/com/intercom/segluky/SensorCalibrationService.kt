@@ -107,7 +107,10 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
     private fun writeHeader() {
         val w = writer ?: return
         val date = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
-        w.write("# Segu-Luky calibracion v1.12s\n")
+        val version = runCatching {
+            packageManager.getPackageInfo(packageName, 0).versionName
+        }.getOrNull() ?: "?"
+        w.write("# Segu-Luky calibracion v$version\n")
         w.write("# actividad=${activity.id} (${activity.label})\n")
         w.write("# fecha=$date\n")
         w.write("# fabricante=${Build.MANUFACTURER}\n")
