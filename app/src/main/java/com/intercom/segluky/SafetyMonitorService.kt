@@ -367,6 +367,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         toneGenerator?.release()
         toneGenerator = null
         wakeScreenController.release()
+        // The foreground notification goes away with the service, but the sticky
+        // emergency alert (id 1002) would survive as an undismissable leftover.
+        getSystemService(NotificationManager::class.java).cancel(EMERGENCY_ALERT_NOTIFICATION_ID)
         SafetyStateStore.reset()
         super.onDestroy()
     }
@@ -987,6 +990,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
     private fun publishRestoredCountdown(end: Long) {
         val now = SystemClock.elapsedRealtime()
+        // A restored countdown must own an event id, otherwise completeProtocol()
+        // cannot identify and report the emergency.
+        if (activeEventId == null) activeEventId = UUID.randomUUID().toString()
         detector.restoreRuntime(AccidentDetector.RuntimeState(SafetyPhase.COUNTDOWN, null, null))
         nextBeepAt = maxOf(now, end - FIRST_BEEP_REMAINING_MS)
         SafetyStateStore.update {
@@ -1000,6 +1006,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         }
         acquireCountdownWakeLock((end - now).coerceAtLeast(0L) + WAKE_LOCK_GRACE_MS)
         scheduleSosAlarm()
+        persistRuntime()
         updateNotification(force = true)
     }
 
@@ -1008,7 +1015,22 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         // guard must run before the state is torn down and before a fresh event id
         // is minted, otherwise a second pass looks like a brand new emergency and
         // repeats the SMS/WhatsApp burst.
-        val completedEventId = activeEventId ?: return
+        val completedEventId = activeEventId ?: run {
+            // Without an event id nothing can be dispatched, but the countdown must
+            // still be torn down or the UI stays on a dead countdown forever.
+            SafetyStateStore.log("Protocolo sin evento activo: cuenta atras descartada")
+            countdownEndsAt = null
+            countdownEndsAtWallTime = null
+            countdownReason = ""
+            nextBeepAt = null
+            releaseCountdownWakeLock()
+            wakeScreenController.release()
+            cancelSosAlarm()
+            getSystemService(NotificationManager::class.java).cancel(EMERGENCY_ALERT_NOTIFICATION_ID)
+            detector.resumeMonitoring()
+            finishProtocolState()
+            return
+        }
         if (runtimeRepository.wasEventCompleted(completedEventId)) {
             countdownEndsAt = null
             countdownEndsAtWallTime = null
@@ -1101,9 +1123,10 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         }
 
         // Sin autoenvio: aviso manual para cada contacto con WhatsApp.
-        if (!autoSend) {
-            postManualWhatsAppActions(whatsappContacts, mapLink)
-        }
+        // Reaching this point means no automatic send was launched (disabled, not
+        // ready, enqueue failure or a failed dispatch persistence), so every
+        // contact with WhatsApp must still get its manual action.
+        postManualWhatsAppActions(whatsappContacts, mapLink)
 
         if (callPhones.isNotEmpty()) {
             if (EmergencyDispatchRepository(this).save(
@@ -1447,10 +1470,6 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             }
             return
         }
-        if (escalationActive) {
-            scheduleDispatchWatchdog(DISPATCH_WATCHDOG_RETRY_MS)
-            return
-        }
         val startedAt = dispatchWatchdogStartedAt ?: SystemClock.elapsedRealtime().also {
             dispatchWatchdogStartedAt = it
         }
@@ -1458,6 +1477,10 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             SafetyStateStore.log("Avisos SOS agotaron el tiempo maximo; se cierra el protocolo")
             WhatsAppAutoSend.disarmAll(this)
             finishEscalation(dispatch, answered = false, detail = "tiempo maximo de avisos")
+            return
+        }
+        if (escalationActive) {
+            scheduleDispatchWatchdog(DISPATCH_WATCHDOG_RETRY_MS)
             return
         }
         if (!startEmergencyForeground("Supervisando avisos SOS")) {
@@ -1750,6 +1773,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         releaseCountdownWakeLock()
         wakeScreenController.release()
         cancelSosAlarm()
+        getSystemService(NotificationManager::class.java).cancel(EMERGENCY_ALERT_NOTIFICATION_ID)
         stopTicker()
         unregisterSensors()
         removeLocationUpdates()
