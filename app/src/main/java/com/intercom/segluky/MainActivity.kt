@@ -18,8 +18,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -1699,6 +1697,10 @@ private fun toneOf(state: IndicatorState): Tone = when (state) {
     IndicatorState.OFF -> Tone.OFF
 }
 
+/** Tinta del boton del monitor: naranja = desactivado, verde = activado. */
+private val MonitorOffInk = Color(0xFFE2660C)
+private val MonitorOnInk = Color(0xFF1E8E3E)
+
 @androidx.compose.runtime.Composable
 private fun StatusPill(text: String, tone: Tone) {
     Surface(shape = RoundedCornerShape(50), color = tone.soft, contentColor = tone.text) {
@@ -1850,18 +1852,20 @@ private fun PhaseHeroCard(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            if (!sosActionsEnabled) {
-                SosDisabledWarning(onOpenSettings = onOpenSettings)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(14.dp).clip(CircleShape).background(visual.state.color))
-                Spacer(Modifier.size(10.dp))
-                Text(
-                    "ESTADO ${visual.title}",
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.weight(1f)
-                )
-                if (gpsPill != null) StatusPill(gpsPill.first, gpsPill.second)
+            val monitoring = phase != SafetyPhase.STOPPED
+            // La fase solo se anuncia cuando aporta algo: "APAGADO" y "OK" ya los
+            // indica el color del boton del monitor.
+            if (monitoring && phase != SafetyPhase.MONITORING) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(14.dp).clip(CircleShape).background(visual.state.color))
+                    Spacer(Modifier.size(10.dp))
+                    Text(
+                        "ESTADO ${visual.title}",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (gpsPill != null) StatusPill(gpsPill.first, gpsPill.second)
+                }
             }
             val detailText = snapshot.detail.takeIf {
                 it.isNotBlank() && (countdownEndsAt == null || !it.startsWith("Cuenta atras"))
@@ -1909,27 +1913,21 @@ private fun PhaseHeroCard(
             }
             if (!phase.locksCriticalSettings()) {
                 val starting = phase == SafetyPhase.STOPPED
+                val stateInk = if (starting) MonitorOffInk else MonitorOnInk
                 Button(
                     onClick = if (starting) onStart else onStop,
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(14.dp),
-                    border = if (starting) null else BorderStroke(1.dp, tone.line),
+                    border = BorderStroke(2.dp, stateInk),
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = if (starting) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        },
-                        contentColor = if (starting) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = stateInk
                     )
                 ) {
                     Text(
                         if (starting) "INICIAR MONITOR" else "DETENER MONITOR",
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -1937,6 +1935,9 @@ private fun PhaseHeroCard(
                 snapshot = snapshot,
                 intercomInstalled = intercomInstalled
             )
+            if (monitoring && !sosActionsEnabled) {
+                SosDisabledWarning(onOpenSettings = onOpenSettings)
+            }
         }
     }
 }
@@ -2162,17 +2163,12 @@ private data class PhaseVisual(
 
 @androidx.compose.runtime.Composable
 private fun SosDisabledWarning(onOpenSettings: () -> Unit) {
-    val blinkAlpha by rememberInfiniteTransition(label = "sosDisabledBlink").animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(durationMillis = 600), RepeatMode.Reverse),
-        label = "sosDisabledAlpha"
-    )
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         color = Tone.BAD.soft,
-        contentColor = Tone.BAD.text
+        contentColor = Tone.BAD.text,
+        border = BorderStroke(1.dp, Tone.BAD.line)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
@@ -2180,7 +2176,7 @@ private fun SosDisabledWarning(onOpenSettings: () -> Unit) {
         ) {
             Text(
                 "AVISOS SOS DESACTIVADOS",
-                modifier = Modifier.weight(1f).graphicsLayer { alpha = blinkAlpha },
+                modifier = Modifier.weight(1f),
                 color = Tone.BAD.text,
                 style = MaterialTheme.typography.titleSmall
             )

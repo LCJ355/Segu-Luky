@@ -988,6 +988,26 @@ Resultado: OK; tests unitarios y lint vital sin errores; monitor dejado detenido
 APK generado: app-release.apk (1.24s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
+Fecha: 2026-11-11
+Version: 1.25s (versionCode 17)
+Cambio: (1) El aviso AVISOS SOS DESACTIVADOS sale ahora al final del recuadro del
+  monitor y solo mientras el monitor esta iniciado; con el monitor detenido no se
+  muestra. (2) Se elimina el texto ESTADO APAGADO / ESTADO OK: el estado se lee
+  en el propio boton del monitor, con borde y letras naranjas cuando esta
+  desactivado y verdes cuando esta activado. (3) El aviso de SOS ya no parpadea
+  (animacion infinita eliminada); ahora lleva borde para destacar sin repintar la
+  pantalla sin parar.
+Motivo: Pedido del usuario: el aviso solo debe aparecer al iniciar el monitor y el
+  texto ESTADO APAGADO era redundante con el boton. El parpadeo ademas impedia a
+  uiautomator llegar a estado idle (fallos de volcado al verificar).
+Prueba realizada: assembleRelease + install -r en el OPPO. Monitor detenido: no
+  aparece AVISOS SOS DESACTIVADOS ni ningun texto ESTADO; boton INICIAR MONITOR.
+  Monitor iniciado: aparece AVISOS SOS DESACTIVADOS abajo (y=352..441), debajo de
+  las luces de sensores (y=294..324), sin texto ESTADO. V-1.25s en pantalla.
+Resultado: OK; tests unitarios y lint vital sin errores; monitor dejado detenido.
+APK generado: app-release.apk (1.25s).
+Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
+
 ======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
