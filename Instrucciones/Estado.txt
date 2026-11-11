@@ -1247,6 +1247,21 @@ Verificacion:
 - Como usar sigue abriendo Instrucciones y VOLVER regresa al inicio.
 - APK generado: app-release.apk (1.42s).
 
+V-1.43s (versionCode 35)
+Fecha: 2026-11-11
+Ajustes en la barra superior:
+- Los tres iconos (Ajuste, Sensores e Informacion) pasan a estar agrupados a la izquierda y cada uno dentro de un circulo naranja de 2 dp trazado en el color primario; el glifo de la rueda dentada, las barras de los sensores y la "i" se agrandan para llenar mejor el circulo.
+- El texto "Segu-Luky" crece a 26 sp en negrita y se coloca en la misma linea que la etiqueta V-1.43s, alineados por la linea base (alignByBaseline), con el grupo situado a la derecha.
+Ajustes en Informacion:
+- Las siete filas del menu llevan icono propio, copiado de RUTAS-MOTERAS (ic_refresh, ic_help, ic_lock, ic_history, ic_mail, ic_share, ic_route): circulo de 34 dp con fondo suave y glifo de 19 dp tintado, alternando verde, azul y naranja igual que la app de referencia.
+Motivo: peticion del usuario para igualar el aspecto de la barra superior y del menu Informacion con la version 1.9.7 de RUTAS-MOTERAS.
+Verificacion:
+- Compilacion y pruebas unitarias correctas (BUILD SUCCESSFUL), 71 pruebas y 0 fallos.
+- Instalado en el OPPO como V-1.43s (versionCode 35): iconos en [16,103][96,183] (Ajuste), [104,95][200,191] (Sensores) y [208,103][288,183] (Informacion), los tres como circulos de 76 x 76 px centrados a la misma altura; "Segu-Luky" en [299,110][580,176] y "V-1.43s" en [592,137][700,169], en la misma linea.
+- Pulsados los tres iconos: abren Configuracion, Sensores e Informacion correctamente.
+- Informacion muestra las 7 filas con su icono tintado (verde, azul, naranja, azul, naranja, verde, azul) y los 7 subtitulos en una sola linea; CERRAR sigue visible en [463,1301][608,1346].
+- Sin registros nuevos en logcat -b crash.
+- APK generado: app-release.apk (1.43s).
 
 
 FORMATO PARA FUTURAS ENTRADAS

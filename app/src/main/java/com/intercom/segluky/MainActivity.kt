@@ -57,6 +57,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -103,6 +104,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -468,49 +470,81 @@ private fun SeguTopBar(
     onBack: () -> Unit
 ) {
     when (screen) {
-        AppScreen.HOME -> CenteredSeguTopBar(
-            title = "Segu-Luky",
-            titleColor = MaterialTheme.colorScheme.primary,
-            navigation = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+        AppScreen.HOME -> Surface(color = MaterialTheme.colorScheme.surface) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .height(60.dp)
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     IconButton(
                         onClick = onSettings,
                         modifier = Modifier.semantics { contentDescription = "Abrir configuracion" }
                     ) {
-                        Text(
-                            "\u2699",
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 24.sp,
-                            lineHeight = 24.sp
-                        )
+                        CircleIconFrame(tint = MaterialTheme.colorScheme.primary) {
+                            Text(
+                                "\u2699",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 22.sp,
+                                lineHeight = 22.sp
+                            )
+                        }
                     }
                     IconButton(
                         onClick = onSensors,
                         modifier = Modifier.semantics { contentDescription = "Abrir sensores" }
                     ) {
-                        SensorGlyph(tint = MaterialTheme.colorScheme.primary)
+                        CircleIconFrame(tint = MaterialTheme.colorScheme.primary) {
+                            SensorGlyph(tint = MaterialTheme.colorScheme.primary)
+                        }
                     }
-                }
-            },
-            action = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = onAbout,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .semantics { contentDescription = "Informacion de Segu-Luky" }
+                        modifier = Modifier.semantics { contentDescription = "Informacion de Segu-Luky" }
                     ) {
-                        InfoGlyph(tint = MaterialTheme.colorScheme.primary)
+                        CircleIconFrame(tint = MaterialTheme.colorScheme.primary) {
+                            Text(
+                                "i",
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 17.sp,
+                                lineHeight = 17.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
-                    Text(
-                        appVersionLabel(),
-                        modifier = Modifier.padding(start = 4.dp, end = 8.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                    Spacer(Modifier.weight(1f))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Text(
+                            "Segu-Luky",
+                            modifier = Modifier.alignByBaseline(),
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 26.sp,
+                            lineHeight = 30.sp
+                        )
+                        Text(
+                            appVersionLabel(),
+                            modifier = Modifier.alignByBaseline(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                    Spacer(Modifier.width(6.dp))
                 }
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant)
+                )
             }
-        )
+        }
         AppScreen.SENSORS -> CenteredSeguTopBar(
             title = "Sensores",
             navigation = { TextButton(onClick = onBack) { Text("VOLVER") } }
@@ -530,6 +564,7 @@ private fun SeguTopBar(
 private fun CenteredSeguTopBar(
     title: String,
     titleColor: Color = MaterialTheme.colorScheme.onSurface,
+    titleSize: TextUnit = MaterialTheme.typography.titleLarge.fontSize,
     navigation: @androidx.compose.runtime.Composable () -> Unit = {},
     action: @androidx.compose.runtime.Composable () -> Unit = {}
 ) {
@@ -546,7 +581,10 @@ private fun CenteredSeguTopBar(
                     modifier = Modifier.align(Alignment.Center),
                     color = titleColor,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = titleSize,
+                        lineHeight = titleSize * 1.2f
+                    )
                 )
                 Box(Modifier.align(Alignment.CenterStart)) { navigation() }
                 Box(Modifier.align(Alignment.CenterEnd)) { action() }
@@ -561,23 +599,19 @@ private fun CenteredSeguTopBar(
     }
 }
 
-/** Icono de informacion dibujado a mano: circulo con una "i", sin depender de glifos de fuente. */
+/** Circulo naranja comun que enmarca los iconos de la barra superior. */
 @androidx.compose.runtime.Composable
-private fun InfoGlyph(tint: Color) {
+private fun CircleIconFrame(
+    tint: Color,
+    content: @androidx.compose.runtime.Composable androidx.compose.foundation.layout.BoxScope.() -> Unit
+) {
     Box(
         modifier = Modifier
-            .size(20.dp)
+            .size(38.dp)
             .border(2.dp, tint, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            "i",
-            color = tint,
-            fontSize = 11.sp,
-            lineHeight = 11.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
+        contentAlignment = Alignment.Center,
+        content = content
+    )
 }
 
 private enum class AboutPage {
@@ -658,16 +692,39 @@ private fun AboutDialog(
             ) {
                 when (page) {
                     AboutPage.MENU -> {
-                        AboutRow("Buscar actualizacion", "Comprobar version nueva", ::checkUpdates)
-                        AboutRow("Como usar", "Instrucciones paso a paso", onOpenInstructions)
-                        AboutRow("Privacidad", "Que se guarda y que se envia", { openPage(AboutPage.PRIVACY) })
-                        AboutRow("Historial", "Cambios recientes", { openPage(AboutPage.HISTORY) })
-                        AboutRow("Sugerencias", "Fallos o mejoras", { openPage(AboutPage.SUGGESTIONS) })
-                        AboutRow("Compartir", "Enlace de Segu-Luky", {
-                            shareApp(context)
-                            onDismiss()
-                        })
-                        AboutRow("Creditos", "Idea original y autor", { openPage(AboutPage.CREDITS) })
+                        AboutRow(
+                            R.drawable.ic_refresh, AboutIconGreenBg, AboutIconGreenFg,
+                            "Buscar actualizacion", "Comprobar version nueva", ::checkUpdates
+                        )
+                        AboutRow(
+                            R.drawable.ic_help, AboutIconBlueBg, AboutIconBlueFg,
+                            "Como usar", "Instrucciones paso a paso", onOpenInstructions
+                        )
+                        AboutRow(
+                            R.drawable.ic_lock, AboutIconOrangeBg, AboutIconOrangeFg,
+                            "Privacidad", "Que se guarda y se envia",
+                            { openPage(AboutPage.PRIVACY) }
+                        )
+                        AboutRow(
+                            R.drawable.ic_history, AboutIconBlueBg, AboutIconBlueFg,
+                            "Historial", "Cambios recientes", { openPage(AboutPage.HISTORY) }
+                        )
+                        AboutRow(
+                            R.drawable.ic_mail, AboutIconOrangeBg, AboutIconOrangeFg,
+                            "Sugerencias", "Fallos o mejoras", { openPage(AboutPage.SUGGESTIONS) }
+                        )
+                        AboutRow(
+                            R.drawable.ic_share, AboutIconGreenBg, AboutIconGreenFg,
+                            "Compartir", "Enlace de Segu-Luky",
+                            {
+                                shareApp(context)
+                                onDismiss()
+                            }
+                        )
+                        AboutRow(
+                            R.drawable.ic_route, AboutIconBlueBg, AboutIconBlueFg,
+                            "Creditos", "Idea original y autor", { openPage(AboutPage.CREDITS) }
+                        )
                     }
                     AboutPage.UPDATE -> UpdatePage(
                         state = updateState,
@@ -693,8 +750,23 @@ private fun AboutDialog(
     )
 }
 
+/** Paleta de los iconos del menu de informacion (igual que en Rutas Moteras). */
+private val AboutIconGreenBg = Color(0xFFE7F7EE)
+private val AboutIconGreenFg = Color(0xFF1E9E57)
+private val AboutIconBlueBg = Color(0xFFE8F0FE)
+private val AboutIconBlueFg = Color(0xFF1A73E8)
+private val AboutIconOrangeBg = Color(0xFFFFF1E6)
+private val AboutIconOrangeFg = Color(0xFFC2410C)
+
 @androidx.compose.runtime.Composable
-private fun AboutRow(title: String, subtitle: String, onClick: () -> Unit) {
+private fun AboutRow(
+    iconRes: Int,
+    iconBg: Color,
+    iconFg: Color,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -704,6 +776,20 @@ private fun AboutRow(title: String, subtitle: String, onClick: () -> Unit) {
             .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .background(iconBg, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                tint = iconFg,
+                modifier = Modifier.size(19.dp)
+            )
+        }
+        Spacer(Modifier.width(8.dp))
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -2564,16 +2650,16 @@ private fun HoldProgressColumn(fill: Float) {
 /** Icono de "Sensores" dibujado con barras para no depender de glifos de fuente. */
 @androidx.compose.runtime.Composable
 private fun SensorGlyph(tint: Color) {
-    val heights = listOf(8.dp, 14.dp, 20.dp)
+    val heights = listOf(10.dp, 16.dp, 23.dp)
     Row(
-        modifier = Modifier.size(width = 24.dp, height = 20.dp),
+        modifier = Modifier.size(width = 24.dp, height = 23.dp),
         horizontalArrangement = Arrangement.spacedBy(3.dp),
         verticalAlignment = Alignment.Bottom
     ) {
         heights.forEach { barHeight ->
             Box(
                 modifier = Modifier
-                    .size(width = 5.dp, height = barHeight)
+                    .size(width = 6.dp, height = barHeight)
                     .background(tint, RoundedCornerShape(2.dp))
             )
         }

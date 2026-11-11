@@ -1,4 +1,4 @@
-# Segu-Luky V-1.41s
+# Segu-Luky V-1.43s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -33,9 +33,13 @@ key; InterCOM is only inspected, never modified.
 
 ## Info menu
 
-- The top bar shows an `(i)` button immediately left of the `V-1.xxs` label. It
-  opens the Segu-Luky dialog with **Buscar actualizacion**, **Como usar**,
-  **Privacidad**, **Historial**, **Sugerencias**, **Compartir** and **Creditos**.
+- The top bar groups the **Ajuste**, **Sensores** and **Informacion** icons on the
+  left, each inside an orange ring, with `Segu-Luky` (26 sp) and the `V-1.xxs`
+  label aligned on the same baseline at the right.
+- The `(i)` icon opens the Segu-Luky dialog with **Buscar actualizacion**,
+  **Como usar**, **Privacidad**, **Historial**, **Sugerencias**, **Compartir** and
+  **Creditos**. Each row carries its own vector icon in a tinted 34 dp circle,
+  copied from RUTAS-MOTERAS.
 - `UpdateChecker` reads `releases/latest` from the public GitHub repository on
   `Dispatchers.IO`, with 6 s timeouts and an unconditional `disconnect()`. The
   repository has no published release yet, so the dialog reports that and offers
