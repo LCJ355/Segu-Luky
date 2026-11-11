@@ -1028,6 +1028,24 @@ Resultado: OK; tests unitarios en verde; monitor dejado detenido.
 APK generado: app-release.apk (1.26s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
+Fecha: 2026-11-11
+Version: 1.27s (versionCode 19)
+Cambio: (1) La linea de NIVEL DE AUDIO pasa del recuadro de sensibilidad a la
+  tarjeta del monitor, justo debajo de las luces de los sensores. (2)
+  MOVIMIENTO DEL MOVIL pasa a la tarjeta del monitor, justo debajo de la linea de
+  audio. (3) Se elimina la leyenda Cambia el ajuste con el monitor detenido: con
+  el monitor en marcha la tarjeta de sensibilidad ya no muestra ninguna leyenda.
+Motivo: Pedido del usuario: las dos lineas de nivel deben estar junto a los
+  sensores que las alimentan y la leyenda sobraba.
+Prueba realizada: assembleRelease + install -r en el OPPO. Orden comprobado en
+  pantalla: boton del monitor, luces de sensores, NIVEL DE AUDIO con su barra,
+  MOVIMIENTO DEL MOVIL con su barra y aviso SOS al final de la tarjeta. Con el
+  monitor iniciado el audio marca valor real (por ejemplo -46 dB) y la tarjeta de
+  sensibilidad muestra solo SENSIBILIDAD A LOS GOLPES y AJUSTE: 3.5 g. V-1.27s.
+Resultado: OK; tests unitarios en verde; monitor dejado detenido.
+APK generado: app-release.apk (1.27s).
+Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
+
 ======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================

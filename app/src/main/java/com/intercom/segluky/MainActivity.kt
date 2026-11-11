@@ -282,6 +282,7 @@ class MainActivity : ComponentActivity() {
                 item {
                     PhaseHeroCard(
                         snapshot = snapshot,
+                        audioLevel = audioLevel,
                         sosActionsEnabled = sosActionsEnabled,
                         intercomInstalled = installation.installed,
                         onStart = { startMonitoring() },
@@ -319,13 +320,11 @@ class MainActivity : ComponentActivity() {
                         description = if (snapshot.phase == SafetyPhase.STOPPED) {
                             "Desliza para ajustar el golpe que dispara el SOS."
                         } else {
-                            "Cambia el ajuste con el monitor detenido."
+                            null
                         }
                     ) {
                         SensitivityControl(
                             sensitivityG = sensitivityG,
-                            movementLevel = snapshot.movementLevel,
-                            audioLevel = audioLevel,
                             enabled = snapshot.phase == SafetyPhase.STOPPED,
                             onSensitivityChange = { g ->
                                 sensitivityG = g
@@ -1807,6 +1806,7 @@ private fun PermissionRow(
 @androidx.compose.runtime.Composable
 private fun PhaseHeroCard(
     snapshot: SafetySnapshot,
+    audioLevel: AudioLevelReading,
     sosActionsEnabled: Boolean,
     intercomInstalled: Boolean,
     onStart: () -> Unit,
@@ -1928,6 +1928,8 @@ private fun PhaseHeroCard(
                 snapshot = snapshot,
                 intercomInstalled = intercomInstalled
             )
+            AudioLevelLine(audioLevel)
+            MovementLevelLine(snapshot.movementLevel)
             if (monitoring && !sosActionsEnabled) {
                 SosDisabledWarning(onOpenSettings = onOpenSettings)
             }
@@ -2003,6 +2005,55 @@ private fun sensorStateLabel(state: IndicatorState): String = when (state) {
     IndicatorState.PENDING -> "no funcional"
     IndicatorState.ERROR -> "no funcional"
     IndicatorState.OFF -> "apagado"
+}
+
+/** Linea de nivel de audio; va justo debajo de las luces de los sensores. */
+@androidx.compose.runtime.Composable
+private fun AudioLevelLine(audioLevel: AudioLevelReading) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "NIVEL DE AUDIO",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                audioLevel.label,
+                color = when {
+                    audioLevel.fromVoice -> StrongGreen
+                    audioLevel.active -> HarleyOrange
+                    else -> Color(0xFF6B7280)
+                },
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        LinearProgressIndicator(
+            progress = { audioLevel.progress },
+            modifier = Modifier.fillMaxWidth(),
+            color = if (audioLevel.fromVoice) StrongGreen else HarleyOrange,
+            trackColor = if (audioLevel.fromVoice) Color(0xFFB9F6CA) else Color(0xFFFFD7B0)
+        )
+    }
+}
+
+/** Linea de movimiento del movil; va justo debajo de la linea de audio. */
+@androidx.compose.runtime.Composable
+private fun MovementLevelLine(movementLevel: Float) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            "MOVIMIENTO DEL MOVIL",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold
+        )
+        LinearProgressIndicator(
+            progress = { movementLevel },
+            modifier = Modifier.fillMaxWidth(),
+            color = StrongGreen,
+            trackColor = Color(0xFFB9F6CA)
+        )
+    }
 }
 
 @androidx.compose.runtime.Composable
@@ -2438,8 +2489,6 @@ private fun RowScope.SegTrack(weight: Float, color: Color) {
 @androidx.compose.runtime.Composable
 private fun SensitivityControl(
     sensitivityG: Float,
-    movementLevel: Float,
-    audioLevel: AudioLevelReading,
     enabled: Boolean,
     onSensitivityChange: (Float) -> Unit
 ) {
@@ -2465,41 +2514,6 @@ private fun SensitivityControl(
                 Text("$g", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
             }
         }
-        Text(
-            "MOVIMIENTO DEL MOVIL",
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold
-        )
-        LinearProgressIndicator(
-            progress = { movementLevel },
-            modifier = Modifier.fillMaxWidth(),
-            color = StrongGreen,
-            trackColor = Color(0xFFB9F6CA)
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "NIVEL DE AUDIO",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                audioLevel.label,
-                color = when {
-                    audioLevel.fromVoice -> StrongGreen
-                    audioLevel.active -> HarleyOrange
-                    else -> Color(0xFF6B7280)
-                },
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        LinearProgressIndicator(
-            progress = { audioLevel.progress },
-            modifier = Modifier.fillMaxWidth(),
-            color = if (audioLevel.fromVoice) StrongGreen else HarleyOrange,
-            trackColor = if (audioLevel.fromVoice) Color(0xFFB9F6CA) else Color(0xFFFFD7B0)
-        )
     }
 }
 
