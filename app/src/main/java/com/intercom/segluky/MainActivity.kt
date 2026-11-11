@@ -250,6 +250,7 @@ class MainActivity : ComponentActivity() {
                 SeguTopBar(
                     screen = screen,
                     onSettings = { screen = AppScreen.SETTINGS },
+                    onSensors = { screen = AppScreen.SENSORS },
                     onInstructions = { screen = AppScreen.INSTRUCTIONS },
                     onBack = { screen = AppScreen.HOME }
                 )
@@ -315,13 +316,6 @@ class MainActivity : ComponentActivity() {
                     SosPanel(onSos = { SafetyMonitorService.confirm(context) })
                 }
                 item {
-                    MonitorCard(
-                        snapshot = snapshot,
-                        intercomInstalled = installation.installed,
-                        sensitivityG = sensitivityG
-                    )
-                }
-                item {
                     SeguCard(
                         title = "SENSIBILIDAD Y NIVELES",
                         status = if (snapshot.phase == SafetyPhase.STOPPED) {
@@ -357,6 +351,12 @@ class MainActivity : ComponentActivity() {
                 item { Spacer(Modifier.height(6.dp)) }
                 }
                 }
+                AppScreen.SENSORS -> SensorsScreen(
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                    snapshot = snapshot,
+                    intercomInstalled = installation.installed,
+                    sensitivityG = sensitivityG
+                )
                 AppScreen.SETTINGS -> EmergencySettingsScreen(
                     modifier = Modifier.fillMaxSize().padding(padding),
                     repository = repository,
@@ -436,6 +436,7 @@ class MainActivity : ComponentActivity() {
 
 private enum class AppScreen {
     HOME,
+    SENSORS,
     SETTINGS,
     INSTRUCTIONS
 }
@@ -457,6 +458,7 @@ private fun appVersionLabel(): String {
 private fun SeguTopBar(
     screen: AppScreen,
     onSettings: () -> Unit,
+    onSensors: () -> Unit,
     onInstructions: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -465,16 +467,24 @@ private fun SeguTopBar(
             title = "Segu-Luky",
             titleColor = MaterialTheme.colorScheme.primary,
             navigation = {
-                IconButton(
-                    onClick = onSettings,
-                    modifier = Modifier.semantics { contentDescription = "Abrir configuracion" }
-                ) {
-                    Text(
-                        "\u2699",
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 24.sp,
-                        lineHeight = 24.sp
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onSettings,
+                        modifier = Modifier.semantics { contentDescription = "Abrir configuracion" }
+                    ) {
+                        Text(
+                            "\u2699",
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 24.sp,
+                            lineHeight = 24.sp
+                        )
+                    }
+                    IconButton(
+                        onClick = onSensors,
+                        modifier = Modifier.semantics { contentDescription = "Abrir sensores" }
+                    ) {
+                        SensorGlyph(tint = MaterialTheme.colorScheme.primary)
+                    }
                 }
             },
             action = {
@@ -486,6 +496,10 @@ private fun SeguTopBar(
                     )
                 }
             }
+        )
+        AppScreen.SENSORS -> CenteredSeguTopBar(
+            title = "Sensores",
+            navigation = { TextButton(onClick = onBack) { Text("VOLVER") } }
         )
         AppScreen.SETTINGS -> CenteredSeguTopBar(
             title = "Configuracion",
@@ -1949,6 +1963,48 @@ private fun SosPanel(onSos: () -> Unit) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+/** Icono de "Sensores" dibujado con barras para no depender de glifos de fuente. */
+@androidx.compose.runtime.Composable
+private fun SensorGlyph(tint: Color) {
+    val heights = listOf(8.dp, 14.dp, 20.dp)
+    Row(
+        modifier = Modifier.size(width = 24.dp, height = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        heights.forEach { barHeight ->
+            Box(
+                modifier = Modifier
+                    .size(width = 5.dp, height = barHeight)
+                    .background(tint, RoundedCornerShape(2.dp))
+            )
+        }
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun SensorsScreen(
+    modifier: Modifier,
+    snapshot: SafetySnapshot,
+    intercomInstalled: Boolean,
+    sensitivityG: Float
+) {
+    LazyColumn(
+        modifier = modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item { Spacer(Modifier.height(12.dp)) }
+        item {
+            MonitorCard(
+                snapshot = snapshot,
+                intercomInstalled = intercomInstalled,
+                sensitivityG = sensitivityG
+            )
+        }
+        item { Spacer(Modifier.height(6.dp)) }
     }
 }
 

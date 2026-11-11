@@ -940,6 +940,31 @@ APK generado: app-release.apk (1.22s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
 ======================================================================
+2026-11-11 - 1.23s (versionCode 15)
+======================================================================
+
+Fecha: 2026-11-11
+Version: 1.23s (versionCode 15)
+Cambio: icono nuevo "Sensores" a la derecha del engranaje y pantalla propia
+  para el recuadro MONITOR.
+Motivo: la pantalla de inicio acumulaba tarjetas; las lecturas de sensores se
+  consultan mejor aparte y el inicio queda centrado en el estado y el SOS.
+  - AppScreen estrena la pantalla SENSORS; la barra superior de Inicio muestra
+    ahora dos iconos: engranaje (Configuracion) y barras (Sensores).
+  - El icono de Sensores se dibuja con barras de color, sin depender de glifos
+    de fuente, y anuncia "Abrir sensores" al lector de pantalla.
+  - La tarjeta MONITOR se traslada tal cual (SENSOR, ORIENTACION, GPS,
+    VELOCIDAD, INTERCOM) a la pantalla nueva; en Inicio ya no aparece.
+  - Se vuelve con VOLVER o con el boton atras del telefono.
+Prueba realizada: assembleRelease + install -r en el OPPO; uiautomator confirma
+  "Abrir configuracion" en [8,103][88,183] y "Abrir sensores" en
+  [96,95][192,191]; Inicio sin MONITOR; Sensores con las seis filas; VOLVER y
+  KEYCODE_BACK vuelven a Inicio; el engranaje sigue abriendo Configuracion.
+Resultado: OK; tests unitarios y lint vital sin errores.
+APK generado: app-release.apk (1.23s).
+Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
+
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 
