@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -83,6 +84,7 @@ import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
@@ -742,6 +744,8 @@ private fun EmergencySettingsScreen(
         }
         item {
             val supported = GlobalTouchAccessibilityService.isSupported()
+            val selfEnable = GlobalTouchAccessibilityService.canEnableByItself(context)
+            val autoRestored = selfEnable && GlobalTouchAccessibilityService.wasAutoEnableRequested(context)
             SeguCard(
                 title = "GESTO GLOBAL 2 DEDOS",
                 status = when {
@@ -754,19 +758,65 @@ private fun EmergencySettingsScreen(
                     globalGestureReady -> Tone.OK
                     else -> Tone.BAD
                 },
-                description = if (supported) {
-                    "Mantener dos dedos 5 s en cualquier pantalla inicia el SOS. Android exige activarlo a mano " +
-                        "en Accesibilidad; no lee el contenido de otras apps."
-                } else {
-                    "Necesita Android 12 o superior."
+                description = when {
+                    !supported -> "Necesita Android 12 o superior."
+                    globalGestureReady && autoRestored ->
+                        "Manten dos dedos 5 s en cualquier pantalla para lanzar el SOS. Lo activa la app y " +
+                            "se restaura sola tras reiniciar."
+                    globalGestureReady ->
+                        "Manten dos dedos 5 s en cualquier pantalla para lanzar el SOS. Si lo desactivas " +
+                            "en Accesibilidad hay que volver a activarlo a mano."
+                    else ->
+                        "Manten dos dedos 5 s en cualquier pantalla inicia el SOS. No lee el contenido de " +
+                            "otras apps."
                 }
             ) {
                 if (supported && !globalGestureReady) {
-                    OutlinedButton(
-                        onClick = { GlobalTouchAccessibilityService.openSettings(context) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("ABRIR ACCESIBILIDAD")
+                    if (selfEnable) {
+                        Button(
+                            onClick = {
+                                val enabled = GlobalTouchAccessibilityService.enableByItself(context)
+                                val message = if (enabled) {
+                                    "Gesto global activado. Se mantiene tras reiniciar."
+                                } else {
+                                    "Android no permitio el cambio. Activalo en Accesibilidad."
+                                }
+                                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                calibrationScope.launch {
+                                    delay(400)
+                                    automationRefresh++
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("ACTIVAR EN UN TOQUE")
+                        }
+                        TextButton(
+                            onClick = { GlobalTouchAccessibilityService.openSettings(context) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("ABRIR AJUSTES DE ACCESIBILIDAD")
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { GlobalTouchAccessibilityService.openSettings(context) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("ABRIR ACCESIBILIDAD")
+                        }
+                        Text(
+                            "Para activarlo sin tocar menus: conecta el movil por USB una vez y ejecuta " +
+                                "tools\\activar-gesto-global.cmd (o el comando de abajo).",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "adb shell settings put secure enabled_accessibility_services " +
+                                "\"<actual>:com.intercom.segluky/" +
+                                "com.intercom.segluky.GlobalTouchAccessibilityService\"",
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }
