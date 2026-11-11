@@ -3,6 +3,7 @@ package com.intercom.segluky
 import android.Manifest
 import android.app.AlarmManager
 import android.app.ActivityOptions
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -1606,11 +1607,53 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private fun launchQueuedWhatsAppHead(): Boolean {
         val request = WhatsAppAutoSend.peek(this) ?: return false
         if (request.status != WhatsAppRequestStatus.PENDING) return false
-        val uri = Uri.parse(
-            "https://api.whatsapp.com/send/?phone=${request.recipient.filter(Char::isDigit)}" +
-                "&text=${Uri.encode(request.normalizedMessage)}"
+        val target = buildWhatsAppIntent(
+            request.expectedPackage,
+            request.recipient.filter(Char::isDigit),
+            request.normalizedMessage
+        ) ?: run {
+            SafetyStateStore.log("WhatsApp SOS: ninguna actividad puede abrir el chat")
+            return false
+        }
+        // The accessibility click only lands while the screen is on: keep it awake
+        // for the whole retry window of the send attempt.
+        wakeScreenController.wakeFor(WHATSAPP_SCREEN_WAKE_MS)
+        return startActivityFromBackground(withKeyguardRelay(target))
+    }
+
+    /**
+     * Prefers the native whatsapp:// scheme, which opens the chat directly instead
+     * of going through the api.whatsapp.com redirect (that one may end in a
+     * browser). Falls back to the https link when the package ignores the scheme.
+     */
+    private fun buildWhatsAppIntent(pkg: String, number: String, message: String): Intent? {
+        if (number.isEmpty()) return null
+        val encoded = Uri.encode(message)
+        val candidates = listOf(
+            "whatsapp://send?phone=$number&text=$encoded",
+            "https://api.whatsapp.com/send/?phone=$number&text=$encoded"
         )
-        return startActivityFromBackground(Intent(Intent.ACTION_VIEW, uri).setPackage(request.expectedPackage))
+        for (url in candidates) {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).setPackage(pkg)
+            val resolvable = runCatching {
+                packageManager.queryIntentActivities(intent, 0).isNotEmpty()
+            }.getOrDefault(false)
+            if (resolvable) return intent
+        }
+        return null
+    }
+
+    /**
+     * A locked screen makes the accessibility tap impossible, so the launch goes
+     * through a transparent activity that turns the screen on and asks the system
+     * to dismiss the keyguard (only automatic when there is no PIN/pattern).
+     */
+    private fun withKeyguardRelay(target: Intent): Intent {
+        val keyguard = getSystemService(KeyguardManager::class.java)
+        val screenOff = !getSystemService(PowerManager::class.java).isInteractive
+        if (keyguard?.isKeyguardLocked != true && !screenOff) return target
+        return Intent(this, WhatsAppUnlockActivity::class.java)
+            .putExtra(WhatsAppUnlockActivity.EXTRA_TARGET, target)
     }
 
     private fun postManualWhatsAppActions(contacts: List<EmergencyContact>, mapLink: String?) {
@@ -1627,10 +1670,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         val pkg = whatsappPackageName() ?: return
         val number = contact.phone.filter(Char::isDigit)
         if (number.isEmpty()) return
-        val intent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("https://api.whatsapp.com/send/?phone=$number&text=${Uri.encode(message)}")
-        ).setPackage(pkg)
+        val intent = buildWhatsAppIntent(pkg, number, message) ?: return
         val pending = PendingIntent.getActivity(
             this,
             MANUAL_WHATSAPP_REQUEST_CODE + index,
@@ -2140,6 +2180,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         private const val FALL_CALIBRATION_MS = 2_000L
         /** Keeps the screen awake while a fall candidate may still be confirmed. */
         private const val CANDIDATE_SCREEN_WAKE_MS = 20_000L
+        private const val WHATSAPP_SCREEN_WAKE_MS = 40_000L
         private const val UPRIGHT_ABORT_SAMPLES = 12
         private const val SENSOR_STALE_MS = 5_000L
         private const val MAX_RESTORED_COUNTDOWN_LATENESS_MS = 2 * 60_000L

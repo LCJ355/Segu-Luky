@@ -43,6 +43,16 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".WhatsAppUnlockActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:showWhenLocked="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:turnScreenOn="true" />
+
         <service
             android:name=".SafetyMonitorService"
             android:exported="false"

@@ -17,6 +17,8 @@ class WhatsAppAutoSendService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private var pendingAttempt: Runnable? = null
     private var attempts = 0
+    private var activeRequestId: String? = null
+    private var lastLoggedProblem = ""
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         val head = WhatsAppAutoSend.peek(this) ?: return
@@ -50,8 +52,13 @@ class WhatsAppAutoSendService : AccessibilityService() {
     }
 
     private fun scheduleAttempt(requestId: String) {
-        if (pendingAttempt != null) return
-        attempts = 0
+        if (pendingAttempt != null && activeRequestId == requestId) return
+        if (activeRequestId != requestId) {
+            activeRequestId = requestId
+            attempts = 0
+            lastLoggedProblem = ""
+        }
+        pendingAttempt?.let { handler.removeCallbacks(it) }
         val runnable = Runnable { runAttempt(requestId) }
         pendingAttempt = runnable
         handler.postDelayed(runnable, INITIAL_DELAY_MS)
@@ -67,6 +74,7 @@ class WhatsAppAutoSendService : AccessibilityService() {
             WhatsAppAutoSend.advance(this, requestId)
             notifyQueueAdvanced()
             attempts = 0
+            lastLoggedProblem = ""
             return
         }
         attempts += 1
@@ -74,12 +82,19 @@ class WhatsAppAutoSendService : AccessibilityService() {
             WhatsAppAutoSend.markFailed(this, requestId, "max attempts exceeded")
             WhatsAppAutoSend.advance(this, requestId)
             notifyQueueAdvanced()
+            attempts = 0
             return
         }
         val runnable = Runnable { runAttempt(requestId) }
         pendingAttempt = runnable
-        handler.postDelayed(runnable, RETRY_DELAY_MS)
+        // Growing delay: WhatsApp needs a moment to build the chat the first time,
+        // and a locked screen may still be waiting for the user to unlock.
+        handler.postDelayed(runnable, retryDelayFor(attempts))
     }
+
+    private fun retryDelayFor(attempt: Int): Long =
+        (RETRY_DELAY_MS + attempt.toLong() * RETRY_BACKOFF_STEP_MS)
+            .coerceAtMost(RETRY_DELAY_MAX_MS)
 
     private fun attemptSend(requestId: String): Boolean {
         val request = WhatsAppAutoSend.peek(this) ?: return false
@@ -88,12 +103,28 @@ class WhatsAppAutoSendService : AccessibilityService() {
         val rootPkg = root.packageName?.toString()
         if (rootPkg != WHATSAPP_PACKAGE && rootPkg != WHATSAPP_BUSINESS_PACKAGE) return false
         if (rootPkg != request.expectedPackage) return false
-        val input = findInputField(root)
+        val input = findInputField(root, request)
         val messageText = input?.text?.toString().orEmpty()
-        if (messageText.isBlank()) return false
-        if (!WhatsAppAutoSend.messageMatches(request, messageText)) return false
+        if (messageText.isBlank()) {
+            logProblemOnce("sin campo de texto con el mensaje")
+            return false
+        }
+        if (!WhatsAppAutoSend.messageMatches(request, messageText)) {
+            logProblemOnce("el mensaje del campo no coincide con el autorizado")
+            return false
+        }
         val sendButton = findSendButton(root, rootPkg)
-        return sendButton != null && sendButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        if (sendButton == null) {
+            logProblemOnce("no se encontro el boton de enviar")
+            return false
+        }
+        return sendButton.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+    }
+
+    private fun logProblemOnce(problem: String) {
+        if (problem == lastLoggedProblem) return
+        lastLoggedProblem = problem
+        SafetyStateStore.log("WhatsApp autoeenvio: $problem")
     }
 
     private fun notifyQueueAdvanced() {
@@ -102,24 +133,47 @@ class WhatsAppAutoSendService : AccessibilityService() {
         runCatching { ContextCompat.startForegroundService(this, intent) }
     }
 
-    private fun findInputField(root: AccessibilityNodeInfo): AccessibilityNodeInfo? =
-        findByTraversal(root) { node ->
+    private fun findInputField(
+        root: AccessibilityNodeInfo,
+        request: WhatsAppSendRequest
+    ): AccessibilityNodeInfo? {
+        val fields = collectByTraversal(root) { node ->
             node.className?.toString()?.contains("EditText") == true &&
                 !node.text.isNullOrBlank()
         }
+        if (fields.isEmpty()) return null
+        // The composer is the field holding our message. Without an exact match
+        // fall back to the last one, which is where WhatsApp places it.
+        return fields.firstOrNull { node ->
+            WhatsAppAutoSend.messageMatches(request, node.text?.toString().orEmpty())
+        } ?: fields.last()
+    }
 
     private fun findSendButton(root: AccessibilityNodeInfo, pkg: String): AccessibilityNodeInfo? {
-        listOf("$pkg:id/send", "$pkg:id/send_btn").forEach { viewId ->
-            val matches = runCatching { root.findAccessibilityNodeInfosByViewId(viewId) }.getOrNull()
-                ?: emptyList()
-            val node = matches.firstOrNull { it.isClickable }
+        SEND_VIEW_IDS.forEach { id ->
+            val matches = runCatching {
+                root.findAccessibilityNodeInfosByViewId("$pkg:id/$id")
+            }.getOrNull().orEmpty()
+            val node = matches.firstOrNull { it.isClickable && it.isVisibleToUser }
+                ?: matches.firstOrNull { it.isClickable }
             if (node != null) return node
         }
-        return findByTraversal(root) { node ->
+        val described = findByTraversal(root) { node ->
             val description = node.contentDescription?.toString().orEmpty()
-            description.isNotBlank() &&
-                (description.equals("enviar", true) || description.equals("send", true))
+            description.isNotBlank() && SEND_DESCRIPTIONS.any { it.equals(description, true) }
         }
+        return described?.let(::clickableSelfOrAncestor)
+    }
+
+    private fun clickableSelfOrAncestor(node: AccessibilityNodeInfo): AccessibilityNodeInfo {
+        var current: AccessibilityNodeInfo? = node
+        var depth = 0
+        while (current != null && depth < MAX_PARENT_DEPTH) {
+            if (current.isClickable) return current
+            current = current.parent
+            depth += 1
+        }
+        return node
     }
 
     private inline fun findByTraversal(
@@ -138,11 +192,38 @@ class WhatsAppAutoSendService : AccessibilityService() {
         return null
     }
 
+    private inline fun collectByTraversal(
+        root: AccessibilityNodeInfo,
+        predicate: (AccessibilityNodeInfo) -> Boolean
+    ): List<AccessibilityNodeInfo> {
+        val matches = mutableListOf<AccessibilityNodeInfo>()
+        val queue = ArrayDeque<AccessibilityNodeInfo>()
+        queue.add(root)
+        while (queue.isNotEmpty()) {
+            val node = queue.removeFirst()
+            if (predicate(node)) matches.add(node)
+            for (index in 0 until node.childCount) {
+                node.getChild(index)?.let(queue::addLast)
+            }
+        }
+        return matches
+    }
+
     companion object {
         private const val WHATSAPP_PACKAGE = "com.whatsapp"
         private const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"
-        private const val INITIAL_DELAY_MS = 800L
-        private const val RETRY_DELAY_MS = 700L
-        private const val MAX_ATTEMPTS = 8
+        private const val INITIAL_DELAY_MS = 1_200L
+        private const val RETRY_DELAY_MS = 800L
+        private const val RETRY_BACKOFF_STEP_MS = 120L
+        private const val RETRY_DELAY_MAX_MS = 2_000L
+        private const val MAX_ATTEMPTS = 24
+        private const val MAX_PARENT_DEPTH = 4
+        private val SEND_VIEW_IDS = listOf(
+            "send",
+            "send_btn",
+            "send_button",
+            "btn_send"
+        )
+        private val SEND_DESCRIPTIONS = listOf("enviar", "send", "send message")
     }
 }
