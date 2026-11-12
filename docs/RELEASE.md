@@ -19,12 +19,17 @@
 6. Verify the signature before publishing:
    `apksigner verify --print-certs app-release.apk` must show the certificate
    SHA-256 listed in [SIGNING.md](SIGNING.md).
-7. Publish the release (`gh release create V-<versionName> "APK´s/Segu-Luky-<versionName>.apk" ...`).
-   Without a GitHub release, push the tag (`git tag V-<versionName>` + `git push origin
-   V-<versionName>`): **Buscar actualizacion** falls back to tags when no release exists.
+7. **Create the GitHub release, not just the tag**:
+   `gh release create V-<versionName> "APK´s/Segu-Luky-<versionName>.apk" ...`.
+   A tag alone is not enough: **Buscar actualizacion** only falls back to tags when there is
+   *no release at all*, so with older releases published a tag-only version is invisible and the
+   app reports "you are up to date" (this happened with 1.48s). Without `gh`, create it in the web
+   UI and attach the APK — the tag must already be pushed.
 8. Commit and push the APK, the mapping, the tag and the document updates together, so
    `APK´s/`, `README.md`, `CHANGELOG.md`, `Instrucciones/Estado.txt` and the bug report agree
    with the version installed on the phone.
+9. Check the result as the app does: `GET /repos/LCJ355/Segu-Luky/releases` must list the new
+   version first with the APK asset attached.
 
 ## Signing material
 
