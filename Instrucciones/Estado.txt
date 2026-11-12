@@ -1510,6 +1510,37 @@ Mapping archivado: APK´s/mapping/Segu-Luky-1.51s-mapping.txt.gz
 Pendientes: ninguna correccion del informe; solo la verificacion en dispositivo
 de §5, §6 y §8.
 
+======================================================================
+V-1.52s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.52s (versionCode 44)
+
+Cambio:
+- Nueva pantalla Acerca de > VERIFICAR INSTALACION: muestra la huella SHA-256
+  del certificado con el que esta firmado el APK instalado, para compararla con
+  la publicada sin necesidad de un PC.
+- docs/SEGURIDAD.md: inventario de permisos y su motivo, alcance del servicio
+  de accesibilidad, destinos de red, dependencias, datos guardados y porque
+  Play Protect marca el APK (con lo que significa y lo que no).
+- APK´s/SHA256SUMS.txt: hash de cada APK publicada y huella del certificado.
+- Instrucciones: apartado "Si Play Protect dice que puede ser dañina".
+
+Motivo: Play Protect avisa en cada instalacion por la combinacion de permisos
+(SMS, llamadas, microfono, accesibilidad); hacia falta una forma de comprobar
+que el archivo instalado es el oficial y una explicacion escrita.
+
+Prueba realizada: testDebugUnitTest (103 pruebas, 0 fallos), lintDebug
+(0 errores) y assembleRelease. Comprobado que el APK sigue firmado con la
+misma clave (E0:E5:A8:FD:...:E2:10:9E) y que los hashes de SHA256SUMS.txt
+coinciden con los archivos de APK´s/.
+Resultado: correcto; pendiente ver la pantalla nueva en el movil.
+APK generado: APK´s/Segu-Luky-1.52s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.52s-mapping.txt.gz
+Pendientes: las tres pruebas de comportamiento (§5, §6, §8) y verificar que la
+huella que muestra la app coincide con la de docs/SEGURIDAD.md.
+
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

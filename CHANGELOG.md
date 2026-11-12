@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.52s (versionCode 44)
+
+Publicada con APK, mapping, protocolo e instrucciones: `APK´s/Segu-Luky-1.52s.apk`,
+`APK´s/mapping/Segu-Luky-1.52s-mapping.txt.gz`, release `V-1.52s` con el APK adjunto.
+
+### Verificar la instalación y explicar el aviso de Play Protect
+- Nueva pantalla **Acerca de → Verificar instalación**: muestra la huella SHA-256 del
+  certificado con el que está firmado el APK instalado, para compararla con la publicada sin
+  necesidad de un PC. Si alguien reempaqueta la app con otra clave, esa huella cambia.
+- `docs/SEGURIDAD.md`: inventario completo de permisos (con su motivo real y cuándo se piden),
+  alcance del servicio de accesibilidad, destinos de red, dependencias, datos guardados y por qué
+  Play Protect marca el APK como sospechoso —con lo que eso significa y lo que no.
+- `APK´s/SHA256SUMS.txt`: hashes de todas las APK publicadas y la huella del certificado.
+- Instrucciones con un apartado **"Si Play Protect dice que puede ser dañina"**: qué hacer,
+  cómo verificar el archivo y por qué el aviso reaparece en cada versión.
+
 ## 1.51s (versionCode 43)
 
 Publicada con APK, mapping, protocolo e instrucciones: `APK´s/Segu-Luky-1.51s.apk`,

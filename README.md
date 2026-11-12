@@ -1,4 +1,4 @@
-# Segu-Luky V-1.51s
+# Segu-Luky V-1.52s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -38,9 +38,13 @@ key; InterCOM is a separate app reached only through its exported bridge (see
   left, each inside an orange ring, with `Segu-Luky` (26 sp) and the `V-1.xxs`
   label aligned on the same baseline at the right.
 - The `(i)` icon opens the Segu-Luky dialog with **Buscar actualizacion**,
-  **Como usar**, **Privacidad**, **Historial**, **Sugerencias**, **Compartir** and
-  **Creditos**. Each row carries its own vector icon in a tinted 34 dp circle,
-  copied from RUTAS-MOTERAS.
+  **Como usar**, **Privacidad**, **Verificar instalacion**, **Historial**,
+  **Sugerencias**, **Compartir** and **Creditos**. Each row carries its own vector
+  icon in a tinted 34 dp circle, copied from RUTAS-MOTERAS. **Verificar
+  instalacion** prints the SHA-256 of the signing certificate of the installed
+  APK so it can be compared with the published fingerprint without a PC; the
+  permission inventory, network endpoints and the Play Protect explanation are in
+  [docs/SEGURIDAD.md](docs/SEGURIDAD.md).
 - `UpdateChecker` reads `releases/latest` from the public GitHub repository on
   `Dispatchers.IO`, with 6 s timeouts and an unconditional `disconnect()`. When a
   release exists it compares tags part by part and links the attached APK; if the
@@ -72,14 +76,14 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every version is published in `APK´s/` as
-`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.51s.apk`), ready to download
+`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.52s.apk`), ready to download
 and install on the phone without Android Studio.
 
 Every version is also published as a GitHub release tagged `V-<version>` with
 that same APK attached, because **Buscar actualizacion** reads the GitHub API:
 
 ```text
-gh release create V-1.51s "APK´s/Segu-Luky-1.51s.apk" --title "Segu-Luky V-1.51s" --notes "..."
+gh release create V-1.52s "APK´s/Segu-Luky-1.52s.apk" --title "Segu-Luky V-1.52s" --notes "..."
 ```
 
 ## Safe device test

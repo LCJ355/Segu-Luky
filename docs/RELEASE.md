@@ -30,6 +30,9 @@
    with the version installed on the phone.
 9. Check the result as the app does: `GET /repos/LCJ355/Segu-Luky/releases` must list the new
    version first with the APK asset attached.
+10. Refresh `APK´s/SHA256SUMS.txt` (all published APKs plus the certificate fingerprint) and put
+    the new APK's SHA-256 in the release notes: it is how anyone verifies a download, together
+    with `docs/SEGURIDAD.md`.
 
 ## Signing material
 

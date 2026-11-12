@@ -1,0 +1,28 @@
+SHA-256 DE LAS APK PUBLICADAS - Segu-Luky
+=========================================
+
+Comprobar un archivo descargado:
+  Windows: certutil -hashfile "Segu-Luky-<version>.apk" SHA256
+  Linux/macOS: sha256sum Segu-Luky-<version>.apk
+  Android: cualquier app de hashes, o Acerca de > VERIFICAR INSTALACION
+
+Un SHA-256 distinto significa que el archivo no es el publicado.
+
+e902a35138354e7e21fc16aba4bffe11d558c4e4e1388344ade5b42b0c57a56c  Segu-Luky-1.44s.apk  (5478391 bytes)
+e95600b5d7adbfcc80d2aeec22684636e22cc1a7ae2cbee3a98ad5de13d5fe7c  Segu-Luky-1.45s.apk  (5481059 bytes)
+1ebaa26c90caae2a44be65096e94150886e19ac386c439f3ce71e5b53251799f  Segu-Luky-1.46s.apk  (5490243 bytes)
+0726b6ed900fa83ccf44c63e5fb5f0786c4b733285cae0f462822f530bae2640  Segu-Luky-1.47s.apk  (5491039 bytes)
+ef59aedea64a08bcdddf4e9a5cbb3ca9a40f9cf0e8ca448620dd900475dbb7b2  Segu-Luky-1.48s.apk  (5490375 bytes)
+688de065526a76b6dc9f804cd4dc389c9fc23c439cb741484e1868fade4eca2a  Segu-Luky-1.49s.apk  (5489403 bytes)
+dbc20665037ddf31742973738652b0568dd7454b49ac6d9d65981cfa8c39d74e  Segu-Luky-1.50s.apk  (5503171 bytes)
+7495ac0a121ef6c18bfbf84238bd31ae500755325bf7ddd04840a40d86316d0d  Segu-Luky-1.51s.apk  (5505179 bytes)
+ef97123015b1f15786dcbaba40d52ba24dc79284207fb88193ce23e244e2fdd8  Segu-Luky-1.52s.apk  (5508387 bytes)
+
+Firma de todas las versiones (misma clave desde la 1.44s):
+  Sujeto:    CN=Segu-Luky, OU=Personal, O=Segu-Luky, C=ES
+  Certificado SHA-256:
+    E0:E5:A8:FD:9B:42:EC:DA:38:22:B3:B1:BC:05:AD:D7:CA:02:DC:B3:DE:B8:77:1B:AF:8F:64:08:CF:E2:10:9E
+  Comprobar la firma: apksigner verify --print-certs <apk>
+
+Detalle de permisos, destinos de red y por que avisa Play Protect:
+  docs/SEGURIDAD.md

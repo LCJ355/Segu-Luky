@@ -115,6 +115,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
+import java.security.MessageDigest
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -669,6 +670,7 @@ private enum class AboutPage {
     MENU,
     UPDATE,
     PRIVACY,
+    VERIFY,
     HISTORY,
     SUGGESTIONS,
     CREDITS
@@ -710,6 +712,7 @@ private fun AboutDialog(
         AboutPage.MENU -> "Segu-Luky"
         AboutPage.UPDATE -> "Buscar actualizacion"
         AboutPage.PRIVACY -> "Privacidad"
+        AboutPage.VERIFY -> "Verificar instalacion"
         AboutPage.HISTORY -> "Historial"
         AboutPage.SUGGESTIONS -> "Sugerencias"
         AboutPage.CREDITS -> "Creditos"
@@ -757,6 +760,11 @@ private fun AboutDialog(
                             { openPage(AboutPage.PRIVACY) }
                         )
                         AboutRow(
+                            R.drawable.ic_lock, AboutIconGreenBg, AboutIconGreenFg,
+                            "Verificar instalacion", "Huella de firma del APK",
+                            { openPage(AboutPage.VERIFY) }
+                        )
+                        AboutRow(
                             R.drawable.ic_history, AboutIconBlueBg, AboutIconBlueFg,
                             "Historial", "Cambios recientes", { openPage(AboutPage.HISTORY) }
                         )
@@ -784,6 +792,7 @@ private fun AboutDialog(
                         onRetry = ::checkUpdates
                     )
                     AboutPage.PRIVACY -> AboutParagraph(privacyText())
+                    AboutPage.VERIFY -> VerifyPage(context, versionLabel)
                     AboutPage.HISTORY -> AboutParagraph(historyText(versionLabel))
                     AboutPage.SUGGESTIONS -> SuggestionsPage(context, versionLabel)
                     AboutPage.CREDITS -> CreditsPage()
@@ -892,6 +901,65 @@ private fun AboutParagraph(text: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         lineHeight = 18.sp
     )
+}
+
+/**
+ * SHA-256 del certificado con el que esta firmado este APK.
+ *
+ * Es lo unico que no puede falsificar un APK modificado: si alguien reempaqueta
+ * la app con otra clave, esta huella cambia. Play Protect avisa de cualquier APK
+ * fuera de Play, asi que esta pantalla es la forma de comprobar en el propio
+ * movil que lo instalado es el build oficial.
+ */
+private fun signingFingerprint(context: Context): String? = runCatching {
+    val info = context.packageManager.getPackageInfo(
+        context.packageName,
+        PackageManager.GET_SIGNING_CERTIFICATES
+    )
+    val signer = info.signingInfo?.apkContentsSigners?.firstOrNull() ?: return@runCatching null
+    MessageDigest.getInstance("SHA-256")
+        .digest(signer.toByteArray())
+        .joinToString(":") { "%02X".format(it) }
+}.getOrNull()
+
+@androidx.compose.runtime.Composable
+private fun VerifyPage(context: Context, versionLabel: String) {
+    val fingerprint = remember { signingFingerprint(context) }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            "Huella de firma de esta instalacion",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            fingerprint ?: "No disponible",
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        AboutParagraph(
+            "Debe coincidir, caracter por caracter, con la huella publicada en el repositorio " +
+                "(docs/SEGURIDAD.md). Si no coincide, este APK no es el build oficial: " +
+                "desinstalalo y vuelve a bajar $versionLabel de la release de GitHub."
+        )
+        Text(
+            "Por que Play Protect avisa",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+        AboutParagraph(
+            "La app no viene de Play y combina permisos que su detector asocia a troyanos: " +
+                "enviar SMS, marcar llamadas, grabar audio y un servicio de accesibilidad que " +
+                "lee la pantalla para pulsar Enviar en WhatsApp. Es un aviso heuristico, no una " +
+                "deteccion de codigo malicioso. El detalle completo, con los destinos de red y " +
+                "las comprobaciones, esta en docs/SEGURIDAD.md."
+        )
+        AboutParagraph(
+            "Esta app no tiene cuentas, ni anuncios, ni analitica, ni servidor propio: solo habla " +
+                "con el bot de Telegram que configures y con la API publica de GitHub para buscar " +
+                "actualizaciones."
+        )
+    }
 }
 
 @androidx.compose.runtime.Composable
