@@ -92,6 +92,10 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private var escalationActive = false
     private var telephonyRegistered = false
     private var currentCallOffhookAt: Long? = null
+    /** True while a placed call has not reported OFFHOOK yet. */
+    private var awaitingCallOffhook = false
+    /** Elapsed time of the last `placeEmergencyCall`, used to spot stale IDLE callbacks. */
+    private var callPlacedAt: Long? = null
     private var dispatchInProgress = false
     private var dispatchWatchdogStartedAt: Long? = null
     private var exactAlarmFallbackLogged = false
@@ -101,6 +105,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             if (!escalationActive) return
             when (state) {
                 TelephonyManager.CALL_STATE_OFFHOOK -> {
+                    awaitingCallOffhook = false
                     if (currentCallOffhookAt == null) {
                         currentCallOffhookAt = SystemClock.elapsedRealtime()
                     }
@@ -1385,6 +1390,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         currentCallOffhookAt = null
         val phone = dispatch.callPhones[index]
         val placed = placeEmergencyCall(phone)
+        awaitingCallOffhook = placed
+        callPlacedAt = if (placed) SystemClock.elapsedRealtime() else null
         SafetyStateStore.log(
             "Llamada ${index + 1}/${dispatch.callPhones.size} a $phone ${if (placed) "iniciada" else "no disponible"}"
         )
@@ -1429,12 +1436,29 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
      * A call ended. Android reports OFFHOOK while dialling and ringing too, so the
      * off-hook duration cannot tell an answer apart from a voicemail: the round
      * continues with the next contact and the log records a *possible* answer.
+     *
+     * The state machine also emits IDLE when no call of ours was in flight (for
+     * example a duplicate callback after the previous call). Advancing on those
+     * would skip a contact, so the event is ignored unless a call was actually
+     * dialled by the escalation.
      */
     private fun onCallEnded() {
         if (!escalationActive) return
         val dispatch = EmergencyDispatchRepository(this).load() ?: return
         val offhookAt = currentCallOffhookAt
+        val wasAwaiting = awaitingCallOffhook
         val now = SystemClock.elapsedRealtime()
+        if (offhookAt == null && !wasAwaiting) {
+            SafetyStateStore.log("Estado de llamada sin llamada propia en curso; se ignora")
+            return
+        }
+        // A dial that reports IDLE within a couple of seconds is the previous
+        // call's callback arriving late. Acting on it would skip the contact we
+        // just dialled, so the scheduled timeout keeps the round going instead.
+        if (offhookAt == null && EscalationPolicy.idleArrivedWhileDialing(callPlacedAt, now)) {
+            SafetyStateStore.log("Fin de llamada anterior ignorado; se mantiene el marcado en curso")
+            return
+        }
         clearCallTracking()
         cancelEscalationAlarm()
         if (offhookAt == null) {
@@ -1485,6 +1509,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
     private fun clearCallTracking() {
         currentCallOffhookAt = null
+        awaitingCallOffhook = false
+        callPlacedAt = null
     }
 
     private fun registerTelephonyListener() {

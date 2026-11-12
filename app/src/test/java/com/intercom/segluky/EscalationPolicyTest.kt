@@ -61,4 +61,24 @@ class EscalationPolicyTest {
         assertTrue(EscalationPolicy.shouldWaitForCallEnd(offhookAt, idleAt))
         assertFalse(EscalationPolicy.answeredByLongCall(offhookAt, idleAt))
     }
+
+    @Test
+    fun staleIdleRightAfterDialingDoesNotSkipTheContact() {
+        // El IDLE de la llamada anterior puede llegar justo despues de marcar el
+        // siguiente contacto: tratarlo como fallo saltaria ese contacto.
+        val placedAt = 10_000L
+
+        assertTrue(EscalationPolicy.idleArrivedWhileDialing(placedAt, placedAt + 500L))
+        assertFalse(
+            EscalationPolicy.idleArrivedWhileDialing(
+                placedAt,
+                placedAt + EscalationPolicy.CALL_DIAL_SETTLE_MS
+            )
+        )
+    }
+
+    @Test
+    fun idleWithoutAnyDialIsNotADialInProgress() {
+        assertFalse(EscalationPolicy.idleArrivedWhileDialing(null, 10_000L))
+    }
 }

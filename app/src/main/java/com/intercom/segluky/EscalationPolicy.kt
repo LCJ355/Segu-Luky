@@ -23,6 +23,12 @@ internal object EscalationPolicy {
     const val ANSWERED_MIN_CALL_MS = 3_000L
     /** Absolute wait budget for a connected call before it closes the round. */
     const val MAX_ACTIVE_CALL_MS = 5 * 60_000L
+    /**
+     * A dial that reports IDLE sooner than this never reached the radio: the
+     * callback belongs to the previous call. Advancing on it would skip a
+     * contact, so the round waits for the next timeout instead.
+     */
+    const val CALL_DIAL_SETTLE_MS = 3_000L
 
     /** Evidence of a possible answer: a connected call of at least the minimum. */
     fun isAnswered(offhookAtElapsed: Long?, idleAtElapsed: Long): Boolean =
@@ -35,4 +41,8 @@ internal object EscalationPolicy {
     /** A connected call that outlasted the wait budget counts as answered. */
     fun answeredByLongCall(offhookAtElapsed: Long?, nowElapsed: Long): Boolean =
         offhookAtElapsed != null && nowElapsed - offhookAtElapsed >= MAX_ACTIVE_CALL_MS
+
+    /** True when an IDLE right after dialling is a stale callback, not a failure. */
+    fun idleArrivedWhileDialing(placedAtElapsed: Long?, nowElapsed: Long): Boolean =
+        placedAtElapsed != null && nowElapsed - placedAtElapsed < CALL_DIAL_SETTLE_MS
 }
