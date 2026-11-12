@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.50s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.51s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 42). Los valores entre parentesis son los del codigo.
+archivo (versionCode 43). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -165,7 +165,10 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   accidente perdia el aviso para siempre.
 - (corregido en 1.49s) «Buscar actualizacion» lee releases y etiquetas y elige la
   mas alta, asi una version etiquetada sin release tambien se ofrece.
-- WhatsAppUnlockActivity abre el chat aunque se cancele el desbloqueo.
+- (corregido en 1.51s) Si el telefono esta bloqueado y el usuario cancela el
+  desbloqueo, la app ya no abre WhatsApp encima del bloqueo: cierra ese aviso en
+  la cola (la ronda sigue con el resto) y deja una notificacion para abrir el
+  chat cuando el usuario quiera.
 
 9) DIAGRAMA DE FLUJO
 --------------------
@@ -207,4 +210,4 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.50s (versionCode 42) - 12/11/2026
+Version: V-1.51s (versionCode 43) - 12/11/2026

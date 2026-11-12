@@ -1,4 +1,4 @@
-package com.intercom.segluky
+﻿package com.intercom.segluky
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -1768,7 +1768,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         // The accessibility click only lands while the screen is on: keep it awake
         // for the whole retry window of the send attempt.
         wakeScreenController.wakeFor(WHATSAPP_SCREEN_WAKE_MS)
-        return startActivityFromBackground(withKeyguardRelay(target))
+        return startActivityFromBackground(withKeyguardRelay(target, request.requestId))
     }
 
     /**
@@ -1818,13 +1818,17 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
      * A locked screen makes the accessibility tap impossible, so the launch goes
      * through a transparent activity that turns the screen on and asks the system
      * to dismiss the keyguard (only automatic when there is no PIN/pattern).
+     *
+     * [requestId] viaja con el intent para que, si el usuario cancela el
+     * desbloqueo, la actividad cierre ese aviso de la cola en vez de reintentarlo.
      */
-    private fun withKeyguardRelay(target: Intent): Intent {
+    private fun withKeyguardRelay(target: Intent, requestId: String?): Intent {
         val keyguard = getSystemService(KeyguardManager::class.java)
         val screenOff = !getSystemService(PowerManager::class.java).isInteractive
         if (keyguard?.isKeyguardLocked != true && !screenOff) return target
         return Intent(this, WhatsAppUnlockActivity::class.java)
             .putExtra(WhatsAppUnlockActivity.EXTRA_TARGET, target)
+            .putExtra(WhatsAppUnlockActivity.EXTRA_REQUEST_ID, requestId)
     }
 
     /**
@@ -2602,7 +2606,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
     companion object {
         private const val MONITOR_CHANNEL_ID = "interseg_monitor"
-        private const val EMERGENCY_CHANNEL_ID = "interseg_emergency_v2"
+        internal const val EMERGENCY_CHANNEL_ID = "interseg_emergency_v2"
         private const val NOTIFICATION_ID = 1001
         private const val EMERGENCY_ALERT_NOTIFICATION_ID = 1002
         private const val COUNTDOWN_MS = 30_000L

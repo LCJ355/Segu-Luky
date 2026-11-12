@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.51s (versionCode 43)
+
+Publicada con APK, mapping, protocolo e instrucciones: `APK´s/Segu-Luky-1.51s.apk`,
+`APK´s/mapping/Segu-Luky-1.51s-mapping.txt.gz`, release `V-1.51s` con el APK adjunto.
+
+### Cancelar el desbloqueo ya no abre WhatsApp
+- Con el móvil bloqueado, el SOS pedía quitar el bloqueo y **en los tres** resultados (incluido
+  "cancelado") abría el chat: el mensaje de emergencia quedaba encima de la pantalla de bloqueo
+  aunque el usuario acabara de rechazarlo. Ahora `WhatsAppUnlockPolicy` decide por resultado
+  (`DISMISSED`/`FAILED` abren, `CANCELLED` no) y el `requestId` viaja en el intent del relay.
+- Al cancelar: no se abre nada, se cierra **ese** aviso de la cola con
+  `WhatsAppAutoSend.markFailed(..., "desbloqueo cancelado por el usuario")` para que la ronda siga
+  con el resto de contactos, y queda la notificación "mensaje SOS pendiente" que abre el chat con
+  un toque cuando el usuario desbloquee.
+- 4 tests nuevos (103 en total).
+
 ## 1.50s (versionCode 42)
 
 Publicada con APK, mapping, protocolo e instrucciones: `APK´s/Segu-Luky-1.50s.apk`,

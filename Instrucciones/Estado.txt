@@ -1481,6 +1481,35 @@ Mapping archivado: APK´s/mapping/Segu-Luky-1.50s-mapping.txt.gz
 Pendientes: §8 (WhatsAppUnlockActivity) y las dos pruebas de comportamiento
 (aviso InterCOM y reintento de Telegram).
 
+======================================================================
+V-1.51s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.51s (versionCode 43)
+
+Cambio:
+- §8: al pedir el desbloqueo del telefono para el autoeenvio de WhatsApp, los
+  tres resultados abrian el chat, incluido "cancelado": el mensaje de
+  emergencia quedaba encima de la pantalla de bloqueo aunque el usuario
+  acabara de rechazarlo. Ahora WhatsAppUnlockPolicy decide por resultado
+  (DISMISSED/FAILED abren, CANCELLED no), el requestId viaja en el intent del
+  relay y al cancelar se cierra ese aviso de la cola con
+  WhatsAppAutoSend.markFailed (la ronda sigue con el resto de contactos) y se
+  deja una notificacion "mensaje SOS pendiente" que abre el chat con un toque.
+
+Motivo: ultimo punto abierto del INFORME-BUGS-1.47s.md; la app hacia algo que
+el usuario acababa de rechazar.
+
+Prueba realizada: testDebugUnitTest (103 pruebas, 0 fallos; 4 nuevas de la
+politica de cancelacion), lintDebug (0 errores) y assembleRelease.
+Instalacion en dispositivo: pendiente (el OPPO esta en la 1.50s).
+Resultado: compila y verifica; pendiente la prueba real con PIN activo.
+APK generado: APK´s/Segu-Luky-1.51s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.51s-mapping.txt.gz
+Pendientes: ninguna correccion del informe; solo la verificacion en dispositivo
+de §5, §6 y §8.
+
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

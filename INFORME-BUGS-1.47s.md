@@ -4,10 +4,10 @@ Proyecto: `G:\-IA-\GitHub-repos-\Segu-Luky`
 Commit analizado: `173d7a8` (`origin/main`, `versionCode = 39`, `versionName = "1.47s"`)
 APK de referencia: `APK´s/Segu-Luky-1.47s.apk`, SHA-256 `0726b6ed…`
 
-> **Estado:** §1, §2, §3 y §4 corregidos en **1.48s** (`versionCode 40`); §7 en **1.49s**
-> (`versionCode 41`); §5 y §6 en **1.50s** (`versionCode 42`, `APK´s/Segu-Luky-1.50s.apk`). Cada
-> apartado corregido indica qué se cambió. El resto sigue pendiente en el orden de la última
-> sección.
+> **Estado:** todo el informe está corregido: §1–§4 en **1.48s** (`versionCode 40`), §7 en
+> **1.49s** (`versionCode 41`), §5 y §6 en **1.50s** (`versionCode 42`) y §8 en **1.51s**
+> (`versionCode 43`, `APK´s/Segu-Luky-1.51s.apk`). Cada apartado indica qué se cambió; la sección
+> 9 recoge lo que conviene no tocar.
 
 ## Corrección del análisis anterior
 
@@ -200,7 +200,7 @@ hasta que se creó su release.
 
 ---
 
-## 8. [MEDIO] `WhatsAppUnlockActivity` abre WhatsApp aunque el usuario cancele el desbloqueo
+## 8. [MEDIO · corregido] `WhatsAppUnlockActivity` abre WhatsApp aunque el usuario cancele el desbloqueo
 
 **Verificado.** `onCreate` pide `requestDismissKeyguard` y en **los tres** callbacks llama a
 `launchTarget(target)`; `onDismissCancelled` solo añade un log si el bloqueo es seguro. El
@@ -208,6 +208,13 @@ mensaje de emergencia (con el enlace de Maps) queda abierto sobre la pantalla de
 cancelar.
 
 **Fix:** en `onDismissCancelled`, no lanzar el destino; dejar la notificación manual.
+
+**Corregido en 1.51s.** `WhatsAppUnlockPolicy.launchTarget` decide por resultado
+(`DISMISSED`/`FAILED` abren, `CANCELLED` no) y el `requestId` viaja en el intent del relay
+(`EXTRA_REQUEST_ID`): al cancelar, la actividad cierra ese aviso de la cola con
+`WhatsAppAutoSend.markFailed(..., "desbloqueo cancelado por el usuario")` para que la ronda siga
+con el resto de contactos, deja una notificación "mensaje SOS pendiente" que abre el chat con un
+toque y se cierra sin lanzar nada. 4 tests nuevos.
 
 ---
 
@@ -227,4 +234,8 @@ cancelar.
    corta por un timbrado).
 2. ~~§3 (voz con pantalla apagada) y §4 (instrucciones del APK)~~ (corregidos en 1.48s).
 3. ~~§5 y §6~~ (corregidos en 1.50s).
-4. ~~§7~~ (corregido en 1.49s) y §8.
+4. ~~§7~~ (corregido en 1.49s) y ~~§8~~ (corregido en 1.51s).
+
+Todo el informe está cerrado. Lo que queda es verificar en dispositivo las dos correcciones de
+comportamiento (aviso de voz de InterCOM con InterCOM encendido y apagado, y el reintento del bot
+de Telegram arrancando sin datos) y la de §8 (cancelar el desbloqueo con PIN).
