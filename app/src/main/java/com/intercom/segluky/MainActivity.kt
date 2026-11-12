@@ -425,13 +425,9 @@ class MainActivity : ComponentActivity() {
                             whatsappAutoSend = enabled
                             WhatsAppAutoSend.setEnabled(context, enabled)
                         }
-                    }
-                )
-                AppScreen.INSTRUCTIONS -> InstructionsScreen(
-                    modifier = Modifier.fillMaxSize().padding(padding),
-                    snapshot = snapshot,
-                    installation = installation,
-                    noticeFeedback = intercomNoticeFeedback,
+                    },
+                    intercomInstallation = installation,
+                    intercomNoticeFeedback = intercomNoticeFeedback,
                     onRefreshIntercom = {
                         installation = IntercomInstallation.inspect(context)
                         intercomNoticeFeedback = null
@@ -441,15 +437,19 @@ class MainActivity : ComponentActivity() {
                         val sent = IntercomInstallation.sendNotice(context)
                         intercomNoticeFeedback = when {
                             !installation.installed ->
-                                "InterCOM no instalado: el aviso solo sono en este movil."
+                                "InterCOM no instalado: el aviso no suena en ningun sitio."
                             !installation.active ->
-                                "InterCOM apagado: el aviso solo sono en este movil. " +
+                                "InterCOM apagado: el aviso no suena en ningun sitio. " +
                                     "Enciende INTERCOM WiFi/Datos en InterCOM-Luky."
                             sent -> "Aviso enviado a los motoristas conectados."
                             else -> "Aviso lanzado; no habia otros motoristas conectados."
                         }
                         installation = IntercomInstallation.inspect(context)
                     }
+                )
+                AppScreen.INSTRUCTIONS -> InstructionsScreen(
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                    snapshot = snapshot
                 )
             }
         }
@@ -1180,7 +1180,12 @@ private fun EmergencySettingsScreen(
     callPermissionRequired: Boolean,
     callPermissionGranted: Boolean,
     whatsappAutoSend: Boolean,
-    onWhatsappAutoSendChange: (Boolean) -> Unit
+    onWhatsappAutoSendChange: (Boolean) -> Unit,
+    intercomInstallation: IntercomInstallationInfo,
+    intercomNoticeFeedback: String?,
+    onRefreshIntercom: () -> Unit,
+    onOpenIntercom: () -> Unit,
+    onTestIntercomNotice: () -> Unit
 ) {
     val context = LocalContext.current
     val calibrationScope = androidx.compose.runtime.rememberCoroutineScope()
@@ -1729,6 +1734,15 @@ private fun EmergencySettingsScreen(
             }
         }
         item {
+            IntercomCard(
+                installation = intercomInstallation,
+                noticeFeedback = intercomNoticeFeedback,
+                onRefreshIntercom = onRefreshIntercom,
+                onOpenIntercom = onOpenIntercom,
+                onTestIntercomNotice = onTestIntercomNotice
+            )
+        }
+        item {
             SectionHeader("CONTACTOS")
         }
         item {
@@ -2088,12 +2102,7 @@ private fun EmergencyContactCard(
 @androidx.compose.runtime.Composable
 private fun InstructionsScreen(
     modifier: Modifier,
-    snapshot: SafetySnapshot,
-    installation: IntercomInstallationInfo,
-    noticeFeedback: String?,
-    onRefreshIntercom: () -> Unit,
-    onOpenIntercom: () -> Unit,
-    onTestIntercomNotice: () -> Unit
+    snapshot: SafetySnapshot
 ) {
     LazyColumn(
         modifier = modifier.padding(horizontal = 16.dp),
@@ -2180,84 +2189,6 @@ private fun InstructionsScreen(
         }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    when (installation.state) {
-                                        IntercomState.ACTIVE -> StrongGreen
-                                        IntercomState.INACTIVE -> Color(0xFFFF9800)
-                                        IntercomState.MISSING -> Color(0xFF9AA0A6)
-                                    }
-                                )
-                        )
-                        Spacer(Modifier.size(8.dp))
-                        Text(
-                            "INTERCOM-LUKY",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Text(
-                        when {
-                            !installation.installed -> "NO INSTALADA (gris): sin aviso de voz"
-                            installation.active -> buildString {
-                                append("ACTIVA (verde): InterCOM encendido")
-                                if (installation.group.isNotBlank()) append(" - grupo ${installation.group}")
-                                if (installation.peers > 0) append(" - ${installation.peers} motoristas")
-                            }
-                            else -> "INSTALADA, NO ACTIVA (naranja): InterCOM apagado"
-                        },
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    if (installation.installed) {
-                        Text(
-                            "Version ${installation.versionName ?: "desconocida"} (${installation.versionCode ?: 0})",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
-                    Text(
-                        "Al terminar la cuenta atras del SOS, Segu-Luky pide a InterCOM-Luky que avise por " +
-                            "voz: \"${IntercomInstallation.SOS_NOTICE_TEXT}\". El aviso suena en el casco de " +
-                            "todos los motoristas del grupo (datos) o del INTERCOM WiFi, y siempre en este movil. " +
-                            "En verde llega a los demas; en naranja o gris solo suena aqui.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    noticeFeedback?.let {
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = StrongGreen
-                        )
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            onClick = onRefreshIntercom,
-                            modifier = Modifier.weight(1f),
-                            contentPadding = CompactButtonPadding
-                        ) { TightButtonLabel("ACTUALIZAR") }
-                        if (installation.installed) {
-                            Button(
-                                onClick = onOpenIntercom,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = CompactButtonPadding
-                            ) { TightButtonLabel("ABRIR") }
-                            OutlinedButton(
-                                onClick = onTestIntercomNotice,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = CompactButtonPadding
-                            ) { TightButtonLabel("PROBAR AVISO") }
-                        }
-                    }
-                }
-            }
-        }
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("REGISTRO RECIENTE", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     if (snapshot.eventLog.isEmpty()) {
@@ -2268,6 +2199,92 @@ private fun InstructionsScreen(
                 }
             }
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun IntercomCard(
+    installation: IntercomInstallationInfo,
+    noticeFeedback: String?,
+    onRefreshIntercom: () -> Unit,
+    onOpenIntercom: () -> Unit,
+    onTestIntercomNotice: () -> Unit
+) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(
+                            when (installation.state) {
+                                IntercomState.ACTIVE -> StrongGreen
+                                IntercomState.INACTIVE -> Color(0xFFFF9800)
+                                IntercomState.MISSING -> Color(0xFF9AA0A6)
+                            }
+                        )
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    "INTERCOM-LUKY",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Text(
+                when {
+                    !installation.installed -> "NO INSTALADA (gris): el aviso no suena en ningun sitio"
+                    installation.active -> buildString {
+                        append("ACTIVA (verde): InterCOM encendido")
+                        if (installation.group.isNotBlank()) append(" - grupo ${installation.group}")
+                        if (installation.peers > 0) append(" - ${installation.peers} motoristas")
+                    }
+                    else -> "INSTALADA, NO ACTIVA (naranja): InterCOM apagado, el aviso no suena en ningun sitio"
+                },
+                style = MaterialTheme.typography.bodyMedium
+            )
+            if (installation.installed) {
+                Text(
+                    "Version ${installation.versionName ?: "desconocida"} (${installation.versionCode ?: 0})",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Text(
+                "Al terminar la cuenta atras del SOS, Segu-Luky pide a InterCOM-Luky que avise por " +
+                    "voz: \"${IntercomInstallation.SOS_NOTICE_TEXT}\". En verde el aviso suena en el casco " +
+                    "de todos los motoristas del grupo (datos) o del INTERCOM WiFi, y tambien en este movil. " +
+                    "En naranja o gris no suena en ningun sitio.",
+                style = MaterialTheme.typography.bodySmall
+            )
+            noticeFeedback?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = StrongGreen
+                )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = onRefreshIntercom,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = CompactButtonPadding
+                ) { TightButtonLabel("ACTUALIZAR") }
+                if (installation.installed) {
+                    Button(
+                        onClick = onOpenIntercom,
+                        modifier = Modifier.weight(1f),
+                        contentPadding = CompactButtonPadding
+                    ) { TightButtonLabel("ABRIR") }
+                    OutlinedButton(
+                        onClick = onTestIntercomNotice,
+                        modifier = Modifier.weight(1f),
+                        contentPadding = CompactButtonPadding
+                    ) { TightButtonLabel("PROBAR AVISO") }
+                }
+            }
         }
     }
 }
@@ -2911,9 +2928,11 @@ private fun MonitorCard(
                 IntercomState.ACTIVE ->
                     "InterCOM encendido: el aviso de voz llega a los motoristas del grupo o del INTERCOM WiFi."
                 IntercomState.INACTIVE ->
-                    "InterCOM instalado pero apagado: sin encenderlo el aviso solo suena en este movil."
+                    "InterCOM instalado pero apagado: el aviso no suena en ningun sitio. " +
+                        "Enciendelo en InterCOM-Luky para que llegue a los demas."
                 IntercomState.MISSING ->
-                    "Instala InterCOM-Luky para avisar por voz a los demas motoristas."
+                    "InterCOM no instalado: el aviso no suena en ningun sitio. " +
+                        "Instala InterCOM-Luky para avisar por voz a los demas motoristas."
             }
         )
     }

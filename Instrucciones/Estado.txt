@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.12s
+﻿SEGU-LUKY V-1.12s
 BITACORA DE ACTUALIZACIONES Y PRUEBAS
 
 Ultima actualizacion: 05/11/2026
@@ -1046,6 +1046,41 @@ Resultado: OK; tests unitarios en verde; monitor dejado detenido.
 APK generado: app-release.apk (1.27s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
+======================================================================
+V-1.47s
+======================================================================
+
+Fecha: 11/12/2026
+Version: 1.47s (versionCode 39)
+
+Cambio:
+- La tarjeta INTERCOM-LUKY deja de estar en Instrucciones y pasa a
+  Configuracion, justo antes de CONTACTOS SOS.
+- Se extrae a un composable propio (IntercomCard) para no duplicar codigo.
+- Textos nuevos: el aviso solo suena en verde.
+    NO INSTALADA (gris): el aviso no suena en ningun sitio
+    INSTALADA, NO ACTIVA (naranja): InterCOM apagado, el aviso no suena en
+      ningun sitio
+    ACTIVA (verde): InterCOM encendido (+ grupo y numero de motoristas)
+  El parrafo explicativo y los mensajes de PROBAR AVISO dicen lo mismo, y la
+  fila INTERCOM del resumen de sensores se ajusta igual.
+
+Motivo: pedido del usuario; la tarjeta se consulta al configurar el SOS y no
+durante la lectura de instrucciones. Aclarar que en naranja o gris el aviso no
+suena en ningun sitio.
+
+Prueba realizada: testDebugUnitTest + lintDebug (81 pruebas, 0 fallos) y
+assembleRelease. En el OPPO, dentro de Configuracion: la tarjeta aparece antes
+de CONTACTOS SOS, con ACTIVA (verde) y Version V-4.1 (403); tras force-stop de
+InterCOM y ACTUALIZAR pasa a INSTALADA, NO ACTIVA (naranja); PROBAR AVISO en
+naranja responde "InterCOM apagado: el aviso no suena en ningun sitio. Enciende
+INTERCOM WiFi/Datos en InterCOM-Luky."; al volver a encender InterCOM y pulsar
+ACTUALIZAR vuelve a verde y borra el mensaje anterior.
+Resultado: correcto, sin textos recortados (las lineas largas hacen wrap).
+APK generado: APK´s/Segu-Luky-1.47s.apk
+Pendientes:
+- Probar el aviso de voz con un segundo movil dentro del grupo o del INTERCOM
+  WiFi; hasta ahora la unica prueba es de un solo dispositivo.
 ======================================================================
 
 1.28s (versionCode 20)

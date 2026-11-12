@@ -1,4 +1,4 @@
-# Segu-Luky V-1.46s
+﻿# Segu-Luky V-1.47s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -72,14 +72,14 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every version is published in `APK´s/` as
-`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.45s.apk`), ready to download
+`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.47s.apk`), ready to download
 and install on the phone without Android Studio.
 
 Every version is also published as a GitHub release tagged `V-<version>` with
 that same APK attached, because **Buscar actualizacion** reads the GitHub API:
 
 ```text
-gh release create V-1.45s "APK´s/Segu-Luky-1.45s.apk" --title "Segu-Luky 1.45s" --notes "..."
+gh release create V-1.47s "APK´s/Segu-Luky-1.47s.apk" --title "Segu-Luky V-1.47s" --notes "..."
 ```
 
 ## Safe device test
@@ -124,11 +124,12 @@ that Segu-Luky uses to reach the riders' group:
   WebRTC (data channel `notice`) and the INTERCOM WiFi (UDP type `6`). Returns
   `sent`, `peers` and the echoed notice text.
 
-The three-state indicator in `Informacion > Como usar` reads that provider every
-5 s: grey = not installed, orange = installed but the intercom is off, green =
-installed and running. The SOS countdown triggers the same notice once it
-completes. Contract details live in
-`Instrucciones/INTEROPERABILIDAD-SEGU-INTERCOM.txt`.
+The three-state indicator in `Configuracion` (the INTERCOM-LUKY card, right above
+`CONTACTOS SOS`) reads that provider every 5 s: grey = not installed, orange =
+installed but the intercom is off, green = installed and running. In green the
+SOS notice reaches the other riders; in orange or grey it does not sound
+anywhere. The SOS countdown triggers the same notice once it completes. Contract
+details live in `Instrucciones/INTEROPERABILIDAD-SEGU-INTERCOM.txt`.
 
 See `INFORME-ANALISIS.md` for the earlier review and `CHANGELOG.md` for this
 version's changes. The package is `com.intercom.segluky`.
