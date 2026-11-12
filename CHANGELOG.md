@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.58s (versionCode 50)
+
+### La ventana de promedio se elige en Sensores
+- La selección `ADAPT. AUTO / 1 / 2 / 3` se mueve a **Configuración → Sensores**, dentro de la misma
+  tarjeta que el deslizador de sensibilidad (junto con el valor, la escala 0..7, `PICO / EFECTIVO /
+  SUGERIDO` y `PROBAR GOLPE`). Sigue bloqueada con el monitor en marcha.
+- En la **pantalla principal** queda solo información: `T. PROMEDIO` con `AUTO` `1` `2` `3`, la
+  opción activa en verde y, a la derecha, `auto: N min` o `N min`. No es pulsable: no hay forma de
+  cambiar la ventana sin querer desde el manillar.
+- El chip de información es de solo lectura (`AdaptiveWindowInfoChip`); el selector interactivo
+  sigue siendo `AdaptationWindowChip`.
+- `onWindowChange` se centraliza en la actividad, igual que la sensibilidad y la prueba de golpe.
+- Instrucciones (3b, 3c y uso diario), protocolo e historial con la nueva ubicación.
+
 ## 1.57s (versionCode 49)
 
 ### La pantalla principal se queda solo con lo esencial

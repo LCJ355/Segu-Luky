@@ -255,6 +255,11 @@ class MainActivity : ComponentActivity() {
                 SafetyStateStore.snapshot.value.effectiveThresholdG ?: sensitivityG
             )
         }
+        // La ventana de promedio se elige en Configuracion > Sensores; en la pantalla
+        // principal solo se muestra cual esta activa.
+        val onWindowChange: (AdaptationWindowMode) -> Unit = { mode ->
+            SafetyMonitorService.setAdaptationWindow(context, mode)
+        }
 
         fun permissionsNeededForConfiguredFeatures(): Array<String> = buildList {
             if (!SafetyMonitorService.hasPreciseLocationPermission(context)) {
@@ -356,9 +361,7 @@ class MainActivity : ComponentActivity() {
                         audioLevel = audioLevel,
                         sensitivityG = sensitivityG,
                         onSensitivityChange = onSensitivityChange,
-                        onWindowChange = { mode ->
-                            SafetyMonitorService.setAdaptationWindow(context, mode)
-                        },
+                        onWindowChange = onWindowChange,
                         onHitTest = onHitTest,
                         sosActionsEnabled = sosActionsEnabled,
                         onSosActionsEnabledChange = onSosActionsEnabledChange,
@@ -423,6 +426,7 @@ class MainActivity : ComponentActivity() {
                     snapshot = snapshot,
                     sensitivityG = sensitivityG,
                     onSensitivityChange = onSensitivityChange,
+                    onWindowChange = onWindowChange,
                     onHitTest = onHitTest,
                     fallOrientationGate = fallOrientationGate,
                     onFallOrientationGateChange = { enabled ->
@@ -1130,6 +1134,8 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.58s - La ventana de promedio (ADAPT.) se elige en Configuracion > Sensores; en la pantalla " +
+        "principal solo se ve T. PROMEDIO con la opcion activa en verde.")
     appendLine("1.57s - La pantalla principal se queda con la etiqueta de sensibilidad y la ventana ADAPT.; el " +
         "deslizador, la escala, el pico del viaje y PRUEBA DE GOLPE pasan a Configuracion > Sensores.")
     appendLine("1.56s - La pantalla principal tiene dos botones de estado: MONITOR ON/OFF (verde/naranja) y " +
@@ -1322,6 +1328,7 @@ private fun EmergencySettingsScreen(
     snapshot: SafetySnapshot,
     sensitivityG: Float,
     onSensitivityChange: (Float) -> Unit,
+    onWindowChange: (AdaptationWindowMode) -> Unit,
     onHitTest: () -> Unit,
     fallOrientationGate: Boolean,
     onFallOrientationGateChange: (Boolean) -> Unit,
@@ -1647,10 +1654,10 @@ private fun EmergencySettingsScreen(
                     status = if (monitorStopped) "AJUSTABLE" else "MONITOR EN MARCHA",
                     tone = if (monitorStopped) Tone.OK else Tone.WARN,
                     description = if (monitorStopped) {
-                        "Sube el umbral para exigir un golpe mas fuerte. La ventana ADAPT. y el interruptor " +
-                            "MONITOR estan en la pantalla principal."
+                        "Sube el umbral para exigir un golpe mas fuerte. Aqui se ajustan tambien el deslizador " +
+                            "y la ventana de promedio (ADAPT.); el interruptor MONITOR esta en la pantalla principal."
                     } else {
-                        "Deten el monitor para cambiarla. La ventana ADAPT. esta en la pantalla principal."
+                        "Deten el monitor para cambiar la sensibilidad o la ventana ADAPT."
                     }
                 ) {
                     SensitivityControl(
@@ -1663,9 +1670,8 @@ private fun EmergencySettingsScreen(
                         hitTestVerdict = snapshot.hitTestVerdict,
                         enabled = monitorStopped,
                         onSensitivityChange = onSensitivityChange,
-                        onWindowChange = {},
-                        onHitTest = onHitTest,
-                        showWindow = false
+                        onWindowChange = onWindowChange,
+                        onHitTest = onHitTest
                     )
                 }
             }
@@ -3128,7 +3134,12 @@ private fun PhaseHeroCard(
                 onWindowChange = onWindowChange,
                 onHitTest = onHitTest,
                 showSlider = false,
+                showWindow = false,
                 showPeak = false
+            )
+            AdaptationWindowInfo(
+                activeWindowMinutes = snapshot.adaptationWindowMinutes,
+                windowAuto = snapshot.adaptationWindowAuto
             )
         }
     }
@@ -3903,6 +3914,59 @@ private fun SensitivityControl(
             )
         }
     }
+}
+
+/** Informacion de la ventana de promedio en la pantalla principal: solo lectura. */
+@androidx.compose.runtime.Composable
+private fun AdaptationWindowInfo(
+    activeWindowMinutes: Int,
+    windowAuto: Boolean
+) {
+    val context = LocalContext.current
+    val storedMode = remember(windowAuto, activeWindowMinutes) {
+        SafetyMonitorService.loadAdaptationWindowMode(context)
+    }
+    Spacer(Modifier.height(5.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            "T. PROMEDIO",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        AdaptiveWindowInfoChip("AUTO", selected = windowAuto)
+        AdaptationWindowMode.fixed.forEach { mode ->
+            AdaptiveWindowInfoChip(
+                label = "${mode.minutes}",
+                selected = !windowAuto && storedMode == mode
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        Text(
+            "${activeWindowMinutes} min",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+    }
+}
+
+/** Chip de solo lectura: el elegido va en verde, el resto en gris. */
+@androidx.compose.runtime.Composable
+private fun AdaptiveWindowInfoChip(label: String, selected: Boolean) {
+    Text(
+        text = label,
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (selected) StrongGreen.copy(alpha = 0.16f) else Color.Transparent)
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        color = if (selected) StrongGreen else MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 /** Fila ADAPT.: AUTO o 1/2/3 minutos, con lo elegido en verde. */

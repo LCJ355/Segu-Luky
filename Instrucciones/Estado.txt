@@ -1709,6 +1709,42 @@ Pendientes: probar la sensibilidad desde Configuracion > Sensores con el
 monitor detenido y las pruebas de comportamiento que siguen abiertas.
 
 ======================================================================
+V-1.58s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.58s (versionCode 50)
+
+Cambio:
+- La seleccion de la ventana ADAPT. (AUTO / 1 / 2 / 3) se mueve a
+  Configuracion > Sensores, en la misma tarjeta del deslizador. Sigue
+  bloqueada con el monitor en marcha.
+- En la pantalla principal queda solo informacion: fila "T. PROMEDIO" con
+  AUTO 1 2 3 (la opcion activa en verde) y los minutos activos a la derecha.
+  No es pulsable, asi que no se puede cambiar la ventana sin querer.
+- Nuevo chip de solo lectura AdaptiveWindowInfoChip; el interactivo sigue
+  siendo AdaptationWindowChip.
+- onWindowChange se centraliza en la actividad, como la sensibilidad y la
+  prueba de golpe.
+- Instrucciones (3b, 3c y uso diario), protocolo, README, historial y Estado
+  actualizados.
+- Ajuste visual: el texto de minutos ya no se parte en dos lineas.
+
+Motivo: pedido del usuario ("la seleccion de ADAPT. AUTO 1 2 3 MIN la movemos
+a Configuracion SENSORES; en la pantalla principal solo informacion
+('T Promedio' Auto 1 2 3) en verde lo seleccionado").
+
+Prueba realizada: testDebugUnitTest (145 pruebas, 0 fallos), lintDebug (0
+errores) y assembleRelease. Revisado en el OPPO: Inicio con SENSIBILIDAD a los
+golpes y T. PROMEDIO (AUTO en verde), y Sensores con deslizador, escala,
+ADAPT. interactivo, pico y PROBAR GOLPE.
+Resultado: compila, verifica y revisado en el movil.
+APK generado: APK´s/Segu-Luky-1.58s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.58s-mapping.txt.gz
+Pendientes: cambiar la ventana desde Sensores en el movil y las pruebas de
+comportamiento que siguen abiertas.
+
+======================================================================
 
 Fecha: 12/11/2026
 Version: 1.53s (versionCode 45)

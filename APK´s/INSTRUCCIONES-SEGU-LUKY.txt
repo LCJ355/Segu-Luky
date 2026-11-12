@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.57s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.58s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -12,8 +12,8 @@ desactivala: la cuenta atras se ejecuta sin avisar a nadie.
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.57s.apk        <- version actual
-Las anteriores (1.44s a 1.56s) se conservan solo como historico.
+    Segu-Luky-1.58s.apk        <- version actual
+Las anteriores (1.44s a 1.57s) se conservan solo como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -88,8 +88,9 @@ docs/SEGURIDAD.md.
 --------------------------------------------------------------------------
 3b) AJUSTAR LA SENSIBILIDAD CON EL PICO DEL VIAJE
 --------------------------------------------------------------------------
-El deslizador y el diagnostico estan en CONFIGURACION > SENSORES. En la
-pantalla principal solo quedan la etiqueta con el valor y la ventana ADAPT.
+El deslizador, la ventana ADAPT. y el diagnostico estan en CONFIGURACION >
+SENSORES. En la pantalla principal solo quedan la etiqueta con el valor y la
+informacion T. PROMEDIO (con la opcion activa en verde).
 
 La app mide el ruido y el traqueteo de TU movil y calcula un umbral efectivo
 (el que de verdad se aplica). Por eso debajo del deslizador veras:
@@ -113,7 +114,9 @@ PRUEBA DE GOLPE (15 segundos, sin avisar a nadie)
    no llegaria, con el ajuste recomendado.
 4. No graba archivos, no inicia la cuenta atras y no envia nada.
 
-ADAPT. (ventana de aprendizaje)
+ADAPT. o T. PROMEDIO (ventana de aprendizaje)
+Se elige en Configuracion > Sensores; en la pantalla principal solo se ve cual
+esta activa. Opciones:
 - AUTO: empieza en 2 minutos y se acorta a 1 si el camino cambia mucho, o se
   alarga a 3 si lleva rato estable.
 - 1 / 2 / 3 MIN: valor fijo elegido por ti.
@@ -130,12 +133,13 @@ resumen de su estado (por ejemplo "4 ACTIVOS" o "FALTAN 2") antes de entrar.
   SENSORES
     - SENSIBILIDAD A LOS GOLPES: deslizador 0,5-7 g, escala 0..7, PICO /
       EFECTIVO / SUGERIDO y PRUEBA DE GOLPE.
+    - ADAPT. (T. PROMEDIO): AUTO o 1/2/3 minutos.
     - CAIDA / ORIENTACION (MODO MOTO).
     - VOZ AYUDA / SOCORRO.
     - DIAGNOSTICO: ficha del movil, REINICIAR APRENDIZAJE y grabacion
       CSV/ZIP opcional.
-    La ventana ADAPT. (AUTO o 1/2/3 min) esta en la pantalla principal, en la
-    tarjeta del monitor.
+    En la pantalla principal solo se muestra T. PROMEDIO con la opcion activa en
+    verde; cambiarla se hace aqui.
 
   CONTACTOS SOS
     - Lista de contactos, en el orden de llamada.
@@ -165,9 +169,9 @@ Configuracion; VOLVER otra vez vuelve a la pantalla principal.
   (vigilando), naranja = OFF (detenido). Solo se ve el estado actual.
 - S O S ON/OFF (a su lado): permite o bloquea TODOS los avisos. Verde = los
   avisos saldran; rojo = no se llamara ni se enviara nada (util para probar).
-- La sensibilidad, la escala 0..7, el pico del viaje y PRUEBA DE GOLPE estan
-  en Configuracion > Sensores. En esta pantalla quedan la etiqueta con el
-  valor y la ventana ADAPT.
+- La sensibilidad, la escala 0..7, la ventana ADAPT., el pico del viaje y
+  PRUEBA DE GOLPE estan en Configuracion > Sensores. En esta pantalla quedan la
+  etiqueta con el valor y la informacion T. PROMEDIO.
 - Con el monitor en marcha es un servicio en primer plano: sigue funcionando
   con la pantalla apagada y el movil bloqueado. Aparece una notificacion fija;
   no la cierres.
@@ -265,4 +269,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.57s (versionCode 49) - paquete com.intercom.segluky.
+Version: V-1.58s (versionCode 50) - paquete com.intercom.segluky.

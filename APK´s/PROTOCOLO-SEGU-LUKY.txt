@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.57s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.58s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 49). Los valores entre parentesis son los del codigo.
+archivo (versionCode 50). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -52,7 +52,8 @@ suaviza los picos mide el golpe mas bajo.
      puede dejar el movil sordo).
    - Un golpe NUNCA sube el umbral que lo detecta: los golpes no entran en el
      promedio.
-   - Ventana ADAPT.: AUTO (empieza en 2 min y se acorta a 1 min si el camino
+   - Ventana ADAPT. / T. PROMEDIO (se elige en Configuracion > Sensores): AUTO
+  (empieza en 2 min y se acorta a 1 min si el camino
      cambia mucho, o se alarga a 3 min si lleva rato estable) o fija a 1/2/3.
    - Muestreo: 25 Hz con el movil quieto, 50 Hz normal, 100 Hz en demanda o tras
      golpe/candidato/cuenta atras. Se mide lo que entrega el sensor y se muestra.
@@ -257,4 +258,4 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.57s (versionCode 49) - 12/11/2026
+Version: V-1.58s (versionCode 50) - 12/11/2026
