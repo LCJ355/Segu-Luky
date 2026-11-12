@@ -92,7 +92,6 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private var escalationActive = false
     private var telephonyRegistered = false
     private var currentCallOffhookAt: Long? = null
-    private var pendingCallAdvance = false
     private var dispatchInProgress = false
     private var dispatchWatchdogStartedAt: Long? = null
     private var exactAlarmFallbackLogged = false
@@ -1384,7 +1383,6 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             return
         }
         currentCallOffhookAt = null
-        pendingCallAdvance = false
         val phone = dispatch.callPhones[index]
         val placed = placeEmergencyCall(phone)
         SafetyStateStore.log(
@@ -1398,22 +1396,17 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         }
     }
 
-    /** Called when a call has been ringing or active for ~1 minute. */
+    /**
+     * Called when a call has been ringing or active for ~1 minute.
+     *
+     * A call that is still connected once the wait budget is exhausted counts as
+     * answered: a five minute connected call is a conversation (or a voicemail
+     * message being recorded), so the round stops instead of dialling the next
+     * contact over an active call. The app never ends a call itself.
+     */
     private fun onEscalationTimeout(dispatch: PendingEmergencyDispatch) {
         if (!escalationActive) return
         val now = SystemClock.elapsedRealtime()
-        if (pendingCallAdvance) {
-            if (currentCallOffhookAt == null) {
-                clearCallTracking()
-                advanceEscalation(dispatch)
-            } else if (!endCurrentCall()) {
-                clearCallTracking()
-                advanceEscalation(dispatch)
-            } else {
-                scheduleEscalationAlarm(dispatch, ESCALATION_END_RETRY_MS)
-            }
-            return
-        }
         val offhookAt = currentCallOffhookAt
         if (offhookAt != null) {
             if (EscalationPolicy.shouldWaitForCallEnd(offhookAt, now)) {
@@ -1421,42 +1414,39 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 scheduleEscalationAlarm(dispatch)
                 return
             }
-            SafetyStateStore.log("Llamada ${dispatch.callIndex + 1} demasiado larga; se corta para continuar")
-            if (!endCurrentCall()) {
-                SafetyStateStore.log("No se pudo cortar la llamada; se pasa al siguiente contacto")
-                clearCallTracking()
-                advanceEscalation(dispatch)
+            if (EscalationPolicy.answeredByLongCall(offhookAt, now)) {
+                SafetyStateStore.log("Llamada ${dispatch.callIndex + 1} larga: se da por atendida")
+                finishEscalation(dispatch, answered = true, detail = "llamada larga en curso")
                 return
             }
-            pendingCallAdvance = true
-            scheduleEscalationAlarm(dispatch, ESCALATION_END_RETRY_MS)
             return
         }
         SafetyStateStore.log("Llamada ${dispatch.callIndex + 1} sin respuesta en 1 minuto")
         advanceEscalation(dispatch)
     }
 
+    /**
+     * A call ended. Android reports OFFHOOK while dialling and ringing too, so the
+     * off-hook duration cannot tell an answer apart from a voicemail: the round
+     * continues with the next contact and the log records a *possible* answer.
+     */
     private fun onCallEnded() {
         if (!escalationActive) return
         val dispatch = EmergencyDispatchRepository(this).load() ?: return
         val offhookAt = currentCallOffhookAt
-        val wasPendingAdvance = pendingCallAdvance
         val now = SystemClock.elapsedRealtime()
         clearCallTracking()
-        if (wasPendingAdvance) {
-            cancelEscalationAlarm()
-            advanceEscalation(dispatch)
-            return
+        cancelEscalationAlarm()
+        if (offhookAt == null) {
+            SafetyStateStore.log("Llamada ${dispatch.callIndex + 1} no llego a establecerse")
+        } else if (EscalationPolicy.isAnswered(offhookAt, now)) {
+            SafetyStateStore.log(
+                "Llamada ${dispatch.callIndex + 1} conectada ${(now - offhookAt) / 1_000}s (posible respuesta); sigue la ronda"
+            )
+        } else {
+            SafetyStateStore.log("Llamada ${dispatch.callIndex + 1} sin respuesta; sigue la ronda")
         }
-        if (EscalationPolicy.isAnswered(offhookAt, now)) {
-            SafetyStateStore.log("Llamada ${dispatch.callIndex + 1} conectada y finalizada")
-            finishEscalation(dispatch, answered = true, detail = "un contacto respondio la llamada")
-            return
-        }
-        if (offhookAt != null) {
-            cancelEscalationAlarm()
-            advanceEscalation(dispatch)
-        }
+        advanceEscalation(dispatch)
     }
 
     private fun advanceEscalation(dispatch: PendingEmergencyDispatch) {
@@ -1495,19 +1485,6 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
     private fun clearCallTracking() {
         currentCallOffhookAt = null
-        pendingCallAdvance = false
-    }
-
-    private fun endCurrentCall(): Boolean {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ANSWER_PHONE_CALLS) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            return false
-        }
-        return runCatching {
-            getSystemService(TelecomManager::class.java).endCall()
-            true
-        }.getOrDefault(false)
     }
 
     private fun registerTelephonyListener() {
@@ -2460,7 +2437,6 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         private const val MAX_MANUAL_WHATSAPP_NOTIFICATIONS = 5
         private const val ESCALATION_ALARM_REQUEST_CODE = 2003
         private const val CALL_ESCALATION_TIMEOUT_MS = 60_000L
-        private const val ESCALATION_END_RETRY_MS = 10_000L
         private const val DISPATCH_WATCHDOG_REQUEST_CODE = 2004
         private const val DISPATCH_WATCHDOG_INITIAL_MS = 10_000L
         private const val DISPATCH_WATCHDOG_RETRY_MS = 10_000L

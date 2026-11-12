@@ -1,5 +1,22 @@
 # Changelog
 
+## Sin publicar (corrige la 1.47s)
+
+### Escalada de llamadas (crítico)
+- Se elimina la dependencia de `ANSWER_PHONE_CALLS`: el permiso se declaraba pero nunca se
+  concedía, así que `endCurrentCall()` siempre fallaba y, al agotarse los 5 min, se marcaba al
+  siguiente contacto **con la llamada anterior todavía activa**. Ahora la app nunca cuelga ni
+  marca sobre una llamada en curso: si sigue conectada al agotarse el presupuesto, la ronda
+  termina y se da por atendida (`EscalationPolicy.answeredByLongCall`).
+- Una llamada que termina ya no cierra la ronda por la inferencia de "contestada" (3 s desde el
+  OFFHOOK): Android no distingue una respuesta de un timbrado o un buzón, así que se pasa al
+  siguiente contacto y el registro anota "posible respuesta". Antes, un buzón de voz detenía el
+  protocolo y los demás contactos no recibían la llamada.
+- `EscalationPolicy` documenta la limitación; tres tests nuevos (84 en total, 0 fallos).
+
+Pendiente para publicar: subir `versionCode`/`versionName`, archivar el mapping nuevo y
+actualizar protocolo e instrucciones (ver `docs/RELEASE.md`).
+
 ## 1.13s – 1.47s (versionCode 5 → 39)
 
 Resumen generado del historial de git (`7cf1c07..173d7a8`). Los mensajes de commit no siempre

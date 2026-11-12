@@ -102,10 +102,14 @@ Si esta ACTIVADA, en este orden:
    pulsa Enviar si coinciden paquete, destinatario y texto normalizado. Un
    watchdog reintenta la cabeza atascada y hay reanudacion al arrancar; a los
    10 min se cierra el despacho.
-5. Llamadas en orden a los contactos con llamada habilitada: 60 s por intento y
-   un maximo de 5 min por llamada; si el movil esta al habla se espera al fin de
-   llamada. Se considera "atendida" una llamada conectada de 3 s o mas (ver
-   limitaciones). Si no hay permiso ANSWER_PHONE_CALLS no se puede colgar.
+5. Llamadas en orden a los contactos con llamada habilitada: 60 s por intento.
+   - Si la llamada termina (la atiendan, no la atiendan o caiga al buzon), se pasa
+     al siguiente contacto. Android no distingue "contestada" de "timbrando", asi
+     que una llamada corta nunca cierra la ronda: el registro anota una "posible
+     respuesta" y el aviso continua con el resto de contactos.
+   - Si la llamada sigue conectada a los 5 min se da por atendida y la ronda
+     termina. La app NO cuelga nunca: no marca otro numero con una llamada activa
+     y no necesita el permiso ANSWER_PHONE_CALLS.
 6. Aviso de voz a InterCOM-Luky ("Posible accidente de motorista") via el puente
    com.intercom.lukymoto.bridge; si no esta instalado o no responde, el SOS sigue.
 7. Sin autoenvio se publican notificaciones manuales (hasta 5 de WhatsApp y 5 de
@@ -125,7 +129,6 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
 - Microfono (RECORD_AUDIO) solo si se activa NIVEL DE AUDIO o la voz.
 - Alarmas exactas: puntualidad del final del SOS y del cambio de contacto.
 - Accesibilidad: solo para el envio automatico de WhatsApp/Telegram.
-- ANSWER_PHONE_CALLS: opcional; el codigo lo consulta pero la app no lo solicita.
 
 7) ENERGIA (decisiones de la version)
 -------------------------------------
@@ -139,10 +142,9 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
 
 8) LIMITACIONES CONOCIDAS (documentadas en INFORME-BUGS-1.47s.md)
 ------------------------------------------------------------------
-- "Atendida" se deduce de 3 s desde el OFFHOOK de marcacion: una llamada que
-  suena y cae al buzon puede contar como atendida y cortar la ronda.
-- ANSWER_PHONE_CALLS no se solicita en ejecucion, asi que no se puede colgar una
-  llamada larga para pasar al siguiente contacto.
+- No hay senal fiable de "contestada": una llamada corta nunca cierra la ronda
+  (se llama tambien a los demas contactos) y una conectada de 5 min se da por
+  atendida. Es una decision conservadora, no una deteccion exacta.
 - El microfono no declara el tipo de servicio en primer plano `microphone`, por lo
   que la escucha con la pantalla apagada puede fallar en Android 11+.
 - El envio por bot de Telegram no tiene cola ni reintento.

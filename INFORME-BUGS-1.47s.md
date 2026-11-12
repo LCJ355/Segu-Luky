@@ -18,15 +18,15 @@ decompilando el APK.
 
 | Comprobación | Resultado |
 |---|---|
-| `gradlew testDebugUnitTest` | **81 tests, 0 fallos** |
-| `gradlew lintDebug` | 6 warnings, 4 info, **0 errores** |
+| `gradlew testDebugUnitTest` | **84 tests, 0 fallos** |
+| `gradlew lintDebug` | 6 warnings, 5 info, **0 errores** |
 | `gradlew assembleRelease` | OK: `versionCode 39` / `1.47s` |
 | Firma de la release local | `CN=Segu-Luky`, SHA-256 `e0e5a8fd…` = **la misma que el APK publicado** → las actualizaciones siguen siendo instalables encima |
 | Reproducibilidad byte a byte | No: el APK local (`EFE96681…`) difiere del publicado (`0726b6ed…`); normal sin builds reproducibles, pero impide verificar el binario publicado contra el árbol |
 
 ---
 
-## 1. [CRÍTICO] `ANSWER_PHONE_CALLS` se declara y nunca se pide: la escalada marca durante una llamada activa
+## 1. [CRÍTICO · corregido] `ANSWER_PHONE_CALLS` se declaraba y nunca se pedía: la escalada marcaba durante una llamada activa
 
 **Verificado.** El manifiesto declara el permiso, y en todo el código aparece una sola vez:
 
@@ -46,12 +46,14 @@ larga, `endCurrentCall()` falla y el flujo cae en `advanceEscalation()`, que **l
 siguiente contacto mientras la llamada anterior sigue conectada**. En el mejor caso el marcador
 rechaza la llamada; en el peor deja en espera a quien sí había atendido.
 
-**Fix:** pedir el permiso junto a `CALL_PHONE` o, si no se quiere pedir, no avanzar cuando
-`endCurrentCall()` falle: mantener la espera o cerrar la ronda.
+**Fix aplicado:** se eliminó `endCurrentCall()` y el permiso `ANSWER_PHONE_CALLS` del
+manifiesto. La app **nunca cuelga ni marca sobre una llamada activa**: si a los 5 min sigue
+conectada, la ronda termina como atendida (`EscalationPolicy.answeredByLongCall`). Así el
+comportamiento no depende de un permiso que nunca se concedía.
 
 ---
 
-## 2. [CRÍTICO] Un buzón de voz cuenta como "contacto atendido" y corta la ronda
+## 2. [CRÍTICO · corregido] Un buzón de voz contaba como "contacto atendido" y cortaba la ronda
 
 **Verificado.** `EscalationPolicy.kt` (igual que en 1.12s):
 
@@ -66,9 +68,11 @@ Una llamada que suena 20-30 s y cae al buzón (el caso normal de "no contesta") 
 → `onCallEnded()` llama a `finishEscalation(answered = true)` → **los contactos restantes no se
 llaman** y se registra "un contacto respondio la llamada".
 
-Android no ofrece señal fiable de "contestada" en llamadas salientes. Opciones, por orden de
-seguridad: (a) no cerrar la ronda por inferencia y llamar a todos; (b) subir el umbral a 25-30 s
-y rotularlo como "posible respuesta"; (c) asumir la ambigüedad y documentarla.
+**Fix aplicado:** `isAnswered()` ya no decide nada: es solo evidencia para el registro. Cualquier
+llamada que termine (contestada, no contestada o buzón) **pasa al siguiente contacto**, de modo
+que toda la lista recibe el aviso; solo una llamada conectada que supere los 5 min cierra la
+ronda (`answeredByLongCall`). Cubierto por tres tests nuevos en `EscalationPolicyTest`
+(84 tests en total, 0 fallos).
 
 ---
 
@@ -190,7 +194,8 @@ cancelar.
 
 ## Prioridad sugerida
 
-1. §1 y §2 (pueden dejar sin aviso a los contactos o marcar en mitad de una llamada).
+1. ~~§1 y §2~~ (corregidos: no se cuelga ni se marca sobre una llamada activa; la ronda ya no se
+   corta por un timbrado).
 2. §3 (voz con pantalla apagada) y §4 (instrucciones del APK).
 3. §5 (no bloquear el SOS por InterCOM) y §6 (Telegram bot durable).
 4. §7 y §8.
