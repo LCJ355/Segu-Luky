@@ -115,7 +115,7 @@ diciendo:
 
 ---
 
-## 5. [ALTO] El aviso a InterCOM (dos IPC a otra app) se ejecuta en la ruta crítica del SOS
+## 5. [ALTO · corregido, sin publicar] El aviso a InterCOM (dos IPC a otra app) se ejecuta en la ruta crítica del SOS
 
 **Verificado.** `SafetyMonitorService.completeProtocol()` llama a `dispatchIntercomNotice()`
 (línea 1153), que en el mismo hilo hace:
@@ -137,6 +137,14 @@ bloqueante en main.
 
 **Fix:** mover a E/S con timeout (la caché negativa de 30 s ya existe) y, en el SOS, no esperar
 a InterCOM: lanzar el aviso y seguir con SMS/WhatsApp/llamadas.
+
+**Corregido (pendiente de publicar).** El aviso sale en un hilo propio
+(`segluky-intercom-notice`): `completeProtocol()` sigue con SMS, WhatsApp y llamadas sin esperar y
+el resultado se anota cuando llega (`IntercomNotice.detail`, con 4 tests). El sondeo de la
+pantalla y «PROBAR AVISO» también pasan a `Dispatchers.IO`, así que la UI ya no se congela si
+InterCOM no contesta. La lectura inicial de la pantalla (`remember { inspect }`) se deja síncrona
+a propósito: es una sola vez, fuera del SOS, y hacerla diferida mostraría un estado falso
+(naranja→verde) cada vez que se abre Configuración.
 
 ---
 
@@ -209,5 +217,5 @@ cancelar.
 1. ~~§1 y §2~~ (corregidos: no se cuelga ni se marca sobre una llamada activa; la ronda ya no se
    corta por un timbrado).
 2. ~~§3 (voz con pantalla apagada) y §4 (instrucciones del APK)~~ (corregidos en 1.48s).
-3. §5 (no bloquear el SOS por InterCOM) y §6 (Telegram bot durable).
+3. ~~§5~~ (corregido, pendiente de publicar) y §6 (Telegram bot durable).
 4. ~~§7~~ (corregido en 1.49s) y §8.

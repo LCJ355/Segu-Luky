@@ -1154,7 +1154,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         }
 
         val contacts = contactsRepository.load()
-        // Aviso de voz InterCOM: a los demas motoristas del grupo (si InterCOM esta activo).
+        // Aviso de voz InterCOM: a los demas motoristas del grupo (si InterCOM esta
+        // activo). Sale en su propio hilo: el aviso no puede retrasar SMS,
+        // WhatsApp ni llamadas, que son los canales directos con el contacto.
         dispatchIntercomNotice()
         val mapLink = if (hasFreshQualifiedLocation()) {
             lastQualifiedLocation?.let { googleMapsLink(it.latitude, it.longitude) }
@@ -1816,31 +1818,42 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
      * Difunde el aviso de voz "Posible accidente de motorista" a traves de
      * InterCOM-Luky. Es tolerante a fallos: si InterCOM no esta instalado, no
      * trae el puente o no esta activo, el SOS sigue su curso.
+     *
+     * Las dos consultas al puente son binder a otra app y no tienen timeout
+     * propio: hechas en el hilo principal retrasan el SMS, el WhatsApp y las
+     * llamadas que vienen despues, y si InterCOM se atasca dejan el servicio sin
+     * responder. Por eso salen en un hilo aparte y el resultado se anota en el
+     * registro cuando llega; el protocolo no las espera.
      */
     private fun dispatchIntercomNotice() {
-        val info = try {
-            IntercomInstallation.inspect(this)
-        } catch (error: Exception) {
-            SafetyStateStore.log("AVISO DE VOZ INTERCOM: no se pudo consultar (${error.javaClass.simpleName})")
-            return
-        }
-        if (!info.installed) {
-            SafetyStateStore.log("AVISO DE VOZ INTERCOM: InterCOM-Luky no instalado")
-            return
-        }
-        val broadcast = try {
-            IntercomInstallation.sendNotice(this)
-        } catch (error: Exception) {
-            SafetyStateStore.log("AVISO DE VOZ INTERCOM fallido: ${error.javaClass.simpleName}")
-            return
-        }
-        val detail = when {
-            broadcast && info.peers > 0 -> " en el grupo (${info.peers + 1} motoristas)"
-            broadcast -> " al grupo"
-            info.active -> ", pero InterCOM no lo confirmo"
-            else -> " solo en este movil (InterCOM sin grupo)"
-        }
-        SafetyStateStore.log("AVISO DE VOZ INTERCOM: ${IntercomInstallation.SOS_NOTICE_TEXT}$detail")
+        val context = applicationContext
+        Thread {
+            val info = try {
+                IntercomInstallation.inspect(context)
+            } catch (error: Exception) {
+                SafetyStateStore.log(
+                    "AVISO DE VOZ INTERCOM: no se pudo consultar (${error.javaClass.simpleName})"
+                )
+                return@Thread
+            }
+            if (!info.installed) {
+                SafetyStateStore.log("AVISO DE VOZ INTERCOM: InterCOM-Luky no instalado")
+                return@Thread
+            }
+            val broadcast = try {
+                IntercomInstallation.sendNotice(context)
+            } catch (error: Exception) {
+                SafetyStateStore.log("AVISO DE VOZ INTERCOM fallido: ${error.javaClass.simpleName}")
+                return@Thread
+            }
+            val detail = IntercomNotice.detail(broadcast, info.peers, info.active)
+            SafetyStateStore.log(
+                "AVISO DE VOZ INTERCOM: ${IntercomInstallation.SOS_NOTICE_TEXT}$detail"
+            )
+        }.apply {
+            isDaemon = true
+            name = "segluky-intercom-notice"
+        }.start()
     }
 
     private fun postManualWhatsAppActions(contacts: List<EmergencyContact>, mapLink: String?) {

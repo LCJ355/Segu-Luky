@@ -115,6 +115,9 @@ Si esta ACTIVADA, en este orden:
      el seria peor que esperar al minuto siguiente.
 6. Aviso de voz a InterCOM-Luky ("Posible accidente de motorista") via el puente
    com.intercom.lukymoto.bridge; si no esta instalado o no responde, el SOS sigue.
+   Va en un hilo aparte porque son dos llamadas a otra app sin timeout propio: si
+   InterCOM tarda, el SMS, el WhatsApp y las llamadas salen igual y solo se retrasa
+   la linea del registro que confirma el aviso.
 7. Sin autoenvio se publican notificaciones manuales (hasta 5 de WhatsApp y 5 de
    Telegram) para abrir el chat con el mensaje listo.
 8. Al final el monitor se rearma: vuelve a MONITORING.

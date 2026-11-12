@@ -1,5 +1,17 @@
 # Changelog
 
+## Sin publicar
+
+### Aviso a InterCOM fuera del hilo del SOS
+- `dispatchIntercomNotice()` hacía dos llamadas binder a otra app (`query` del estado y `call`
+  del aviso de voz) **en el hilo principal**, justo antes de lanzar SMS, WhatsApp y llamadas: si
+  InterCOM tardaba, el SOS empezaba tarde, y si se atascaba el servicio se quedaba sin responder
+  (ANR) con el protocolo a medias. Ahora el aviso sale en su propio hilo, el protocolo no lo
+  espera y el resultado se anota en el registro cuando llega (`IntercomNotice.detail`).
+- La misma consulta se hacía en la pantalla cada 5 s y al pulsar «PROBAR AVISO»: ambas pasan a
+  un hilo de fondo, así que la UI no se congela si InterCOM no contesta.
+- 4 tests nuevos (94 en total) sobre el texto del registro.
+
 ## 1.49s (versionCode 41)
 
 Publicada con APK, mapping, protocolo e instrucciones: `APK´s/Segu-Luky-1.49s.apk`,

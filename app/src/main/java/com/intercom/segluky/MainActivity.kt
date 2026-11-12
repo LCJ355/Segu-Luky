@@ -1,4 +1,4 @@
-﻿package com.intercom.segluky
+package com.intercom.segluky
 
 import android.Manifest
 import android.content.ClipData
@@ -149,13 +149,23 @@ class MainActivity : ComponentActivity() {
         var notificationPermissionGranted by remember { mutableStateOf(hasNotificationPermission(context)) }
         var permissionFeedback by remember { mutableStateOf<String?>(null) }
         val lifecycleOwner = LocalLifecycleOwner.current
+        val intercomScope = rememberCoroutineScope()
+        // La consulta al puente de InterCOM es binder a otra app: se hace fuera del
+        // hilo de UI para que la pantalla no se congele si InterCOM tarda.
+        fun refreshIntercom() {
+            intercomScope.launch {
+                installation = withContext(Dispatchers.IO) {
+                    IntercomInstallation.inspect(context)
+                }
+            }
+        }
         DisposableEffect(lifecycleOwner) {
             val observer = LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
                     audioPermissionGranted = hasAudioPermission(context)
                     callPermissionGranted = hasCallPermission(context)
                     notificationPermissionGranted = hasNotificationPermission(context)
-                    installation = IntercomInstallation.inspect(context)
+                    refreshIntercom()
                 }
             }
             lifecycleOwner.lifecycle.addObserver(observer)
@@ -164,7 +174,9 @@ class MainActivity : ComponentActivity() {
         // Sondeo ligero del estado de InterCOM para que la luz pase de naranja a verde al empezar el grupo.
         LaunchedEffect(Unit) {
             while (true) {
-                installation = IntercomInstallation.inspect(context)
+                installation = withContext(Dispatchers.IO) {
+                    IntercomInstallation.inspect(context)
+                }
                 delay(5_000)
             }
         }
@@ -429,22 +441,35 @@ class MainActivity : ComponentActivity() {
                     intercomInstallation = installation,
                     intercomNoticeFeedback = intercomNoticeFeedback,
                     onRefreshIntercom = {
-                        installation = IntercomInstallation.inspect(context)
                         intercomNoticeFeedback = null
+                        refreshIntercom()
                     },
                     onOpenIntercom = { IntercomInstallation.open(context) },
                     onTestIntercomNotice = {
-                        val sent = IntercomInstallation.sendNotice(context)
-                        intercomNoticeFeedback = when {
-                            !installation.installed ->
-                                "InterCOM no instalado: el aviso no suena en ningun sitio."
-                            !installation.active ->
-                                "InterCOM apagado: el aviso no suena en ningun sitio. " +
-                                    "Enciende INTERCOM WiFi/Datos en InterCOM-Luky."
-                            sent -> "Aviso enviado a los motoristas conectados."
-                            else -> "Aviso lanzado; no habia otros motoristas conectados."
+                        // Enviar y refrescar el puente es binder a otra app: fuera del
+                        // hilo de UI, o el boton congela la pantalla si InterCOM tarda.
+                        intercomNoticeFeedback = null
+                        intercomScope.launch {
+                            val info = withContext(Dispatchers.IO) {
+                                IntercomInstallation.inspect(context)
+                            }
+                            installation = info
+                            val sent = withContext(Dispatchers.IO) {
+                                IntercomInstallation.sendNotice(context)
+                            }
+                            intercomNoticeFeedback = when {
+                                !info.installed ->
+                                    "InterCOM no instalado: el aviso no suena en ningun sitio."
+                                !info.active ->
+                                    "InterCOM apagado: el aviso no suena en ningun sitio. " +
+                                        "Enciende INTERCOM WiFi/Datos en InterCOM-Luky."
+                                sent -> "Aviso enviado a los motoristas conectados."
+                                else -> "Aviso lanzado; no habia otros motoristas conectados."
+                            }
+                            installation = withContext(Dispatchers.IO) {
+                                IntercomInstallation.inspect(context)
+                            }
                         }
-                        installation = IntercomInstallation.inspect(context)
                     }
                 )
                 AppScreen.INSTRUCTIONS -> InstructionsScreen(
