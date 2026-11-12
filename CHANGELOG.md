@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.62s (versionCode 54)
+
+### Repaso visual de todos los menús
+- La tarjeta `INTERRUPTOR S O S` (Configuración → Canales de salida SOS) ya no parte el título en
+  dos líneas: la etiqueta de estado (`DESACTIVADO` / `ACTIVADO`) le robaba el ancho y el texto
+  quedaba como `INTERRUPTOR S` / `O S`. Ahora **el título ocupa toda la línea y la etiqueta va
+  debajo**.
+- `S O S` se escribe con espacios duros (U+00A0), así que nunca se separa entre letras: ni en
+  títulos, ni en descripciones, ni en los avisos de la pantalla principal.
+- Nueva cabecera compartida `CardHeader` para tarjetas, filas del índice de Configuración y fichas
+  de contacto: mismo orden (título, etiqueta, descripción) y ningún título partido a mitad de frase.
+- Filas de permisos en dos líneas legibles: `Accesibilidad` ya no se corta por la mitad
+  (`Accesibilid` / `ad`) y el botón `ABRIR` no empuja al texto.
+- Tarjeta `INTERCOM-LUKY`: el estado se lee en cuerpo pequeño, el punto de color queda junto al
+  título y los botones se reparten en dos filas, así `ACTUALIZAR` deja de salir recortado
+  (`ACTUALIZ…`) y `PROBAR AVISO` pasa a línea completa.
+- Sensores: el valor interior se llama `UMBRAL DE GOLPE` (antes repetía el título de la tarjeta) y
+  la ventana automática se anota en su propia línea (`AUTO aplica 2 min ahora`) en lugar de
+  partirse dentro de la fila de chips.
+- `REINICIAR APRENDIZAJE` queda alineado con el texto de la tarjeta y los chips de actividad
+  comparten altura.
+- Textos corregidos: la ayuda de `COMO SE ENVIA LA UBICACION` había perdido el final de la frase;
+  se acortan las de SMS, diagnóstico y contactos. La cabecera de Información ya no deja la versión
+  sola en una línea.
+
 ## 1.61s (versionCode 53)
 
 ### T. PROMEDIO más compacto y en negrilla

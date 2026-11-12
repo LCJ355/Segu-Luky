@@ -104,6 +104,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -757,10 +758,17 @@ private fun AboutDialog(
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    if (page == AboutPage.MENU) "Informacion, ayuda y creditos - $versionLabel" else versionLabel,
+                    if (page == AboutPage.MENU) "Informacion y ayuda" else versionLabel,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (page == AboutPage.MENU) {
+                    Text(
+                        versionLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         },
         text = {
@@ -850,6 +858,9 @@ private val CompactButtonPadding = androidx.compose.foundation.layout.PaddingVal
     horizontal = 4.dp,
     vertical = 8.dp
 )
+
+// "S O S" con espacios duros: el texto nunca se parte entre las letras al ajustar lineas.
+private const val SOS_HARD = "S\u00A0O\u00A0S"
 
 // Etiqueta de boton estrecho: una sola linea y tamano reducido para que nunca se recorte.
 @androidx.compose.runtime.Composable
@@ -1134,6 +1145,9 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.62s - Repaso visual de todos los menus: cada tarjeta pone el titulo en una linea y la " +
+        "etiqueta de estado debajo, asi \"INTERRUPTOR S O S\" ya no se parte. Los permisos quedan en dos " +
+        "lineas legibles y el boton ACTUALIZAR de InterCOM deja de recortarse.")
     appendLine("1.61s - T. PROMEDIO va mas pegada a la sensibilidad y AUTO / 1 / 2 / 3 se muestra en " +
         "negrilla, con el activo en verde.")
     appendLine("1.60s - Cuando AUTO cambia de ventana, el numero de T. PROMEDIO destella tres veces para " +
@@ -1495,7 +1509,7 @@ private fun EmergencySettingsScreen(
                     description = if (pendientes.isEmpty()) {
                         "Todo lo que necesita la app esta concedido."
                     } else {
-                        pendientes.joinToString(", ")
+                        "Falta: " + pendientes.joinToString(", ")
                     },
                     onClick = { section = SettingsSection.PERMISSIONS }
                 )
@@ -1510,10 +1524,10 @@ private fun EmergencySettingsScreen(
             item {
                 val callsBlocked = callPermissionRequired && !callPermissionGranted
                 SeguCard(
-                    title = "INTERRUPTOR S O S",
+                    title = "INTERRUPTOR $SOS_HARD",
                     status = if (sosActionsEnabled) "ACTIVADO" else "DESACTIVADO",
                     tone = if (sosActionsEnabled) Tone.OK else Tone.BAD,
-                    description = "El interruptor S O S ON/OFF esta en la pantalla principal, junto al del " +
+                    description = "El interruptor $SOS_HARD ON/OFF esta en la pantalla principal, junto al del " +
                         "monitor. Desactivalo para probar los sensores sin avisar a nadie."
                 ) {
                     if (callsBlocked) {
@@ -1564,7 +1578,7 @@ private fun EmergencySettingsScreen(
                     }
                 ) {
                     PermissionRow(
-                        label = "Accesibilidad (pulsar Enviar)",
+                        label = "Accesibilidad",
                         status = if (accessibilityReady) "ACTIVADA" else "DESACTIVADA",
                         tone = if (accessibilityReady) Tone.OK else Tone.BAD,
                         actionLabel = if (accessibilityReady) null else "ABRIR",
@@ -1660,8 +1674,8 @@ private fun EmergencySettingsScreen(
                     status = if (monitorStopped) "AJUSTABLE" else "MONITOR EN MARCHA",
                     tone = if (monitorStopped) Tone.OK else Tone.WARN,
                     description = if (monitorStopped) {
-                        "Sube el umbral para exigir un golpe mas fuerte. Aqui se ajustan tambien el deslizador " +
-                            "y la ventana de promedio (ADAPT.); el interruptor MONITOR esta en la pantalla principal."
+                        "Sube el umbral para exigir un golpe mas fuerte. Aqui estan tambien el deslizador y " +
+                            "la ventana ADAPT.; el interruptor MONITOR esta en la pantalla principal."
                     } else {
                         "Deten el monitor para cambiar la sensibilidad o la ventana ADAPT."
                     }
@@ -1677,7 +1691,8 @@ private fun EmergencySettingsScreen(
                         enabled = monitorStopped,
                         onSensitivityChange = onSensitivityChange,
                         onWindowChange = onWindowChange,
-                        onHitTest = onHitTest
+                        onHitTest = onHitTest,
+                        valueLabel = "UMBRAL DE GOLPE ="
                     )
                 }
             }
@@ -1784,7 +1799,7 @@ private fun EmergencySettingsScreen(
                             AutomationPermissions.canDrawOverlays(context)
                         }
                         PermissionRow(
-                            label = "Accesibilidad (pulsar Enviar)",
+                            label = "Accesibilidad",
                             status = if (accessibilityReady) "ACTIVADA" else "DESACTIVADA",
                             tone = if (accessibilityReady) Tone.OK else Tone.BAD,
                             actionLabel = if (accessibilityReady) null else "ABRIR",
@@ -1955,8 +1970,8 @@ private fun EmergencySettingsScreen(
                             }
                         )
                     },
-                    description = "Envia por SMS el mensaje con el enlace de Maps a TODOS los contactos, sin confirmacion y " +
-                        "con la pantalla apagada o bloqueada. Puede tener coste de operador."
+                    description = "Envia el enlace de Maps por SMS a TODOS los contactos, sin confirmacion y con la " +
+                        "pantalla bloqueada. Puede tener coste de operador."
                 )
             }
         }
@@ -1983,10 +1998,10 @@ private fun EmergencySettingsScreen(
                     ) {
                         Text("GRABACION DE SENSORES (OPCIONAL)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(
-                            "La app ya se ajusta sola con el uso: la sensibilidad se afina con el ruido y el " +
-                                "traqueteo de este movil, y con PRUEBA DE GOLPE (arriba) compruebas que se entera de " +
-                                "un golpe en 15 s. Grabar solo sirve para diagnostico: adjuntar datos reales a una " +
-                                "incidencia o comparar dos moviles.",
+                            "La app ya se ajusta sola con el uso: aprende el ruido y el traqueteo de este " +
+                                "movil, y con PRUEBA DE GOLPE (arriba) compruebas en 15 s que detecta un " +
+                                "golpe. Grabar solo sirve para diagnostico: adjuntar datos a una incidencia " +
+                                "o comparar dos moviles.",
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
@@ -2008,7 +2023,8 @@ private fun EmergencySettingsScreen(
                             onClick = {
                                 SafetyMonitorService.resetDeviceProfile(context)
                                 SafetyStateStore.log("Aprendizaje del movil reiniciado")
-                            }
+                            },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                         ) {
                             Text("REINICIAR APRENDIZAJE", style = MaterialTheme.typography.labelSmall)
                         }
@@ -2021,7 +2037,7 @@ private fun EmergencySettingsScreen(
                                             calibrationActivity = act
                                             CalibrationRepository.saveLastActivity(context, act)
                                         },
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier.weight(1f).height(46.dp),
                                         enabled = !calibration.recording,
                                         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                                             containerColor = if (selected) StrongGreen else Color(0xFFE0E0E0),
@@ -2160,28 +2176,30 @@ private fun EmergencySettingsScreen(
         }
         if (section == SettingsSection.CONTACTS) {
             item {
-                SectionHeader("CONTACTOS")
-            }
-            item {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(start = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "CONTACTOS SOS",
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.weight(1f)
+                        "CONTACTOS",
+                        modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall
                     )
                     StatusPill(
                         if (contacts.isEmpty()) "NINGUNO" else "${contacts.size}",
                         if (contacts.isEmpty()) Tone.BAD else Tone.OK
                     )
                 }
+            }
+            item {
                 Text(
                     "La lista marca el orden de llamada: 1o, luego 2o si no responde en 1 minuto, luego 3o. " +
                         "El mensaje de WhatsApp se enviara a todos los contactos que lo tengan activado.",
-                    style = MaterialTheme.typography.bodyMedium
+                    modifier = Modifier.padding(start = 4.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             if (editorVisible) {
@@ -2244,8 +2262,8 @@ private fun EmergencySettingsScreen(
                 SeguCard(
                     title = "COMO SE ENVIA LA UBICACION",
                     description = "El marcador {MAPA} se sustituye por un enlace Google Maps con la ultima posicion GPS " +
-                        "precisa y reciente. El interruptor S O S ON/OFF de la pantalla principal debe estar en ON: " +
-                        "reales sin avisar a nadie."
+                        "precisa y reciente. El interruptor $SOS_HARD ON/OFF de la pantalla principal debe estar en " +
+                        "ON: si esta en OFF el aviso no sale."
                 )
             }
         }
@@ -2272,23 +2290,20 @@ private fun SettingsEntryRow(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    title,
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                StatusPill(status, tone)
-                Text(
-                    "\u203A",
-                    fontSize = 20.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            CardHeader(
+                title = title,
+                status = status,
+                tone = tone,
+                titleStyle = MaterialTheme.typography.titleMedium,
+                titleWeight = FontWeight.Bold,
+                trailing = {
+                    Text(
+                        "\u203A",
+                        fontSize = 20.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            )
             Text(
                 description,
                 style = MaterialTheme.typography.bodySmall,
@@ -2553,30 +2568,19 @@ private fun EmergencyContactCard(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(contact.name, style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        contact.phone,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                StatusPill(
-                    if (actions.isBlank()) "SIN ACCIONES" else actions,
-                    if (actions.isBlank()) Tone.BAD else Tone.OK
-                )
-            }
+            CardHeader(
+                title = contact.name,
+                subtitle = contact.phone,
+                status = if (actions.isBlank()) "SIN ACCIONES" else actions,
+                tone = if (actions.isBlank()) Tone.BAD else Tone.OK
+            )
             if (contact.whatsappEnabled) {
                 Text(
                     ensureMapLinkToken(contact.whatsappMessage).replace(MAP_LINK_TOKEN, "enlace de Google Maps"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -2608,7 +2612,7 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "1. Configura los contactos",
-                text = "Activa S O S ON/OFF en la pantalla principal para habilitar todos los avisos. Para cada telefono elige llamada, WhatsApp, Telegram o una combinacion. El texto de WhatsApp puede personalizarse y {MAPA} insertara el enlace Google Maps; ese mismo texto se usa en Telegram."
+                text = "Activa ${SOS_HARD} ON/OFF en la pantalla principal para habilitar todos los avisos. Para cada telefono elige llamada, WhatsApp, Telegram o una combinacion. El texto de WhatsApp puede personalizarse y {MAPA} insertara el enlace Google Maps; ese mismo texto se usa en Telegram."
             )
         }
         item {
@@ -2639,7 +2643,7 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "5. SOS manual y pruebas",
-                text = "Mantener pulsado el boton SOS durante 5 segundos inicia la cuenta atras real. Antes de probar, deja S O S en OFF para que la cuenta atras no llame ni envie mensajes a los contactos."
+                text = "Mantener pulsado el boton SOS durante 5 segundos inicia la cuenta atras real. Antes de probar, deja ${SOS_HARD} en OFF para que la cuenta atras no llame ni envie mensajes a los contactos."
             )
         }
         item {
@@ -2679,7 +2683,7 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "Importante",
-                text = "Al completar la cuenta atras y con S O S en ON, Segu-Luky inicia llamadas a los contactos con llamada habilitada y abre WhatsApp o Telegram con su mensaje y el enlace Google Maps de la ultima posicion. Comprueba siempre contactos, GPS, bateria y permisos antes de circular."
+                text = "Al completar la cuenta atras y con ${SOS_HARD} en ON, Segu-Luky inicia llamadas a los contactos con llamada habilitada y abre WhatsApp o Telegram con su mensaje y el enlace Google Maps de la ultima posicion. Comprueba siempre contactos, GPS, bateria y permisos antes de circular."
             )
         }
         item {
@@ -2736,14 +2740,16 @@ private fun IntercomCard(
                         if (installation.group.isNotBlank()) append(" - grupo ${installation.group}")
                         if (installation.peers > 0) append(" - ${installation.peers} motoristas")
                     }
-                    else -> "INSTALADA, NO ACTIVA (naranja): InterCOM apagado, el aviso no suena en ningun sitio"
+                    else -> "INSTALADA, NO ACTIVA (naranja): el aviso no suena en ningun sitio"
                 },
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             if (installation.installed) {
                 Text(
                     "Version ${installation.versionName ?: "desconocida"} (${installation.versionCode ?: 0})",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Text(
@@ -2751,7 +2757,8 @@ private fun IntercomCard(
                     "voz: \"${IntercomInstallation.SOS_NOTICE_TEXT}\". En verde el aviso suena en el casco " +
                     "de todos los motoristas del grupo (datos) o del INTERCOM WiFi, y tambien en este movil. " +
                     "En naranja o gris no suena en ningun sitio.",
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             noticeFeedback?.let {
                 Text(
@@ -2773,12 +2780,14 @@ private fun IntercomCard(
                         modifier = Modifier.weight(1f),
                         contentPadding = CompactButtonPadding
                     ) { TightButtonLabel("ABRIR") }
-                    OutlinedButton(
-                        onClick = onTestIntercomNotice,
-                        modifier = Modifier.weight(1f),
-                        contentPadding = CompactButtonPadding
-                    ) { TightButtonLabel("PROBAR AVISO") }
                 }
+            }
+            if (installation.installed) {
+                OutlinedButton(
+                    onClick = onTestIntercomNotice,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = CompactButtonPadding
+                ) { TightButtonLabel("PROBAR AVISO") }
             }
         }
     }
@@ -2852,6 +2861,45 @@ private fun SectionHeader(text: String) {
 }
 
 /**
+ * Cabecera comun de tarjetas y filas: el titulo ocupa todo el ancho y la
+ * etiqueta de estado va debajo. Asi ningun titulo se parte a mitad de frase ni
+ * empuja la etiqueta contra el borde.
+ */
+@androidx.compose.runtime.Composable
+private fun CardHeader(
+    title: String? = null,
+    status: String? = null,
+    tone: Tone = Tone.OFF,
+    subtitle: String? = null,
+    leading: (@androidx.compose.runtime.Composable () -> Unit)? = null,
+    trailing: (@androidx.compose.runtime.Composable () -> Unit)? = null,
+    titleStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.titleSmall,
+    titleWeight: FontWeight? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        leading?.invoke()
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            if (title != null) {
+                Text(title, style = titleStyle, fontWeight = titleWeight)
+            }
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (status != null) StatusPill(status, tone)
+        }
+        trailing?.invoke()
+    }
+}
+
+/**
  * Shared card used by the home screen and the settings list: one title, one
  * status pill and one short line of copy, so every block reads the same way.
  */
@@ -2877,28 +2925,7 @@ private fun SeguCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (title != null || status != null) {
-                if (trailing == null) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (title != null) {
-                            Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                        }
-                        if (status != null) StatusPill(status, tone)
-                    }
-                } else {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            if (title != null) Text(title, style = MaterialTheme.typography.titleSmall)
-                            if (status != null) StatusPill(status, tone)
-                        }
-                        trailing()
-                    }
-                }
+                CardHeader(title = title, status = status, tone = tone, trailing = trailing)
             }
             if (description != null) {
                 Text(
@@ -2924,16 +2951,25 @@ private fun PermissionRow(
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Box(Modifier.size(9.dp).clip(CircleShape).background(tone.text))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             Text(label, style = MaterialTheme.typography.labelLarge)
-            Text(status, style = MaterialTheme.typography.bodySmall, color = tone.text, fontWeight = FontWeight.Bold)
+            Text(
+                status,
+                style = MaterialTheme.typography.labelSmall,
+                color = tone.text,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
         }
         if (actionLabel != null && onAction != null) {
-            TextButton(onClick = onAction) {
-                Text(actionLabel, style = MaterialTheme.typography.labelSmall)
+            TextButton(
+                onClick = onAction,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+            ) {
+                Text(actionLabel, style = MaterialTheme.typography.labelSmall, maxLines = 1)
             }
         }
     }
@@ -3111,7 +3147,7 @@ private fun PhaseHeroCard(
                         onClick = if (monitorOn) onStop else onStart
                     )
                     StateToggleButton(
-                        label = "S O S",
+                        label = SOS_HARD,
                         stateLabel = if (sosActionsEnabled) "ON" else "OFF",
                         on = sosActionsEnabled,
                         onColor = StateOnInk,
@@ -3322,7 +3358,7 @@ private fun SosPanel(onSos: () -> Unit) {
                         .background(Tone.BAD.soft)
                 )
                 RoundActionButton(
-                    mainText = "S O S",
+                    mainText = SOS_HARD,
                     subText = "5 s",
                     color = Tone.BAD.text,
                     buttonSize = SOS_BUTTON_SIZE.dp,
@@ -3543,7 +3579,7 @@ private fun SosDisabledWarning() {
         border = BorderStroke(1.dp, Tone.BAD.line)
     ) {
         Text(
-            "AVISOS SOS DESACTIVADOS: pulsa S O S OFF en la tarjeta del monitor para activarlos.",
+            "AVISOS SOS DESACTIVADOS: pulsa $SOS_HARD OFF en la tarjeta del monitor para activarlos.",
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             color = Tone.BAD.text,
             style = MaterialTheme.typography.titleSmall
@@ -3843,7 +3879,8 @@ private fun SensitivityControl(
     onHitTest: () -> Unit,
     showSlider: Boolean = true,
     showWindow: Boolean = true,
-    showPeak: Boolean = true
+    showPeak: Boolean = true,
+    valueLabel: String = "SENSIBILIDAD A LOS GOLPES ="
 ) {
     val context = LocalContext.current
     val storedMode = remember(windowAuto, activeWindowMinutes) {
@@ -3883,7 +3920,7 @@ private fun SensitivityControl(
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "SENSIBILIDAD A LOS GOLPES =",
+                valueLabel,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -4050,14 +4087,13 @@ private fun AdaptationWindowSelector(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.weight(1f))
-        if (windowAuto) {
-            Text(
-                "auto: $activeWindowMinutes min",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+    }
+    if (windowAuto) {
+        Text(
+            "AUTO aplica $activeWindowMinutes min ahora",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

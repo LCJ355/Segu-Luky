@@ -9,7 +9,7 @@ Sin el, las trazas de fallo de la app publicada muestran nombres como
 
 Aqui se guarda uno comprimido por cada version publicada:
 
-    Segu-Luky-1.61s-mapping.txt.gz   <- version actual (versionCode 53)
+    Segu-Luky-1.62s-mapping.txt.gz   <- version actual (versionCode 54)
     Segu-Luky-1.60s-mapping.txt.gz   <- historico (versionCode 52)
     Segu-Luky-1.59s-mapping.txt.gz   <- historico (versionCode 51)
     Segu-Luky-1.58s-mapping.txt.gz   <- historico (versionCode 50)

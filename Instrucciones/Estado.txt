@@ -1829,6 +1829,48 @@ Pendientes: ver el destello en un viaje con AUTO y las pruebas de
 comportamiento que siguen abiertas.
 
 ======================================================================
+V-1.62s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.62s (versionCode 54)
+
+Cambio:
+- Repaso visual de todos los menus (Configuracion y sus cuatro submenus,
+  Instrucciones e Info). La tarjeta "INTERRUPTOR S O S" partia el titulo en dos
+  lineas ("INTERRUPTOR S" / "O S") porque la etiqueta DESACTIVADO le robaba el
+  ancho; ahora el titulo ocupa toda la linea y la etiqueta va debajo.
+- "S O S" se escribe con espacios duros: el texto ya no puede partirse entre las
+  letras en ninguna pantalla.
+- Nueva cabecera compartida (CardHeader): la usan las tarjetas, las filas del
+  indice de Configuracion y la ficha de cada contacto, asi que ningun titulo se
+  parte a mitad de frase.
+- Filas de permisos en dos lineas legibles: "Accesibilidad" ya no se corta por la
+  mitad ("Accesibilid / ad") y el boton ABRIR no empuja al texto.
+- Tarjeta INTERCOM-LUKY: el estado se lee en cuerpo pequeno, el punto de color va
+  junto al titulo y los botones se reparten en dos filas; ACTUALIZAR deja de salir
+  recortado ("ACTUALIZ...") y PROBAR AVISO pasa a linea completa.
+- Sensores: el valor interior se llama UMBRAL DE GOLPE (antes repetia el titulo de
+  la tarjeta) y la ventana AUTO se anota en una linea propia ("AUTO aplica 2 min
+  ahora") en vez de partirse dentro de la fila de chips.
+- REINICIAR APRENDIZAJE queda alineado con el texto de la tarjeta y los chips de
+  actividad tienen todos la misma altura.
+- Textos corregidos: la ayuda de COMO SE ENVIA LA UBICACION habia perdido el final
+  de la frase; se acortan las de SMS, diagnostico y contactos. Info ya no deja la
+  version sola en una linea.
+
+Motivo: pedido del usuario ("en Configuracion, Canales de salida SOS, INTERRUPTOR
+SOS (salto de linea); comprobar en todos los menus el texto y los saltos de
+linea").
+
+Prueba realizada: testDebugUnitTest (145 pruebas, 0 fallos), lintDebug (0 errores)
+y assembleRelease. Revisado en el OPPO con capturas de las seis pantallas.
+Resultado: compila, verifica y revisado en el movil.
+APK generado: APK´s/Segu-Luky-1.62s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.62s-mapping.txt.gz
+Pendientes: ver el destello en un viaje con AUTO y las pruebas de comportamiento
+que siguen abiertas (§5, §6, §8).
+======================================================================
 
 Fecha: 12/11/2026
 Version: 1.53s (versionCode 45)
