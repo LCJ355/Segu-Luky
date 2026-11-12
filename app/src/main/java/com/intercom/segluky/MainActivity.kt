@@ -1134,6 +1134,8 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.61s - T. PROMEDIO va mas pegada a la sensibilidad y AUTO / 1 / 2 / 3 se muestra en " +
+        "negrilla, con el activo en verde.")
     appendLine("1.60s - Cuando AUTO cambia de ventana, el numero de T. PROMEDIO destella tres veces para " +
         "que se note sin mirar fijo.")
     appendLine("1.59s - En T. PROMEDIO se quita el texto de minutos: con AUTO se marcan en verde AUTO y el " +
@@ -3125,26 +3127,30 @@ private fun PhaseHeroCard(
             )
             AudioLevelLine(audioLevel)
             MovementLevelLine(snapshot.movementLevel)
-            SensitivityControl(
-                sensitivityG = sensitivityG,
-                effectiveG = snapshot.effectiveThresholdG ?: sensitivityG,
-                livePeakG = snapshot.ridePeakG,
-                activeWindowMinutes = snapshot.adaptationWindowMinutes,
-                windowAuto = snapshot.adaptationWindowAuto,
-                hitTestRunning = snapshot.hitTestRunning,
-                hitTestVerdict = snapshot.hitTestVerdict,
-                enabled = phase == SafetyPhase.STOPPED,
-                onSensitivityChange = onSensitivityChange,
-                onWindowChange = onWindowChange,
-                onHitTest = onHitTest,
-                showSlider = false,
-                showWindow = false,
-                showPeak = false
-            )
-            AdaptationWindowInfo(
-                activeWindowMinutes = snapshot.adaptationWindowMinutes,
-                windowAuto = snapshot.adaptationWindowAuto
-            )
+            // Etiqueta y T. PROMEDIO van juntas: menos aire entre ellas que entre el
+            // resto de bloques de la tarjeta.
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                SensitivityControl(
+                    sensitivityG = sensitivityG,
+                    effectiveG = snapshot.effectiveThresholdG ?: sensitivityG,
+                    livePeakG = snapshot.ridePeakG,
+                    activeWindowMinutes = snapshot.adaptationWindowMinutes,
+                    windowAuto = snapshot.adaptationWindowAuto,
+                    hitTestRunning = snapshot.hitTestRunning,
+                    hitTestVerdict = snapshot.hitTestVerdict,
+                    enabled = phase == SafetyPhase.STOPPED,
+                    onSensitivityChange = onSensitivityChange,
+                    onWindowChange = onWindowChange,
+                    onHitTest = onHitTest,
+                    showSlider = false,
+                    showWindow = false,
+                    showPeak = false
+                )
+                AdaptationWindowInfo(
+                    activeWindowMinutes = snapshot.adaptationWindowMinutes,
+                    windowAuto = snapshot.adaptationWindowAuto
+                )
+            }
         }
     }
 }
@@ -3951,7 +3957,6 @@ private fun AdaptationWindowInfo(
             delay(BLINK_OFF_MS)
         }
     }
-    Spacer(Modifier.height(5.dp))
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -3980,7 +3985,7 @@ private fun AdaptationWindowInfo(
     }
 }
 
-/** Chip de solo lectura: el elegido va en verde, el resto en gris. */
+/** Chip de solo lectura: todo en negrilla y el elegido en verde. */
 @androidx.compose.runtime.Composable
 private fun AdaptiveWindowInfoChip(
     label: String,
@@ -4000,7 +4005,7 @@ private fun AdaptiveWindowInfoChip(
             )
             .padding(horizontal = 6.dp, vertical = 2.dp),
         style = MaterialTheme.typography.labelSmall,
-        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        fontWeight = FontWeight.Bold,
         color = if (selected) StrongGreen else MaterialTheme.colorScheme.onSurfaceVariant
     )
 }

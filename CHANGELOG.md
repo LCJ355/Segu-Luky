@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.61s (versionCode 53)
+
+### T. PROMEDIO más compacto y en negrilla
+- La fila `T. PROMEDIO` va **más pegada** a la línea de sensibilidad: la etiqueta y la ventana forman
+  un solo grupo (2 dp en vez de los 8 dp del resto de bloques de la tarjeta).
+- `AUTO` `1` `2` `3` se muestran siempre en **negrilla**; el activo, además, en verde (y con el
+  destello cuando AUTO cambia de ventana).
+
 ## 1.60s (versionCode 52)
 
 ### El número de T. PROMEDIO destella cuando AUTO cambia de ventana

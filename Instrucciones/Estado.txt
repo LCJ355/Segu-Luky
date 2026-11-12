@@ -1803,6 +1803,32 @@ Pendientes: ver el destello en un viaje con AUTO y las pruebas de
 comportamiento que siguen abiertas.
 
 ======================================================================
+V-1.61s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.61s (versionCode 53)
+
+Cambio:
+- La linea T. PROMEDIO va mas pegada a la de sensibilidad: etiqueta y ventana
+  van dentro de un grupo con 2 dp, en vez de los 8 dp que separan el resto de
+  bloques de la tarjeta.
+- AUTO / 1 / 2 / 3 se muestran siempre en negrilla; el activo ademas en verde y
+  con el destello cuando AUTO cambia de ventana.
+- Instrucciones, README, changelog, historial y Estado actualizados.
+
+Motivo: pedido del usuario ("ajusta (reduce) el espacio con la linea superior y
+al estar AUTO 1 2 3, ademas de verde, las letras y numeros en negrilla").
+
+Prueba realizada: testDebugUnitTest (145 pruebas, 0 fallos), lintDebug (0
+errores) y assembleRelease. Revisado en el OPPO con captura.
+Resultado: compila, verifica y revisado en el movil.
+APK generado: APK´s/Segu-Luky-1.61s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.61s-mapping.txt.gz
+Pendientes: ver el destello en un viaje con AUTO y las pruebas de
+comportamiento que siguen abiertas.
+
+======================================================================
 
 Fecha: 12/11/2026
 Version: 1.53s (versionCode 45)
