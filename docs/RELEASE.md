@@ -20,6 +20,11 @@
    `apksigner verify --print-certs app-release.apk` must show the certificate
    SHA-256 listed in [SIGNING.md](SIGNING.md).
 7. Publish the release (`gh release create V-<versionName> "APK´s/Segu-Luky-<versionName>.apk" ...`).
+   Without a GitHub release, push the tag (`git tag V-<versionName>` + `git push origin
+   V-<versionName>`): **Buscar actualizacion** falls back to tags when no release exists.
+8. Commit and push the APK, the mapping, the tag and the document updates together, so
+   `APK´s/`, `README.md`, `CHANGELOG.md`, `Instrucciones/Estado.txt` and the bug report agree
+   with the version installed on the phone.
 
 ## Signing material
 
@@ -55,6 +60,9 @@ previous build.
 - Reboot with monitoring requested.
 - Android 12+ background start and exact-alarm behaviour.
 - Telegram: bot with valid token and chat id, and the same flow with no data (the
-  bot send does not retry in 1.47s).
+  bot send still does not retry).
+- Voice activation with the screen off and the phone in a pocket (the microphone
+  foreground type must be accepted; look for "Android rechazo el tipo microfono"
+  in the log if it is not).
 - InterCOM: absent, installed-but-off, and installed-and-on (voice notice).
 - Update check: offline, with no releases, and with a newer tag but no newer release.

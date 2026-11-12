@@ -1,4 +1,4 @@
-﻿SEGU-LUKY V-1.12s
+SEGU-LUKY V-1.12s
 BITACORA DE ACTUALIZACIONES Y PRUEBAS
 
 Ultima actualizacion: 05/11/2026
@@ -1081,6 +1081,39 @@ APK generado: APK´s/Segu-Luky-1.47s.apk
 Pendientes:
 - Probar el aviso de voz con un segundo movil dentro del grupo o del INTERCOM
   WiFi; hasta ahora la unica prueba es de un solo dispositivo.
+======================================================================
+
+======================================================================
+V-1.48s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.48s (versionCode 40)
+
+Cambio (correcciones del informe INFORME-BUGS-1.47s.md):
+- Escalada de llamadas: se elimina ANSWER_PHONE_CALLS (se declaraba y nunca se
+  concedia). La app ya no cuelga ni marca sobre una llamada activa: la llamada
+  conectada de 5 min cierra la ronda como atendida.
+- Un timbrado o un buzon ya no cortan la ronda: al terminar cualquier llamada se
+  pasa al siguiente contacto y el registro anota "posible respuesta".
+- Un aviso de fin de llamada que llega antes de que el marcado nuevo se
+  establezca se ignora (es el del intento anterior).
+- Microfono: el servicio declara el tipo microphone y lo pide solo con la voz
+  activa y permiso, para que Android 14+ no entregue silencio con la pantalla
+  apagada. Si el sistema lo rechaza, arranca sin el tipo y lo registra.
+- Instrucciones y protocolo actualizados (sin el gesto de dos dedos, con el
+  comportamiento nuevo de llamadas y microfono).
+
+Prueba realizada: testDebugUnitTest (86 pruebas, 0 fallos), lintDebug (0 errores)
+y assembleRelease. Manifiesto compilado con foregroundServiceType
+location|microphone|specialUse y FOREGROUND_SERVICE_MICROPHONE; firma
+CN=Segu-Luky con la misma huella que las versiones anteriores.
+Resultado: compila y verifica; pendiente la prueba en dispositivo (voz con
+pantalla apagada, llamadas reales y fin de ronda).
+APK generado: APK´s/Segu-Luky-1.48s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.48s-mapping.txt.gz
+Pendientes: §5 (IPC de InterCOM en el hilo principal), §6 (Telegram sin
+reintento), §7 (etiquetas en Buscar actualizacion), §8 (WhatsAppUnlockActivity).
 ======================================================================
 
 1.28s (versionCode 20)

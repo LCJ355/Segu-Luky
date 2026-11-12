@@ -1,4 +1,4 @@
-﻿# Segu-Luky V-1.47s
+# Segu-Luky V-1.48s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -72,14 +72,14 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every version is published in `APK´s/` as
-`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.47s.apk`), ready to download
+`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.48s.apk`), ready to download
 and install on the phone without Android Studio.
 
 Every version is also published as a GitHub release tagged `V-<version>` with
 that same APK attached, because **Buscar actualizacion** reads the GitHub API:
 
 ```text
-gh release create V-1.47s "APK´s/Segu-Luky-1.47s.apk" --title "Segu-Luky V-1.47s" --notes "..."
+gh release create V-1.48s "APK´s/Segu-Luky-1.48s.apk" --title "Segu-Luky V-1.48s" --notes "..."
 ```
 
 ## Safe device test

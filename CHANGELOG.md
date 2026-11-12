@@ -1,6 +1,9 @@
 # Changelog
 
-## Sin publicar (corrige la 1.47s)
+## 1.48s (versionCode 40)
+
+Publicada con APK, mapping, protocolo e instrucciones: `APK´s/Segu-Luky-1.48s.apk`,
+`APK´s/mapping/Segu-Luky-1.48s-mapping.txt.gz`.
 
 ### Escalada de llamadas (crítico)
 - Se elimina la dependencia de `ANSWER_PHONE_CALLS`: el permiso se declaraba pero nunca se
@@ -12,10 +15,19 @@
   OFFHOOK): Android no distingue una respuesta de un timbrado o un buzón, así que se pasa al
   siguiente contacto y el registro anota "posible respuesta". Antes, un buzón de voz detenía el
   protocolo y los demás contactos no recibían la llamada.
-- `EscalationPolicy` documenta la limitación; tres tests nuevos (84 en total, 0 fallos).
+- Un aviso de fin de llamada que llega antes de que el marcado nuevo se establezca se ignora
+  (`EscalationPolicy.idleArrivedWhileDialing`): es el del intento anterior y saltarse un contacto
+  por él sería peor que esperar al minuto siguiente.
 
-Pendiente para publicar: subir `versionCode`/`versionName`, archivar el mapping nuevo y
-actualizar protocolo e instrucciones (ver `docs/RELEASE.md`).
+### Micrófono en primer plano (crítico)
+- El servicio declara y solicita el tipo `microphone` (`FOREGROUND_SERVICE_MICROPHONE`) mientras
+  la activación por voz está activa y hay permiso, así que Android 14+ deja de entregar silencio
+  a `AudioRecord` con la pantalla apagada. Si el sistema rechaza el tipo, el servicio se inicia
+  sin él y lo anota en el registro, de modo que el monitor nunca se queda sin arrancar.
+
+### Verificación
+- 86 tests unitarios, 0 fallos; `lintDebug` 0 errores; APK firmado con la misma clave
+  (`CN=Segu-Luky`) que las versiones anteriores.
 
 ## 1.13s – 1.47s (versionCode 5 → 39)
 

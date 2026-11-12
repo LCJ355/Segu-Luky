@@ -1,16 +1,30 @@
-MAPPING DE R8 - Segu-Luky 1.47s (versionCode 39)
-================================================
+MAPPING DE R8 - Segu-Luky
+=========================
 
 Que es
--------
-`Segu-Luky-1.47s-mapping.txt.gz` es el mapa de ofuscacion que genera R8 al
-compilar la release. Sin el, las trazas de fallo de la app publicada muestran
-nombres como `a.b.c(SourceFile:1)` y no se pueden diagnosticar.
+------
+Un `mapping.txt` es el mapa de ofuscacion que genera R8 al compilar la release.
+Sin el, las trazas de fallo de la app publicada muestran nombres como
+`a.b.c(SourceFile:1)` y no se pueden diagnosticar.
 
-Procedencia
------------
+Aqui se guarda uno comprimido por cada version publicada:
+
+    Segu-Luky-1.48s-mapping.txt.gz   <- version actual (versionCode 40)
+    Segu-Luky-1.47s-mapping.txt.gz   <- historico (versionCode 39)
+
+Cada archivo solo sirve para las trazas del codigo con el que se genero.
+
+Procedencia de la 1.48s (actual)
+--------------------------------
+- Generado con `gradlew assembleRelease` sobre el commit que declara
+  `versionCode = 40` / `versionName = "1.48s"`.
+- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
+- Compilado el 12/11/2026.
+
+Procedencia de la 1.47s
+-----------------------
 - Generado con `gradlew assembleRelease` sobre el commit `173d7a8`
-  ("V-1.47s: tarjeta INTERCOM-LUKY en Configuracion"), que es el que declara
+  ("V-1.47s: tarjeta INTERCOM-LUKY en Configuracion"), que declara
   `versionCode = 39` / `versionName = "1.47s"`.
 - Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
 - Compilado el 12/11/2026.
@@ -18,17 +32,16 @@ Procedencia
 Alcance (importante)
 --------------------
 Los nombres de clase se conservan (Kotlin objects con `INSTANCE`), pero los de
-metodo y los numeros de linea se reescriben, y **eso** es lo que resuelve este
-archivo. Se corresponde con el codigo de la 1.47s, no con el binario publicado
+metodo y los numeros de linea se reescriben, y **eso** es lo que resuelve cada
+archivo. Se corresponde con el codigo de su version, no con el binario publicado
 byte a byte: Android no produce builds reproducibles, asi que el APK que se
-distribuye tiene otro SHA-256. Sirve para simbolizar trazas del mismo codigo
-(commit `173d7a8`); si algun dia se recompila con otro commit, hace falta su
-propio mapping.
+distribuye tiene otro SHA-256. Sirve para simbolizar trazas del mismo codigo; si
+se recompila con otro commit, hace falta su propio mapping.
 
 Como usarlo
 -----------
 1. Descomprimir:
-   `gzip -dk Segu-Luky-1.47s-mapping.txt.gz`
+   `gzip -dk Segu-Luky-1.48s-mapping.txt.gz`
 2. Con la traza ofuscada en `trace.txt`, ejecutar desde la raiz del SDK:
    `java -jar build-tools\35.0.0\lib\d8.jar retrace.jar mapping.txt trace.txt`
    o la tarea de Gradle `retrace` si esta disponible.
@@ -37,5 +50,5 @@ Como usarlo
 Regla de mantenimiento
 ----------------------
 Archivar un mapping por cada version publicada en `APK´s/mapping/`, con el
-nombre de la version. Esta es la unica copia de la 1.47s: `app/build/` esta
-ignorado por git y se borra con `gradlew clean`.
+nombre de la version. Es la unica copia: `app/build/` esta ignorado por git y se
+borra con `gradlew clean`.

@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.47s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.48s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 39). Los valores entre parentesis son los del codigo.
+archivo (versionCode 40). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -110,6 +110,9 @@ Si esta ACTIVADA, en este orden:
    - Si la llamada sigue conectada a los 5 min se da por atendida y la ronda
      termina. La app NO cuelga nunca: no marca otro numero con una llamada activa
      y no necesita el permiso ANSWER_PHONE_CALLS.
+   - Un aviso de "llamada terminada" que llega antes de que el marcado nuevo se
+     establezca se ignora: es el del intento anterior y saltarse un contacto por
+     el seria peor que esperar al minuto siguiente.
 6. Aviso de voz a InterCOM-Luky ("Posible accidente de motorista") via el puente
    com.intercom.lukymoto.bridge; si no esta instalado o no responde, el SOS sigue.
 7. Sin autoenvio se publican notificaciones manuales (hasta 5 de WhatsApp y 5 de
@@ -126,7 +129,10 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
 - Notificaciones: monitor en primer plano y avisos.
 - Llamadas (CALL_PHONE): marcar. READ_PHONE_STATE: detectar el fin de llamada.
 - SMS (SEND_SMS) solo si se activa SMS automatico.
-- Microfono (RECORD_AUDIO) solo si se activa NIVEL DE AUDIO o la voz.
+- Microfono (RECORD_AUDIO) solo si se activa NIVEL DE AUDIO o la voz. El monitor
+  declara el tipo de servicio en primer plano `microphone` (junto con `location` y
+  `specialUse`) y lo pide solo cuando la voz esta activa y hay permiso; si Android
+  lo rechaza, el servicio sigue sin ese tipo y lo anota en el registro.
 - Alarmas exactas: puntualidad del final del SOS y del cambio de contacto.
 - Accesibilidad: solo para el envio automatico de WhatsApp/Telegram.
 
@@ -145,8 +151,9 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
 - No hay senal fiable de "contestada": una llamada corta nunca cierra la ronda
   (se llama tambien a los demas contactos) y una conectada de 5 min se da por
   atendida. Es una decision conservadora, no una deteccion exacta.
-- El microfono no declara el tipo de servicio en primer plano `microphone`, por lo
-  que la escucha con la pantalla apagada puede fallar en Android 11+.
+- (corregido en 1.48s) El monitor declara el tipo `microphone` y lo pide en primer
+  plano mientras la voz esta activa, para que Android 14+ no entregue silencio. Si
+  el sistema rechaza ese tipo, la activacion por voz se queda sin oir y lo anota.
 - El envio por bot de Telegram no tiene cola ni reintento.
 - «Buscar actualizacion» solo mira las etiquetas si no hay ninguna release.
 - WhatsAppUnlockActivity abre el chat aunque se cancele el desbloqueo.
@@ -191,4 +198,4 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.47s (versionCode 39) - 12/11/2026
+Version: V-1.48s (versionCode 40) - 12/11/2026

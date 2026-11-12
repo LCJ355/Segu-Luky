@@ -4,6 +4,10 @@ Proyecto: `G:\-IA-\GitHub-repos-\Segu-Luky`
 Commit analizado: `173d7a8` (`origin/main`, `versionCode = 39`, `versionName = "1.47s"`)
 APK de referencia: `APK´s/Segu-Luky-1.47s.apk`, SHA-256 `0726b6ed…`
 
+> **Estado:** §1, §2, §3 y §4 están corregidos y publicados en **1.48s** (`versionCode 40`,
+> `APK´s/Segu-Luky-1.48s.apk`). Cada apartado corregido indica qué se cambió. El resto sigue
+> pendiente en el orden de la última sección.
+
 ## Corrección del análisis anterior
 
 El informe previo partía de que el repositorio no contenía la fuente de la 1.47s. **Era falso**:
@@ -18,7 +22,7 @@ decompilando el APK.
 
 | Comprobación | Resultado |
 |---|---|
-| `gradlew testDebugUnitTest` | **84 tests, 0 fallos** |
+| `gradlew testDebugUnitTest` | **84 tests, 0 fallos** (86 tras las correcciones de 1.48s) |
 | `gradlew lintDebug` | 6 warnings, 5 info, **0 errores** |
 | `gradlew assembleRelease` | OK: `versionCode 39` / `1.47s` |
 | Firma de la release local | `CN=Segu-Luky`, SHA-256 `e0e5a8fd…` = **la misma que el APK publicado** → las actualizaciones siguen siendo instalables encima |
@@ -76,18 +80,21 @@ ronda (`answeredByLongCall`). Cubierto por tres tests nuevos en `EscalationPolic
 
 ---
 
-## 3. [ALTO] El micrófono en segundo plano sigue sin tipo de servicio en primer plano
+## 3. [ALTO · corregido] El micrófono en segundo plano sigue sin tipo de servicio en primer plano
 
 **Verificado.** `AndroidManifest.xml:63`: `android:foregroundServiceType="location|specialUse"`,
 y no aparece `FOREGROUND_SERVICE_MICROPHONE` (sí `RECORD_AUDIO`).
 
 `VoiceKeywordMonitor` captura con `AudioRecord` desde ese servicio. Desde Android 11 el
 micrófono es un recurso *while-in-use*: un FGS solo puede usarlo en segundo plano si declara el
-tipo `microphone` (y desde Android 14, además, el permiso). El README sigue prometiendo la
-escucha "even with the screen off".
+tipo `microphone` (y desde Android 14, además, el permiso). El README promete la escucha "even
+with the screen off", que en ese estado no podía cumplirse.
 
-**Fix:** añadir `FOREGROUND_SERVICE_MICROPHONE` y pasar el tipo combinado en `startForeground`
-(`location|microphone` con GPS; `microphone` sin GPS). Ojo: `specialUse` no se puede combinar.
+**Corregido en 1.48s.** El manifiesto declara `FOREGROUND_SERVICE_MICROPHONE` y el servicio pasa
+a `location|microphone|specialUse`; el servicio pide el tipo `microphone` solo cuando la voz está
+activa y hay permiso (`withMicrophoneType`), lo re-aplica al cambiar el interruptor de voz
+(`refreshForegroundType`) y, si Android lo rechaza, arranca sin ese tipo y lo anota en el
+registro en vez de quedarse sin monitor.
 
 ---
 
@@ -196,6 +203,6 @@ cancelar.
 
 1. ~~§1 y §2~~ (corregidos: no se cuelga ni se marca sobre una llamada activa; la ronda ya no se
    corta por un timbrado).
-2. §3 (voz con pantalla apagada) y §4 (instrucciones del APK).
+2. ~~§3 (voz con pantalla apagada) y §4 (instrucciones del APK)~~ (corregidos en 1.48s).
 3. §5 (no bloquear el SOS por InterCOM) y §6 (Telegram bot durable).
 4. §7 y §8.

@@ -414,6 +414,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         val hasMic = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
         monitor.start(this, enabled, hasMic)
+        refreshForegroundType()
     }
 
     private fun stopVoiceMonitor() {
@@ -2302,18 +2303,67 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         text: String,
         type: Int
     ): Boolean {
+        val withMicrophone = withMicrophoneType(type)
+        if (withMicrophone == type) return attemptStartForeground(mode, text, type, logFailure = true)
+        if (attemptStartForeground(mode, text, withMicrophone, logFailure = false)) return true
+        SafetyStateStore.log(
+            "Android rechazo el tipo microfono; la activacion por voz puede quedar silenciada"
+        )
+        return attemptStartForeground(mode, text, type, logFailure = true)
+    }
+
+    /**
+     * Android 14 y posteriores solo entregan audio a un servicio en primer plano
+     * cuando declara el tipo `microphone`, y sin el las muestras llegan a cero: el
+     * vigilante de voz escuchaba para siempre sin oir nada. El tipo se anade solo
+     * cuando hace falta y se permite, porque pedirlo sin RECORD_AUDIO hace fallar
+     * el propio `startForeground`.
+     */
+    private fun withMicrophoneType(base: Int): Int {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return base
+        if (!loadVoiceKeywordsGate(this)) return base
+        val hasMic = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!hasMic) return base
+        return base or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+    }
+
+    /** Re-aplica el tipo de primer plano tras cambiar el interruptor de voz. */
+    private fun refreshForegroundType() {
+        val mode = foregroundMode
+        if (mode == ForegroundMode.NONE) return
+        val text = lastNotificationText ?: "Monitor de seguridad activo"
+        when (mode) {
+            ForegroundMode.LOCATION -> startLocationForeground(text)
+            ForegroundMode.SPECIAL -> startSpecialForeground(text)
+            ForegroundMode.NONE -> Unit
+        }
+    }
+
+    private fun attemptStartForeground(
+        mode: ForegroundMode,
+        text: String,
+        type: Int,
+        logFailure: Boolean
+    ): Boolean {
         return try {
             ServiceCompat.startForeground(this, NOTIFICATION_ID, notification(text), type)
             foregroundMode = mode
             true
         } catch (error: SecurityException) {
-            SafetyStateStore.log("Inicio de servicio rechazado: ${error.message.orEmpty()}")
+            if (logFailure) {
+                SafetyStateStore.log("Inicio de servicio rechazado: ${error.message.orEmpty()}")
+            }
             false
         } catch (error: IllegalArgumentException) {
-            SafetyStateStore.log("Tipo de servicio no valido: ${error.message.orEmpty()}")
+            if (logFailure) {
+                SafetyStateStore.log("Tipo de servicio no valido: ${error.message.orEmpty()}")
+            }
             false
         } catch (error: RuntimeException) {
-            SafetyStateStore.log("Android rechazo el servicio: ${error.message.orEmpty()}")
+            if (logFailure) {
+                SafetyStateStore.log("Android rechazo el servicio: ${error.message.orEmpty()}")
+            }
             false
         }
     }

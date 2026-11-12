@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.47s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.48s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -12,8 +12,8 @@ desactivala: la cuenta atras se ejecuta sin avisar a nadie.
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.47s.apk        <- version actual
-Las anteriores (1.44s, 1.45s, 1.46s...) se conservan solo como historico.
+    Segu-Luky-1.48s.apk        <- version actual
+Las anteriores (1.44s, 1.45s, 1.46s, 1.47s) se conservan solo como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -49,7 +49,9 @@ ajustes se conservan. No hace falta desinstalar.
      no puede enviar el mapa.
    - Notificaciones: necesarias para el monitor en segundo plano.
    - Microfono: solo si quieres NIVEL DE AUDIO o VOZ AYUDA / SOCORRO. No se
-     graba ni se guarda sonido.
+     graba ni se guarda sonido: solo se mide el nivel y se buscan las palabras.
+     Con el permiso dado, el monitor declara el servicio de microfono y sigue
+     escuchando con la pantalla apagada (Android 14 o superior).
    - Accesibilidad: solo para el envio automatico de WhatsApp.
 5. SENSORES:
    - CAIDA / ORIENTACION: activalo (MODO MOTO) para que un golpe aislado no
@@ -153,4 +155,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.47s (versionCode 39) - paquete com.intercom.segluky.
+Version: V-1.48s (versionCode 40) - paquete com.intercom.segluky.
