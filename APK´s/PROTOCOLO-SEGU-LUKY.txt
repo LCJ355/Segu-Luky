@@ -1,122 +1,192 @@
-SEGU-LUKY V-1.12s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.47s - PROTOCOLO Y ALGORITMO
 ==========================================
-Documento de comprension de la app (deteccion, cuenta atras, llamadas,
-WhatsApp, ubicacion y recuperacion). Describe el codigo real.
+Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
+ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
+archivo (versionCode 39). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
-Este APK REALIZA ACCIONES REALES: marca llamadas, envia SMS y abre o envia
-WhatsApp a los contactos configurados. No es una simulacion. Antes de activar
-FUNCIONALIDAD SOS, comprueba los contactos guardados. Para probar sensores,
-desactiva FUNCIONALIDAD SOS: la cuenta atras se ejecuta sin avisar a nadie.
+Este APK REALIZA ACCIONES REALES: marca llamadas, envia SMS, envia mensajes por
+Telegram (bot), abre o envia WhatsApp y pide a InterCOM-Luky que avise por voz.
+No es una simulacion. Antes de activar FUNCIONALIDAD SOS revisa los contactos y
+los permisos: cualquier SOS que no canceles avisara de verdad a esas personas.
 
 1) RESUMEN
 ----------
-Segu-Luky vigila los sensores mientras el monitor esta activo. Si cree que ha
-habido un accidente inicia una cuenta atras de 30 s con pitidos que puedes
-cancelar. Si se completa, y solo con FUNCIONALIDAD SOS activada, ejecuta SMS,
-WhatsApp y llamadas en orden. El monitor es un servicio en primer plano: sigue
-con la pantalla apagada y el telefono bloqueado.
+Segu-Luky vigila los sensores mientras el monitor esta activo. Cuando cree que
+ha habido un accidente inicia una cuenta atras de 30 s con pitidos que puedes
+cancelar. Si la cuenta atras termina y FUNCIONALIDAD SOS esta activada, ejecuta
+los canales configurados para cada contacto.
+
+El monitor es un servicio en primer plano con notificacion permanente: sigue
+vigilando con la pantalla apagada y el movil bloqueado.
+
+Fases internas (SafetyPhase): STOPPED, MONITORING, VALIDATING, FALL_CANDIDATE y
+COUNTDOWN. El despacho posterior a la cuenta atras no es una fase: se publica en
+el estado como "avisos en curso" (dispatchInProgress).
 
 2) COMO SE DECIDE UN SOS
 ------------------------
-Sensibilidad (SENSIBILIDAD A LOS GOLPES, 0,5 a 7 g; por defecto 3,5 g) es el
-unico umbral de golpe.
+Entradas: aceleracion dinamica (sin gravedad), sensor de gravedad para la
+inclinacion, giroscopio (solo durante validacion), GPS (mapa y velocidad), voz
+opcional y el boton S O S de la app.
 
-A) CAIDA / ORIENTACION ACTIVADA (valor por defecto, MODO MOTO):
-   - Un golpe fuerte aislado NO dispara el SOS: arma CANDIDATO A CAIDA (15 s).
-   - La pantalla se enciende al armar el candidato, para poder cancelar.
-   - El SOS salta si, dentro de la ventana, el movil queda inclinado 55 grados
-     o mas durante 4 s seguidos (sensor de gravedad).
-   - El candidato se aborta si vuelve a vertical (menos de 25 grados), si el
-     GPS indica 30 km/h o mas, o si expira la ventana.
-   - En candidato y cuenta atras el GPS pasa a 2 s. En vigilancia normal usa
-     20 s o 25 m.
+La sensibilidad (SENSIBILIDAD A LOS GOLPES, 0,5 a 7 g; por defecto 3,5 g) es el
+unico umbral de golpe. No hay umbral fijo de 7 g ni filtros de GPS/velocidad que
+bloqueen un golpe.
 
-   DESACTIVADO:
-   - Todo golpe que alcance la sensibilidad inicia la cuenta atras al instante.
+A) CAIDA DE MOTO AUTOMATICA (interruptor CAIDA / ORIENTACION, activado por defecto)
+   - Un golpe aislado >= sensibilidad NO dispara el SOS: arma un CANDIDATO A
+     CAIDA con ventana de 15 s.
+   - El SOS salta si dentro de la ventana el movil queda inclinado >= 55 grados
+     durante 4 s seguidos, medido con el sensor de gravedad (la guinada de una
+     curva no cuenta). La actitud se calibra en los primeros 2 s.
+   - El candidato se ABORTA sin SOS si el movil vuelve a vertical (menos de 25
+     grados, 12 muestras seguidas), si el GPS da 30 km/h o mas, o si expira la
+     ventana.
+   - Mientras hay candidato la pantalla se enciende 20 s y el GPS pasa a 2 s /
+     0 m; al expirar o abortar vuelve a 20 s / 25 m.
+   - DESACTIVADO: todo golpe que alcance la sensibilidad inicia la cuenta atras
+     al instante, sin confirmar inclinacion.
 
-B) SOS DELIBERADO:
-   - Sacudida: 2 picos fuertes dentro de 1,2 s.
-   - Mantener el boton S O S 5 segundos.
-   - El gesto de dos dedos (global y dentro de la app) ya no existe: el gesto
-     global dejaba la pantalla sin respuesta al tacto en algunos OPPO/ColorOS y
-     el de dentro de la app se retiro por la misma razon practica.
-   - Decir "ayuda" o "socorro" (VOZ AYUDA / SOCORRO, desactivado por defecto):
-     funciona con el monitor activo y con la pantalla apagada. Si se activa la
-     voz con el monitor ya iniciado, la captura arranca sin reiniciar el
-     servicio.
+B) SOS DELIBERADO (inmediato)
+   - Sacudida: 2 picos >= sensibilidad dentro de 1,2 s.
+   - Boton S O S mantenido 5 s (las columnas laterales se llenan de verde).
+   - Decir "ayuda" o "socorro" si VOZ AYUDA / SOCORRO esta activado. La captura
+     la hace el servicio: funciona con la pantalla apagada. El reconocimiento se
+     abre solo tras un grito sostenido (>= -22 dB durante 0,3 s), dura como
+     maximo 8 s y hay 2,5 s de enfriamiento y 20 s entre activaciones.
+   - NO hay gesto de dos dedos: se elimino en la 1.39s porque en algunas ROM
+     OPPO/ColorOS el filtro de accesibilidad dejaba la pantalla sin respuesta al
+     tacto. Solo quedan las vias anteriores.
 
 3) CUENTA ATRAS (30 SEGUNDOS)
 -----------------------------
-- Pitidos en los ultimos 20 s, mas frecuentes al final.
-- CANCELAR SOS desarma el evento y rearma el monitor.
-- Cada evento se ejecuta UNA sola vez: identificador unico y marca de
-  completado en disco. El ticker y la alarma de respaldo no pueden duplicar el
-  aviso. Una alarma duplicada ya no puede destruir un monitor sano.
+- Pitidos de aviso en los ultimos 20 s, cada vez mas frecuentes.
+- CANCELAR SOS (en pantalla o en la notificacion) desarma el evento y rearma el
+  monitor.
+- Se toman un PARTIAL_WAKE_LOCK y un encendido de pantalla de 35 s (30 s + 5 s
+  de gracia).
+- Respaldo por alarma exacta (SCHEDULE_EXACT_ALARM si esta autorizada; si no, se
+  usa una alarma inexacta y se registra una sola vez).
+- Cada evento se ejecuta UNA sola vez: se identifica con un UUID y se marca como
+  completado en disco, de modo que el temporizador interno y la alarma de respaldo
+  no duplican los avisos.
 
 4) GPS Y UBICACION
 ------------------
-- Posicion valida: precision de 100 m o mejor. Posicion reciente: 60 s.
-- Vigilancia: 20 s / 25 m. Candidato, cuenta atras y validacion: 2 s / 0 m.
-- El enlace de mapa usa la ultima posicion valida de los ultimos 5 minutos, por
-  lo que sigue disponible aunque el movil este parado y el GPS haya reducido
-  su ritmo. Si no hay ninguna, el texto indica "ubicacion GPS no disponible".
-- La deteccion de golpes funciona sin GPS, sin permiso de ubicacion o con el GPS
-  apagado.
+- Posicion valida: precision de 100 m o mejor; velocidad valida si su precision
+  es <= 5 m/s.
+- Intervalos: 2 s al arrancar y durante candidato/cuenta atras/validacion;
+  20 s / 25 m en vigilancia normal.
+- El enlace del mapa usa la ultima posicion valida de hasta 5 minutos; tambien
+  vale una posicion fija antigua, no hace falta movimiento.
+- Sin GPS la deteccion sigue igual y el mensaje sale con la nota
+  "ubicacion GPS no disponible".
 
 5) AL COMPLETARSE LA CUENTA ATRAS
 ---------------------------------
-Si FUNCIONALIDAD SOS esta DESACTIVADA:
-   No se llama ni se envia nada; solo queda el registro.
+Si FUNCIONALIDAD SOS esta DESACTIVADA: no se envia nada; solo queda el registro.
 
-Si FUNCIONALIDAD SOS esta ACTIVADA:
-   1. SMS AUTOMATICO (si esta activado y hay permiso): se envia a todos los
-      contactos. Funciona con pantalla apagada y sin Accesibilidad.
-   2. WHATSAPP (contactos con WhatsApp habilitado):
-      - Con ENVIO AUTO WHATSAPP + Accesibilidad, se encola cada contacto y la
-        accesibilidad pulsa Enviar tras verificar paquete, destinatario y texto.
-      - Si un envio queda atascado, una alarma de supervision reintenta la cola
-        y continua con el resto. Si el proceso muere, el despacho persistido se
-        reanuda al arrancar el servicio.
-      - Sin Accesibilidad, se publica una notificacion "ABRIR WHATSAPP" por
-        cada contacto con WhatsApp habilitado.
-   3. LLAMADAS EN ORDEN: se llama de uno en uno. Se espera a que la llamada
-      termine antes de llamar al siguiente; una llamada conectada de 3 s o mas
-      se considera atendida y detiene la ronda. Una llamada no se corta antes de
-      5 minutos. El avance se programa con alarma para sobrevivir a la muerte
-      del proceso. Con ANSWER_PHONE_CALLS concedido, al agotar el tiempo se
-      intenta colgar antes de pasar al siguiente.
-   4. UBICACION: {MAPA} se sustituye por el enlace de Google Maps.
+Si esta ACTIVADA, en este orden:
+1. Se calcula el enlace {MAPA} con la ultima posicion valida (<= 5 min).
+2. Telegram por bot (si hay token global y el contacto tiene chat id): hilo
+   propio con wake lock de 2 min; un POST a api.telegram.org por contacto, 15 s
+   de conexion + 15 s de lectura. El resultado se registra ("TELEGRAM bot: n/m
+   avisos enviados"), pero NO se reintenta ni se persiste.
+3. SMS automatico (si esta activado y hay permiso): un SMS por contacto, partido
+   si es largo. Funciona con la pantalla apagada.
+4. WhatsApp y Telegram por enlace (si ENVIO AUTO esta activo, hay Accesibilidad y
+   el contacto tiene telefono o usuario): se encolan en la cola durable
+   (WHATSAPP -> CALLS) con caducidad de 120 s; el servicio de accesibilidad solo
+   pulsa Enviar si coinciden paquete, destinatario y texto normalizado. Un
+   watchdog reintenta la cabeza atascada y hay reanudacion al arrancar; a los
+   10 min se cierra el despacho.
+5. Llamadas en orden a los contactos con llamada habilitada: 60 s por intento y
+   un maximo de 5 min por llamada; si el movil esta al habla se espera al fin de
+   llamada. Se considera "atendida" una llamada conectada de 3 s o mas (ver
+   limitaciones). Si no hay permiso ANSWER_PHONE_CALLS no se puede colgar.
+6. Aviso de voz a InterCOM-Luky ("Posible accidente de motorista") via el puente
+   com.intercom.lukymoto.bridge; si no esta instalado o no responde, el SOS sigue.
+7. Sin autoenvio se publican notificaciones manuales (hasta 5 de WhatsApp y 5 de
+   Telegram) para abrir el chat con el mensaje listo.
+8. Al final el monitor se rearma: vuelve a MONITORING.
 
-6) RECUPERACION
----------------
-- La cuenta atras persiste eventId, fin en reloj monotono y de pared, y la
-  ultima ubicacion.
-- Alarmas exactas si el usuario las autoriza; si no, Android puede retrasar el
-  respaldo y se registra el aviso.
-- El servicio arranca en primer plano con tipo LOCATION si puede y, si Android
-  lo rechaza en segundo plano, cae a SPECIAL_USE para no perder el SOS. Si el
-  arranque de ubicacion en segundo plano no esta permitido, el monitor sigue
-  con sensores y sin GPS en vivo.
-- BootReceiver reanuda la monitorizacion si el usuario la habia pedido. Un
-  despacho pendiente tiene prioridad sobre un simple rearme.
+Formato del mensaje: plantilla por contacto; {MAPA} se sustituye por
+https://www.google.com/maps/search/?api=1&query=LAT,LNG. El mismo texto sirve
+para WhatsApp y Telegram; el SMS usa la misma plantilla.
 
-7) REQUISITOS
--------------
-- FUNCIONALIDAD SOS activada y al menos un destinatario.
-- Permiso de llamadas para marcar; SMS si se activa; microfono para voz;
-  Accesibilidad para el envio automatico de WhatsApp y el enlace t.me.
-- Alarmas exactas y ubicacion en segundo plano mejoran la recuperacion; la app
-  avisa de su estado en Configuracion.
+6) PERMISOS
+-----------
+- Ubicacion precisa: mapa y velocidad (sin ella se detectan golpes igual).
+- Notificaciones: monitor en primer plano y avisos.
+- Llamadas (CALL_PHONE): marcar. READ_PHONE_STATE: detectar el fin de llamada.
+- SMS (SEND_SMS) solo si se activa SMS automatico.
+- Microfono (RECORD_AUDIO) solo si se activa NIVEL DE AUDIO o la voz.
+- Alarmas exactas: puntualidad del final del SOS y del cambio de contacto.
+- Accesibilidad: solo para el envio automatico de WhatsApp/Telegram.
+- ANSWER_PHONE_CALLS: opcional; el codigo lo consulta pero la app no lo solicita.
 
-8) CONSUMO (V-1.12s)
---------------------
-- Estado en disco solo ante cambios relevantes; reloj de ubicacion agrupado en
-  tramos de 15 s.
-- Latido 5 s en vigilancia, 100 ms en cuenta atras.
+7) ENERGIA (decisiones de la version)
+-------------------------------------
+- Latido de vigilancia cada 5 s (100 ms durante la cuenta atras).
 - Giroscopio solo en candidato/validacion.
-- Pantalla solo en candidato/cuenta atras.
-- Calibracion vuelca cada 5 s.
+- Pantalla solo en candidato (20 s), cuenta atras (35 s) o aviso de WhatsApp (40 s).
+- Estado persistido solo ante cambios relevantes (fase, evento, temporizadores,
+  movimiento > ~1 m); la hora del fix se agrupa en tramos de 15 s.
+- Buffer de sensores de 250 ms cuando el sensor lo soporta.
+- Calibracion: el CSV se vuelca cada 5 s.
 
-Version: V-1.12s (versionCode 4).
+8) LIMITACIONES CONOCIDAS (documentadas en INFORME-BUGS-1.47s.md)
+------------------------------------------------------------------
+- "Atendida" se deduce de 3 s desde el OFFHOOK de marcacion: una llamada que
+  suena y cae al buzon puede contar como atendida y cortar la ronda.
+- ANSWER_PHONE_CALLS no se solicita en ejecucion, asi que no se puede colgar una
+  llamada larga para pasar al siguiente contacto.
+- El microfono no declara el tipo de servicio en primer plano `microphone`, por lo
+  que la escucha con la pantalla apagada puede fallar en Android 11+.
+- El envio por bot de Telegram no tiene cola ni reintento.
+- «Buscar actualizacion» solo mira las etiquetas si no hay ninguna release.
+- WhatsAppUnlockActivity abre el chat aunque se cancele el desbloqueo.
+
+9) DIAGRAMA DE FLUJO
+--------------------
+                 INICIO MONITOR
+                       |
+                       v
+   +----------- MONITOR ACTIVO (sensores, GPS, voz) ----------+
+   +------+------------------+-------------------+-----------+
+          |                  |                   |
+          v                  v                   v
+   golpe >= sensib.    2 picos en 1,2 s    SOS manual (boton 5 s / voz)
+          |                  |                   |
+          v                  |                   |
+   CAIDA/ORIENTACION on?     |                   |
+     | si    | no            |                   |
+     v       |               |                   |
+  CANDIDATO  |               |                   |
+  (15 s)     |               |                   |
+     |       |               |                   |
+     | inclinacion >= 55 grados durante 4 s      |
+     +-------+---------------+-------------------+
+                             |
+                             v
+                    CUENTA ATRAS 30 s  (pitidos ultimos 20 s)
+                             |
+                 CANCELAR ---+---> monitor rearmado
+                             |
+                             v
+                 COMPLETADO (una sola vez por evento)
+                             |
+                             v
+                 FUNCIONALIDAD SOS activada?
+                    | si                     | no
+                    v                        v
+   {MAPA} <=5 min -> Telegram bot        no se envia nada
+                    -> SMS automatico      (solo registro)
+                    -> WhatsApp + Telegram t.me (cola durable)
+                    -> llamadas en orden (60 s, fin de llamada)
+                    -> aviso de voz InterCOM
+                    -> monitor rearmado
+
+Version: V-1.47s (versionCode 39) - 12/11/2026

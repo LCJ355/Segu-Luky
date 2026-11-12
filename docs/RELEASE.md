@@ -9,13 +9,24 @@
    gradlew.bat assembleRelease
    ```
 3. The signed APK is at `app/build/outputs/apk/release/app-release.apk`.
-4. Keep `app/build/outputs/mapping/release/mapping.txt` for the release.
-5. Copy the APK and the current protocol to `APK´s/`.
+4. Archive the R8 mapping, compressed, with the version in the name:
+   `APK´s/mapping/Segu-Luky-<versionName>-mapping.txt.gz`. Without it the stack
+   traces of the published build cannot be read; `app/build/` is git-ignored and
+   `gradlew clean` deletes the original. See `APK´s/mapping/LEEME.txt`.
+5. Copy the APK to `APK´s/` as `Segu-Luky-<versionName>.apk` and update
+   `APK´s/PROTOCOLO-SEGU-LUKY.txt` and `APK´s/INSTRUCCIONES-SEGU-LUKY.txt` so
+   they describe the version being released (version, channels, permissions).
+6. Verify the signature before publishing:
+   `apksigner verify --print-certs app-release.apk` must show the certificate
+   SHA-256 listed in [SIGNING.md](SIGNING.md).
+7. Publish the release (`gh release create V-<versionName> "APK´s/Segu-Luky-<versionName>.apk" ...`).
 
 ## Signing material
 
 `keystore.properties` and `segu-luky-release.jks` are local-only and ignored by
-`.gitignore`. Do not share or commit them.
+`.gitignore`. Do not share or commit them. The certificate fingerprint used to
+verify a published build, the restore steps and the backup/rotation rules are in
+[SIGNING.md](SIGNING.md); `keystore.properties.example` is the versioned template.
 
 For CI or another machine, set the environment variables instead of storing the
 secrets in a file:
@@ -43,4 +54,7 @@ previous build.
 - `am crash` during the countdown and during the dispatch.
 - Reboot with monitoring requested.
 - Android 12+ background start and exact-alarm behaviour.
-- Global gesture on Android 12+.
+- Telegram: bot with valid token and chat id, and the same flow with no data (the
+  bot send does not retry in 1.47s).
+- InterCOM: absent, installed-but-off, and installed-and-on (voice notice).
+- Update check: offline, with no releases, and with a newer tag but no newer release.
