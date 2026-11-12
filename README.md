@@ -1,4 +1,4 @@
-# Segu-Luky V-1.54s
+# Segu-Luky V-1.55s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -41,6 +41,22 @@ key; InterCOM is a separate app reached only through its exported bridge (see
   enabled and contacts are configured, a completed countdown sends SMS when
   enabled, queues WhatsApp messages, and calls contacts in order. Verify the
   configured contacts before enabling it.
+
+## Configuracion
+
+The gear opens an index with four blocks and their live status; each block shows
+only its own settings and a `‹ CONFIGURACION` header to go back (the system back
+button goes up one level, not straight to the home screen).
+
+- **Sensores**: fall/orientation confirmation, voice trigger and diagnostics
+  (device profile, reset learning, optional CSV/ZIP recording). Sensitivity,
+  `ADAPT.` and `PROBAR GOLPE` stay on the monitor card.
+- **Contactos SOS**: contact list in call order, editor, and the map-link note.
+- **Canales de salida SOS**: SOS master switch, auto WhatsApp (with its two
+  permissions), Telegram bot, automatic SMS and the INTERCOM voice notice.
+- **Permisos sistema**: exact alarms, accessibility/overlay and the state of
+  notifications, location, microphone, calls and SMS with a shortcut to the app
+  settings.
 
 ## Info menu
 
@@ -86,14 +102,14 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every version is published in `APK´s/` as
-`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.54s.apk`), ready to download
+`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.55s.apk`), ready to download
 and install on the phone without Android Studio.
 
 Every version is also published as a GitHub release tagged `V-<version>` with
 that same APK attached, because **Buscar actualizacion** reads the GitHub API:
 
 ```text
-gh release create V-1.54s "APK´s/Segu-Luky-1.54s.apk" --title "Segu-Luky V-1.54s" --notes "..."
+gh release create V-1.55s "APK´s/Segu-Luky-1.55s.apk" --title "Segu-Luky V-1.55s" --notes "..."
 ```
 
 ## Safe device test

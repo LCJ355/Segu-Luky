@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.55s (versionCode 47)
+
+### Configuración dividida en cuatro submenús
+- **Índice**: el engranaje abre Configuración con cuatro bloques y el estado resumido de cada uno
+  (modo de golpe, número de contactos, canales activos y permisos pendientes). Al entrar en uno,
+  la lista muestra solo sus ajustes y una cabecera `‹ CONFIGURACION` para volver; el botón atrás
+  del sistema también sube un nivel en vez de cerrar la configuración entera.
+- **Sensores**: CAIDA / ORIENTACION, VOZ AYUDA / SOCORRO y DIAGNÓSTICO (ficha del móvil,
+  REINICIAR APRENDIZAJE y grabación CSV/ZIP opcional). Un aviso recuerda que la sensibilidad, la
+  ventana `ADAPT.` y `PRUEBA DE GOLPE` viven en la tarjeta del monitor.
+- **Contactos SOS**: lista y editor con el orden de llamada, y el bloque de cómo se envía la
+  ubicación.
+- **Canales de salida SOS**: FUNCIONALIDAD SOS, ENVIO AUTO MENSAJES (con sus dos permisos),
+  TELEGRAM SOS, SMS SOS AUTOMATICO e INTERCOM-LUKY.
+- **Permisos sistema**: alarmas exactas, accesibilidad y overlay, y el estado de notificaciones,
+  ubicación, micrófono, llamadas y SMS, con un botón a los ajustes de la app.
+- La lista vuelve al principio al cambiar de bloque. Sin cambios en el comportamiento del SOS:
+  solo cambia dónde está cada ajuste.
+- Instrucciones, protocolo e historial actualizados; sin pruebas nuevas (la UI no tiene lógica
+  propia más allá de los estados que ya se calculaban).
+
 ## 1.54s (versionCode 46)
 
 ### La sensibilidad se afina sola con cada móvil y con el uso

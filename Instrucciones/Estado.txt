@@ -1599,6 +1599,43 @@ de muestreo, (2) que el umbral efectivo sube en camino roto y vuelve en llano,
 siguen abiertas (seccion 5, 6 y 8 del informe).
 
 ======================================================================
+V-1.55s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.55s (versionCode 47)
+
+Cambio:
+- Configuracion pasa a ser un indice con cuatro submenus y el estado
+  resumido de cada uno: SENSORES, CONTACTOS SOS, CANALES DE SALIDA SOS y
+  PERMISOS SISTEMA.
+- Sensores: CAIDA/ORIENTACION, VOZ AYUDA/SOCORRO y DIAGNOSTICO (ficha del
+  movil, REINICIAR APRENDIZAJE y grabacion CSV/ZIP). Aviso de que la
+  sensibilidad, ADAPT. y PRUEBA DE GOLPE estan en la tarjeta del monitor.
+- Contactos SOS: lista y editor en orden de llamada, y como se envia la
+  ubicacion.
+- Canales de salida SOS: FUNCIONALIDAD SOS, ENVIO AUTO MENSAJES con sus dos
+  permisos, TELEGRAM SOS, SMS SOS AUTOMATICO e INTERCOM-LUKY.
+- Permisos sistema: alarmas exactas, accesibilidad y overlay, y estado de
+  notificaciones, ubicacion, microfono, llamadas y SMS con boton a los
+  ajustes de la app.
+- Cabecera VOLVER dentro de cada bloque y boton atras del sistema que sube
+  un nivel. La lista vuelve arriba al cambiar de bloque.
+
+Motivo: pedido del usuario ("vamos a modificar visualmente los menus: dentro
+de Configuracion creamos submenus Sensores, Contactos SOS, Canales de salida
+SOS y Permisos sistema").
+
+Prueba realizada: testDebugUnitTest (145 pruebas, 0 fallos), lintDebug (0
+errores) y assembleRelease. Sin pruebas nuevas: la UI solo reordena bloques
+que ya existian y reutiliza los estados que ya se calculaban.
+Resultado: compila y verifica; pendiente la revision visual en el movil.
+APK generado: APK´s/Segu-Luky-1.55s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.55s-mapping.txt.gz
+Pendientes: revisar en el OPPO los cuatro bloques y que el boton atras suba
+un nivel, y siguen abiertas las pruebas de comportamiento del informe.
+
+======================================================================
 
 Fecha: 12/11/2026
 Version: 1.53s (versionCode 45)

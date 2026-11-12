@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.54s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.55s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -12,8 +12,8 @@ desactivala: la cuenta atras se ejecuta sin avisar a nadie.
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.54s.apk        <- version actual
-Las anteriores (1.44s a 1.53s) se conservan solo como historico.
+    Segu-Luky-1.55s.apk        <- version actual
+Las anteriores (1.44s a 1.54s) se conservan solo como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -114,8 +114,43 @@ ADAPT. (ventana de aprendizaje)
   alarga a 3 si lleva rato estable.
 - 1 / 2 / 3 MIN: valor fijo elegido por ti.
 - Cuanto mas uses la app, mas afinado queda el perfil del movil (a partir de 5
-  minutos de uso). En Configuracion > DIAGNOSTICO puedes ver lo aprendido y
+  minutos de uso). En Configuracion > Sensores > DIAGNOSTICO puedes ver lo aprendido y
   reiniciarlo si cambias de soporte o de moto.
+
+--------------------------------------------------------------------------
+3c) DONDE ESTA CADA AJUSTE (CONFIGURACION)
+--------------------------------------------------------------------------
+El engranaje abre CONFIGURACION con cuatro bloques. Cada uno muestra un
+resumen de su estado (por ejemplo "4 ACTIVOS" o "FALTAN 2") antes de entrar.
+
+  SENSORES
+    - CAIDA / ORIENTACION (MODO MOTO).
+    - VOZ AYUDA / SOCORRO.
+    - DIAGNOSTICO: ficha del movil, REINICIAR APRENDIZAJE y grabacion
+      CSV/ZIP opcional.
+    La sensibilidad, la ventana ADAPT. y PRUEBA DE GOLPE estan en la
+    pantalla principal, en la tarjeta del monitor.
+
+  CONTACTOS SOS
+    - Lista de contactos, en el orden de llamada.
+    - ANADIR / EDITAR / BORRAR contacto.
+    - COMO SE ENVIA LA UBICACION.
+
+  CANALES DE SALIDA SOS
+    - FUNCIONALIDAD SOS (interruptor general de avisos).
+    - ENVIO AUTO MENSAJES (WhatsApp y t.me) con sus dos permisos.
+    - TELEGRAM SOS (token del bot y prueba).
+    - SMS SOS AUTOMATICO.
+    - INTERCOM-LUKY (aviso de voz al grupo).
+
+  PERMISOS SISTEMA
+    - ALARMAS EXACTAS.
+    - ACCESIBILIDAD (solo para el envio automatico de WhatsApp).
+    - Estado de notificaciones, ubicacion, microfono, llamadas y SMS, con
+      acceso a los ajustes de la app.
+
+VOLVER (arriba) o el boton atras del movil devuelven al indice de
+Configuracion; VOLVER otra vez vuelve a la pantalla principal.
 
 --------------------------------------------------------------------------
 4) USO DIARIO
@@ -147,7 +182,7 @@ CUENTA ATRAS DE 30 s
 --------------------------------------------------------------------------
 5) COMO PROBAR SIN AVISAR A NADIE
 --------------------------------------------------------------------------
-1. Configuracion > FUNCIONALIDAD SOS: DESACTIVADO.
+1. Configuracion > Canales de salida SOS > FUNCIONALIDAD SOS: DESACTIVADO.
 2. Vuelve a la pantalla principal e INICIAR MONITOR.
 3. Da golpes suaves al movil o manten el boton S O S 5 s.
 4. Veras el candidato, la cuenta atras y los pitidos, pero no se llamara ni
@@ -157,7 +192,7 @@ CUENTA ATRAS DE 30 s
 --------------------------------------------------------------------------
 6) INTERCOM-LUKY (AVISO DE VOZ AL GRUPO)
 --------------------------------------------------------------------------
-La tarjeta INTERCOM-LUKY esta en Configuracion, justo encima de CONTACTOS SOS.
+La tarjeta INTERCOM-LUKY esta en Configuracion > Canales de salida SOS.
 Semaforo de tres estados:
 
   GRIS     InterCOM-Luky no esta instalado.
@@ -217,4 +252,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.54s (versionCode 46) - paquete com.intercom.segluky.
+Version: V-1.55s (versionCode 47) - paquete com.intercom.segluky.

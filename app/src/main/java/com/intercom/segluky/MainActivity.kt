@@ -1116,6 +1116,8 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.55s - Configuracion se divide en cuatro submenus: Sensores, Contactos SOS, Canales de " +
+        "salida SOS y Permisos sistema.")
     appendLine("1.54s - La sensibilidad se afina sola: aprende el ruido y el traqueteo de cada movil, " +
         "adapta el muestreo y el umbral en ventanas de 1-3 minutos, y anade PRUEBA DE GOLPE.")
     appendLine("1.53s - La cola del bot de Telegram ya no pierde avisos si se escribe a la vez, y el historial " +
@@ -1283,6 +1285,15 @@ private fun CriticalSettingsLockedWarning() {
     }
 }
 
+/** Bloques de Configuracion: indice y submenus, en el mismo orden del indice. */
+private enum class SettingsSection(val title: String) {
+    ROOT("Configuracion"),
+    SENSORS("Sensores"),
+    CONTACTS("Contactos SOS"),
+    CHANNELS("Canales de salida SOS"),
+    PERMISSIONS("Permisos sistema")
+}
+
 @androidx.compose.runtime.Composable
 private fun EmergencySettingsScreen(
     modifier: Modifier,
@@ -1331,187 +1342,216 @@ private fun EmergencySettingsScreen(
         smsAuto = granted
         SafetyMonitorService.saveSmsAuto(context, granted)
     }
+    var section by remember { mutableStateOf(SettingsSection.ROOT) }
+    // El boton atras del sistema sube un nivel, no cierra la configuracion entera.
+    BackHandler(enabled = section != SettingsSection.ROOT) { section = SettingsSection.ROOT }
+    val accessibilityReady = remember(automationRefresh) {
+        AutomationPermissions.isAccessibilityEnabled(context)
+    }
+    val overlayReady = remember(automationRefresh) {
+        AutomationPermissions.canDrawOverlays(context)
+    }
+    val smsPermissionGranted = remember(automationRefresh) { hasSendSmsPermission(context) }
+    val notificationsReady = remember(automationRefresh) { hasNotificationPermission(context) }
+    val locationReady = remember(automationRefresh) {
+        SafetyMonitorService.hasPreciseLocationPermission(context)
+    }
+    val telegramBotReady = remember(automationRefresh) {
+        TelegramSos.normalizeBotToken(ContactsRepository(context).telegramBotToken()) != null
+    }
+    // Al cambiar de bloque la lista vuelve arriba: los items son distintos y el
+    // desplazamiento anterior no tiene sentido en otro submenu.
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(section) { listState.scrollToItem(0) }
 
     LazyColumn(
+        state = listState,
         modifier = modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        item { Spacer(Modifier.height(8.dp)) }
         if (criticalSettingsLocked) {
+            item { CriticalSettingsLockedWarning() }
+        }
+        if (section == SettingsSection.ROOT) {
             item {
-                Spacer(Modifier.height(8.dp))
-                CriticalSettingsLockedWarning()
-            }
-        }
-        item {
-            if (!criticalSettingsLocked) Spacer(Modifier.height(8.dp))
-            SectionHeader("AVISOS SOS")
-        }
-        item {
-            val callsBlocked = callPermissionRequired && !callPermissionGranted
-            SeguCard(
-                title = "FUNCIONALIDAD SOS",
-                status = when {
-                    !sosActionsEnabled -> "DESACTIVADO"
-                    callsBlocked -> "LLAMADAS SIN PERMISO"
-                    else -> "ACTIVADO"
-                },
-                tone = when {
-                    callsBlocked -> Tone.BAD
-                    sosActionsEnabled -> Tone.OK
-                    else -> Tone.OFF
-                },
-                trailing = {
-                    Switch(
-                        checked = sosActionsEnabled,
-                        enabled = !criticalSettingsLocked,
-                        onCheckedChange = onSosActionsEnabledChange,
-                        colors = activeSwitchColors()
-                    )
-                }
-            ) {
                 Text(
-                    if (sosActionsEnabled) {
-                        "Las llamadas y los mensajes configurados quedan habilitados para un SOS."
-                    } else {
-                        "No se realizaran llamadas ni mensajes a ningun contacto."
-                    } + " Desactivalo para probar los sensores sin avisar a nadie.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (callsBlocked) {
-                    Text(
-                        "Las llamadas no estan listas hasta conceder el permiso; los mensajes configurados no se bloquean.",
-                        color = Tone.BAD.text,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-        item {
-            SectionHeader("PERMISOS DEL SISTEMA")
-        }
-        item {
-            SeguCard(
-                title = "ALARMAS EXACTAS",
-                status = if (exactAlarmReady) "AUTORIZADAS" else "NO AUTORIZADAS",
-                tone = if (exactAlarmReady) Tone.OK else Tone.BAD,
-                description = "Android puede retrasar el final del SOS y el paso al siguiente contacto si no las permite. " +
-                    "Autorizalas para que el aviso sea puntual."
-            ) {
-                if (!exactAlarmReady) {
-                    OutlinedButton(
-                        onClick = { AutomationPermissions.openExactAlarmSettings(context) },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("AUTORIZAR ALARMAS EXACTAS")
-                    }
-                }
-            }
-        }
-        item {
-            SectionHeader("SENSORES")
-        }
-        item {
-            SeguCard(
-                title = "CAIDA / ORIENTACION",
-                status = if (fallOrientationGate) "MODO MOTO" else "GOLPE DIRECTO",
-                tone = if (fallOrientationGate) Tone.OK else Tone.OFF,
-                trailing = {
-                    Switch(
-                        checked = fallOrientationGate,
-                        enabled = !criticalSettingsLocked,
-                        onCheckedChange = onFallOrientationGateChange,
-                        colors = activeSwitchColors()
-                    )
-                }
-            ) {
-                Text(
-                    if (fallOrientationGate) {
-                        "Un golpe fuerte abre un candidato de 15 s: si el movil queda inclinado 55 grados o mas durante 4 s, " +
-                            "salta el SOS. Un bache no tumba la moto y no avisa; la sacudida y los botones siguen siendo inmediatos."
-                    } else {
-                        "Todo golpe al nivel elegido inicia la cuenta atras directamente, como agitar el movil, " +
-                            "sin confirmar inclinacion."
-                    } + " Se aplica al iniciar el monitor.",
+                    "Elige un bloque: los ajustes estan agrupados por tema.",
+                    modifier = Modifier.padding(start = 4.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-        item {
-            val voiceBlocked = voiceKeywordsGate && !audioPermissionGranted
-            SeguCard(
-                title = "VOZ AYUDA / SOCORRO",
-                status = when {
-                    voiceBlocked -> "SIN MICROFONO"
-                    voiceKeywordsGate -> "ACTIVADA"
-                    else -> "DESACTIVADA"
-                },
-                tone = when {
-                    voiceBlocked -> Tone.BAD
-                    voiceKeywordsGate -> Tone.OK
-                    else -> Tone.OFF
-                },
-                trailing = {
-                    Switch(
-                        checked = voiceKeywordsGate,
-                        enabled = !criticalSettingsLocked,
-                        onCheckedChange = onVoiceKeywordsGateChange,
-                        colors = activeSwitchColors()
-                    )
-                }
-            ) {
-                Text(
-                    if (voiceKeywordsGate) {
-                        "Con el monitor activo y el microfono autorizado, decir AYUDA o SOCORRO inicia la cuenta atras " +
-                            "aunque la pantalla este apagada. No se graba ni se guarda sonido."
-                    } else {
-                        "No se escuchan palabras de emergencia; el microfono queda libre."
+            item {
+                SettingsEntryRow(
+                    title = "SENSORES",
+                    status = when {
+                        fallOrientationGate && voiceKeywordsGate -> "MOTO + VOZ"
+                        fallOrientationGate -> "MODO MOTO"
+                        voiceKeywordsGate -> "SOLO VOZ"
+                        else -> "GOLPE DIRECTO"
                     },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    tone = when {
+                        fallOrientationGate -> Tone.OK
+                        voiceKeywordsGate -> Tone.WARN
+                        else -> Tone.OFF
+                    },
+                    description = "Caida y orientacion, voz de socorro y diagnostico del sensor.",
+                    onClick = { section = SettingsSection.SENSORS }
                 )
             }
-        }
-        item {
-            SectionHeader("ENVIO AUTOMATICO")
-        }
-        item {
-            SeguCard(
-                title = "ENVIO AUTO MENSAJES",
-                status = if (whatsappAutoSend) "ACTIVADO" else "DESACTIVADO",
-                tone = if (whatsappAutoSend) Tone.OK else Tone.OFF,
-                trailing = {
-                    Switch(
-                        checked = whatsappAutoSend,
-                        enabled = !criticalSettingsLocked,
-                        onCheckedChange = onWhatsappAutoSendChange,
-                        colors = activeSwitchColors()
-                    )
-                },
-                description = if (whatsappAutoSend) {
-                    "Al terminar el SOS, WhatsApp y los enlaces t.me se abren y se pulsa Enviar sin confirmacion."
-                } else {
-                    "WhatsApp y Telegram se abren con el mensaje listo; el envio es manual."
+            item {
+                SettingsEntryRow(
+                    title = "CONTACTOS SOS",
+                    status = if (contacts.isEmpty()) "NINGUNO" else "${contacts.size}",
+                    tone = if (contacts.isEmpty()) Tone.BAD else Tone.OK,
+                    description = "Quien recibe el aviso y en que orden se le llama.",
+                    onClick = { section = SettingsSection.CONTACTS }
+                )
+            }
+            item {
+                val canales = buildList {
+                    if (callPermissionRequired && callPermissionGranted) add("LLAMADAS")
+                    if (smsAuto) add("SMS")
+                    if (whatsappAutoSend) add("WHATSAPP")
+                    if (telegramBotReady) add("TELEGRAM")
+                    if (intercomInstallation.state == IntercomState.ACTIVE) add("VOZ")
                 }
-            ) {
-                if (whatsappAutoSend) {
-                    val whatsappLifecycle = LocalLifecycleOwner.current
-                    var whatsappRefresh by remember { mutableStateOf(0) }
-                    DisposableEffect(whatsappLifecycle) {
-                        val observer = LifecycleEventObserver { _, event ->
-                            if (event == Lifecycle.Event.ON_RESUME) whatsappRefresh++
+                SettingsEntryRow(
+                    title = "CANALES DE SALIDA SOS",
+                    status = when {
+                        !sosActionsEnabled -> "DESACTIVADO"
+                        canales.isEmpty() -> "SIN CANALES"
+                        else -> "${canales.size} ACTIVOS"
+                    },
+                    tone = when {
+                        !sosActionsEnabled -> Tone.OFF
+                        canales.isEmpty() -> Tone.BAD
+                        else -> Tone.OK
+                    },
+                    description = if (sosActionsEnabled && canales.isNotEmpty()) {
+                        canales.joinToString(" - ")
+                    } else {
+                        "SOS, WhatsApp, Telegram, SMS, llamadas y aviso de voz de InterCOM."
+                    },
+                    onClick = { section = SettingsSection.CHANNELS }
+                )
+            }
+            item {
+                val pendientes = buildList {
+                    if (!exactAlarmReady) add("alarmas exactas")
+                    if (whatsappAutoSend && !accessibilityReady) add("accesibilidad")
+                    if (whatsappAutoSend && !overlayReady) add("abrir sobre otras apps")
+                    if (sosActionsEnabled && smsAuto && !smsPermissionGranted) add("SMS")
+                    if (sosActionsEnabled && callPermissionRequired && !callPermissionGranted) add("llamadas")
+                    if (voiceKeywordsGate && !audioPermissionGranted) add("microfono")
+                }
+                SettingsEntryRow(
+                    title = "PERMISOS SISTEMA",
+                    status = when {
+                        pendientes.isEmpty() -> "TODO OK"
+                        pendientes.size == 1 -> "FALTA 1"
+                        else -> "FALTAN ${pendientes.size}"
+                    },
+                    tone = when {
+                        pendientes.isEmpty() -> Tone.OK
+                        pendientes.size == 1 -> Tone.WARN
+                        else -> Tone.BAD
+                    },
+                    description = if (pendientes.isEmpty()) {
+                        "Todo lo que necesita la app esta concedido."
+                    } else {
+                        pendientes.joinToString(", ")
+                    },
+                    onClick = { section = SettingsSection.PERMISSIONS }
+                )
+            }
+        } else {
+            item { SettingsBackRow(title = section.title, onBack = { section = SettingsSection.ROOT }) }
+        }
+        if (section == SettingsSection.CHANNELS) {
+            item {
+                SectionHeader("AVISOS SOS")
+            }
+            item {
+                val callsBlocked = callPermissionRequired && !callPermissionGranted
+                SeguCard(
+                    title = "FUNCIONALIDAD SOS",
+                    status = when {
+                        !sosActionsEnabled -> "DESACTIVADO"
+                        callsBlocked -> "LLAMADAS SIN PERMISO"
+                        else -> "ACTIVADO"
+                    },
+                    tone = when {
+                        callsBlocked -> Tone.BAD
+                        sosActionsEnabled -> Tone.OK
+                        else -> Tone.OFF
+                    },
+                    trailing = {
+                        Switch(
+                            checked = sosActionsEnabled,
+                            enabled = !criticalSettingsLocked,
+                            onCheckedChange = onSosActionsEnabledChange,
+                            colors = activeSwitchColors()
+                        )
+                    }
+                ) {
+                    Text(
+                        if (sosActionsEnabled) {
+                            "Las llamadas y los mensajes configurados quedan habilitados para un SOS."
+                        } else {
+                            "No se realizaran llamadas ni mensajes a ningun contacto."
+                        } + " Desactivalo para probar los sensores sin avisar a nadie.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (callsBlocked) {
+                        Text(
+                            "Las llamadas no estan listas hasta conceder el permiso; los mensajes configurados no se bloquean.",
+                            color = Tone.BAD.text,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+        if (section == SettingsSection.PERMISSIONS) {
+            item {
+                SectionHeader("PERMISOS DEL SISTEMA")
+            }
+            item {
+                SeguCard(
+                    title = "ALARMAS EXACTAS",
+                    status = if (exactAlarmReady) "AUTORIZADAS" else "NO AUTORIZADAS",
+                    tone = if (exactAlarmReady) Tone.OK else Tone.BAD,
+                    description = "Android puede retrasar el final del SOS y el paso al siguiente contacto si no las permite. " +
+                        "Autorizalas para que el aviso sea puntual."
+                ) {
+                    if (!exactAlarmReady) {
+                        OutlinedButton(
+                            onClick = { AutomationPermissions.openExactAlarmSettings(context) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("AUTORIZAR ALARMAS EXACTAS")
                         }
-                        whatsappLifecycle.lifecycle.addObserver(observer)
-                        onDispose { whatsappLifecycle.lifecycle.removeObserver(observer) }
                     }
-                    val accessibilityReady = remember(whatsappRefresh) {
-                        AutomationPermissions.isAccessibilityEnabled(context)
+                }
+            }
+            item {
+                SectionHeader("ACCESIBILIDAD")
+            }
+            item {
+                SeguCard(
+                    title = "ENVIO AUTOMATICO DE WHATSAPP",
+                    status = if (accessibilityReady && overlayReady) "LISTO" else "INCOMPLETO",
+                    tone = if (accessibilityReady && overlayReady) Tone.OK else Tone.WARN,
+                    description = if (whatsappAutoSend) {
+                        "Estos dos permisos son los que permiten pulsar Enviar y abrir WhatsApp desde segundo plano."
+                    } else {
+                        "Solo hacen falta si activas ENVIO AUTO MENSAJES; sin ellos el envio es manual."
                     }
-                    val overlayReady = remember(whatsappRefresh) {
-                        AutomationPermissions.canDrawOverlays(context)
-                    }
+                ) {
                     PermissionRow(
                         label = "Accesibilidad (pulsar Enviar)",
                         status = if (accessibilityReady) "ACTIVADA" else "DESACTIVADA",
@@ -1526,346 +1566,549 @@ private fun EmergencySettingsScreen(
                         actionLabel = if (overlayReady) null else "PERMITIR",
                         onAction = { AutomationPermissions.openOverlaySettings(context) }
                     )
-                    if (!accessibilityReady || !overlayReady) {
+                }
+            }
+            item {
+                SectionHeader("PERMISOS DE ANDROID")
+            }
+            item {
+                SeguCard(
+                    title = "ESTADO DE LOS PERMISOS",
+                    status = if (notificationsReady && locationReady) "OK" else "REVISAR",
+                    tone = if (notificationsReady && locationReady) Tone.OK else Tone.WARN,
+                    description = "Se conceden en los dialogos de Android. Si alguno esta denegado, la app " +
+                        "sigue detectando golpes pero pierde esa parte del aviso."
+                ) {
+                    PermissionRow(
+                        label = "Notificaciones",
+                        status = if (notificationsReady) "CONCEDIDO" else "DENEGADO",
+                        tone = if (notificationsReady) Tone.OK else Tone.BAD
+                    )
+                    PermissionRow(
+                        label = "Ubicacion precisa",
+                        status = if (locationReady) "CONCEDIDA" else "DENEGADA",
+                        tone = if (locationReady) Tone.OK else Tone.WARN
+                    )
+                    PermissionRow(
+                        label = "Microfono",
+                        status = if (audioPermissionGranted) "CONCEDIDO" else "DENEGADO",
+                        tone = if (audioPermissionGranted) Tone.OK else Tone.OFF
+                    )
+                    PermissionRow(
+                        label = "Llamadas",
+                        status = when {
+                            callPermissionGranted -> "CONCEDIDO"
+                            callPermissionRequired -> "DENEGADO"
+                            else -> "NO HACE FALTA"
+                        },
+                        tone = when {
+                            callPermissionGranted -> Tone.OK
+                            callPermissionRequired -> Tone.BAD
+                            else -> Tone.OFF
+                        }
+                    )
+                    PermissionRow(
+                        label = "SMS",
+                        status = when {
+                            smsPermissionGranted -> "CONCEDIDO"
+                            smsAuto -> "DENEGADO"
+                            else -> "NO HACE FALTA"
+                        },
+                        tone = when {
+                            smsPermissionGranted -> Tone.OK
+                            smsAuto -> Tone.BAD
+                            else -> Tone.OFF
+                        }
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        Uri.parse("package:${context.packageName}")
+                                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("ABRIR AJUSTES DE LA APP")
+                    }
+                }
+            }
+        }
+        if (section == SettingsSection.SENSORS) {
+            item {
+                SectionHeader("SENSORES")
+            }
+            item {
+                SeguCard(
+                    title = "AJUSTE EN LA PANTALLA PRINCIPAL",
+                    description = "La sensibilidad a los golpes, la ventana ADAPT. y PRUEBA DE GOLPE estan en la " +
+                        "tarjeta del monitor, en la pantalla principal. Aqui se configura como se confirma un golpe " +
+                        "y se diagnostica el sensor."
+                )
+            }
+            item {
+                SeguCard(
+                    title = "CAIDA / ORIENTACION",
+                    status = if (fallOrientationGate) "MODO MOTO" else "GOLPE DIRECTO",
+                    tone = if (fallOrientationGate) Tone.OK else Tone.OFF,
+                    trailing = {
+                        Switch(
+                            checked = fallOrientationGate,
+                            enabled = !criticalSettingsLocked,
+                            onCheckedChange = onFallOrientationGateChange,
+                            colors = activeSwitchColors()
+                        )
+                    }
+                ) {
+                    Text(
+                        if (fallOrientationGate) {
+                            "Un golpe fuerte abre un candidato de 15 s: si el movil queda inclinado 55 grados o mas durante 4 s, " +
+                                "salta el SOS. Un bache no tumba la moto y no avisa; la sacudida y los botones siguen siendo inmediatos."
+                        } else {
+                            "Todo golpe al nivel elegido inicia la cuenta atras directamente, como agitar el movil, " +
+                                "sin confirmar inclinacion."
+                        } + " Se aplica al iniciar el monitor.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            item {
+                val voiceBlocked = voiceKeywordsGate && !audioPermissionGranted
+                SeguCard(
+                    title = "VOZ AYUDA / SOCORRO",
+                    status = when {
+                        voiceBlocked -> "SIN MICROFONO"
+                        voiceKeywordsGate -> "ACTIVADA"
+                        else -> "DESACTIVADA"
+                    },
+                    tone = when {
+                        voiceBlocked -> Tone.BAD
+                        voiceKeywordsGate -> Tone.OK
+                        else -> Tone.OFF
+                    },
+                    trailing = {
+                        Switch(
+                            checked = voiceKeywordsGate,
+                            enabled = !criticalSettingsLocked,
+                            onCheckedChange = onVoiceKeywordsGateChange,
+                            colors = activeSwitchColors()
+                        )
+                    }
+                ) {
+                    Text(
+                        if (voiceKeywordsGate) {
+                            "Con el monitor activo y el microfono autorizado, decir AYUDA o SOCORRO inicia la cuenta atras " +
+                                "aunque la pantalla este apagada. No se graba ni se guarda sonido."
+                        } else {
+                            "No se escuchan palabras de emergencia; el microfono queda libre."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        if (section == SettingsSection.CHANNELS) {
+            item {
+                SectionHeader("ENVIO AUTOMATICO")
+            }
+            item {
+                SeguCard(
+                    title = "ENVIO AUTO MENSAJES",
+                    status = if (whatsappAutoSend) "ACTIVADO" else "DESACTIVADO",
+                    tone = if (whatsappAutoSend) Tone.OK else Tone.OFF,
+                    trailing = {
+                        Switch(
+                            checked = whatsappAutoSend,
+                            enabled = !criticalSettingsLocked,
+                            onCheckedChange = onWhatsappAutoSendChange,
+                            colors = activeSwitchColors()
+                        )
+                    },
+                    description = if (whatsappAutoSend) {
+                        "Al terminar el SOS, WhatsApp y los enlaces t.me se abren y se pulsa Enviar sin confirmacion."
+                    } else {
+                        "WhatsApp y Telegram se abren con el mensaje listo; el envio es manual."
+                    }
+                ) {
+                    if (whatsappAutoSend) {
+                        val whatsappLifecycle = LocalLifecycleOwner.current
+                        var whatsappRefresh by remember { mutableStateOf(0) }
+                        DisposableEffect(whatsappLifecycle) {
+                            val observer = LifecycleEventObserver { _, event ->
+                                if (event == Lifecycle.Event.ON_RESUME) whatsappRefresh++
+                            }
+                            whatsappLifecycle.lifecycle.addObserver(observer)
+                            onDispose { whatsappLifecycle.lifecycle.removeObserver(observer) }
+                        }
+                        val accessibilityReady = remember(whatsappRefresh) {
+                            AutomationPermissions.isAccessibilityEnabled(context)
+                        }
+                        val overlayReady = remember(whatsappRefresh) {
+                            AutomationPermissions.canDrawOverlays(context)
+                        }
+                        PermissionRow(
+                            label = "Accesibilidad (pulsar Enviar)",
+                            status = if (accessibilityReady) "ACTIVADA" else "DESACTIVADA",
+                            tone = if (accessibilityReady) Tone.OK else Tone.BAD,
+                            actionLabel = if (accessibilityReady) null else "ABRIR",
+                            onAction = { AutomationPermissions.openAccessibilitySettings(context) }
+                        )
+                        PermissionRow(
+                            label = "Abrir sobre otras apps",
+                            status = if (overlayReady) "PERMITIDO" else "DENEGADO",
+                            tone = if (overlayReady) Tone.OK else Tone.BAD,
+                            actionLabel = if (overlayReady) null else "PERMITIR",
+                            onAction = { AutomationPermissions.openOverlaySettings(context) }
+                        )
+                        if (!accessibilityReady || !overlayReady) {
+                            Text(
+                                "Sin ambos permisos no puede ser automatico; se ofrecera WhatsApp manual como respaldo.",
+                                color = Tone.BAD.text,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+            }
+            item {
+                val telegramRepository = remember { ContactsRepository(context) }
+                var telegramToken by remember { mutableStateOf(telegramRepository.telegramBotToken()) }
+                var telegramFeedback by remember { mutableStateOf("") }
+                var telegramTesting by remember { mutableStateOf(false) }
+                val telegramContacts = remember(automationRefresh) {
+                    telegramRepository.load().filter { it.telegramEnabled }
+                }
+                val telegramInstalled = remember(automationRefresh) { TelegramSos.isInstalled(context) }
+                val botConfigured = TelegramSos.normalizeBotToken(telegramToken) != null
+                val botTargets = telegramContacts.filter { it.telegramReadyForBot }
+                val linkTargets = telegramContacts.filter {
+                    !it.telegramReadyForBot && it.telegramUsername.isNotEmpty()
+                }
+                val telegramScope = androidx.compose.runtime.rememberCoroutineScope()
+                SeguCard(
+                    title = "TELEGRAM SOS",
+                    status = when {
+                        botConfigured -> "BOT LISTO"
+                        telegramInstalled -> "SIN BOT"
+                        else -> "SIN TELEGRAM"
+                    },
+                    tone = when {
+                        botConfigured -> Tone.OK
+                        telegramInstalled -> Tone.WARN
+                        else -> Tone.BAD
+                    },
+                    description = when {
+                        botConfigured -> "El aviso sale solo, sin abrir Telegram ni desbloquear el movil."
+                        telegramInstalled -> "Se abrira Telegram y se pulsara Enviar; necesita ENVIO AUTO MENSAJES."
+                        else -> "Ni bot ni app de Telegram: ahora mismo no se enviaria nada."
+                    }
+                ) {
+                    Text(
+                        "Bot conectado: ${botTargets.size} de ${telegramContacts.size} contactos con chat id. " +
+                            "Enlace t.me: ${linkTargets.size} contacto(s) por accesibilidad.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = telegramToken,
+                        onValueChange = { telegramToken = it.trim() },
+                        label = { Text("Token del bot (@BotFather)") },
+                        singleLine = true,
+                        enabled = !criticalSettingsLocked,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            enabled = !criticalSettingsLocked,
+                            modifier = Modifier.weight(1f),
+                            contentPadding = CompactButtonPadding,
+                            onClick = {
+                                val normalized = TelegramSos.normalizeBotToken(telegramToken)
+                                if (normalized == null) {
+                                    telegramFeedback = "Token no valido: debe ser 123456789:AAAA..."
+                                } else {
+                                    telegramRepository.setTelegramBotToken(normalized)
+                                    telegramToken = normalized
+                                    telegramFeedback = "Token guardado"
+                                }
+                            }
+                        ) { TightButtonLabel("GUARDAR") }
+                        OutlinedButton(
+                            enabled = !criticalSettingsLocked && !telegramTesting && botTargets.isNotEmpty(),
+                            modifier = Modifier.weight(1f),
+                            contentPadding = CompactButtonPadding,
+                            onClick = {
+                                val target = botTargets.firstOrNull() ?: return@OutlinedButton
+                                val token = TelegramSos.normalizeBotToken(telegramToken)
+                                if (token == null) {
+                                    telegramFeedback = "Guarda primero un token valido"
+                                    return@OutlinedButton
+                                }
+                                telegramTesting = true
+                                telegramFeedback = "Enviando prueba..."
+                                telegramScope.launch {
+                                    val result = withContext(Dispatchers.IO) {
+                                        TelegramSos.sendViaBot(
+                                            token,
+                                            target.telegramChatId,
+                                            "Segu-Luky: mensaje de prueba para ${target.name}"
+                                        )
+                                    }
+                                    telegramTesting = false
+                                    telegramFeedback = if (result.ok) {
+                                        "Prueba enviada a ${target.name}"
+                                    } else {
+                                        "Fallo: ${result.detail}"
+                                    }
+                                }
+                            }
+                        ) { TightButtonLabel("ENVIAR PRUEBA") }
+                    }
+                    if (telegramToken.isNotBlank()) {
+                        TextButton(
+                            enabled = !criticalSettingsLocked,
+                            onClick = {
+                                telegramRepository.setTelegramBotToken("")
+                                telegramToken = ""
+                                telegramFeedback = "Token borrado"
+                            }
+                        ) { Text("BORRAR TOKEN") }
+                    }
+                    if (telegramFeedback.isNotEmpty()) {
+                        Text(telegramFeedback, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    }
+                    Text(
+                        "1) Crea el bot en @BotFather y copia el token. " +
+                            "2) Cada contacto debe escribir /start al bot. " +
+                            "3) Pega su chat id en el contacto (o el enlace t.me como respaldo). " +
+                            "4) Pulsa ENVIAR PRUEBA para comprobar la entrega. " +
+                            "El detalle esta en INSTRUCCIONES DE USO, pasos 7 y 8.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (telegramContacts.isNotEmpty() && botTargets.isEmpty()) {
                         Text(
-                            "Sin ambos permisos no puede ser automatico; se ofrecera WhatsApp manual como respaldo.",
+                            "Ningun contacto de Telegram tiene chat id: ahora mismo solo funcionaria el enlace t.me.",
                             color = Tone.BAD.text,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
                 }
             }
-        }
-        item {
-            val telegramRepository = remember { ContactsRepository(context) }
-            var telegramToken by remember { mutableStateOf(telegramRepository.telegramBotToken()) }
-            var telegramFeedback by remember { mutableStateOf("") }
-            var telegramTesting by remember { mutableStateOf(false) }
-            val telegramContacts = remember(automationRefresh) {
-                telegramRepository.load().filter { it.telegramEnabled }
-            }
-            val telegramInstalled = remember(automationRefresh) { TelegramSos.isInstalled(context) }
-            val botConfigured = TelegramSos.normalizeBotToken(telegramToken) != null
-            val botTargets = telegramContacts.filter { it.telegramReadyForBot }
-            val linkTargets = telegramContacts.filter {
-                !it.telegramReadyForBot && it.telegramUsername.isNotEmpty()
-            }
-            val telegramScope = androidx.compose.runtime.rememberCoroutineScope()
-            SeguCard(
-                title = "TELEGRAM SOS",
-                status = when {
-                    botConfigured -> "BOT LISTO"
-                    telegramInstalled -> "SIN BOT"
-                    else -> "SIN TELEGRAM"
-                },
-                tone = when {
-                    botConfigured -> Tone.OK
-                    telegramInstalled -> Tone.WARN
-                    else -> Tone.BAD
-                },
-                description = when {
-                    botConfigured -> "El aviso sale solo, sin abrir Telegram ni desbloquear el movil."
-                    telegramInstalled -> "Se abrira Telegram y se pulsara Enviar; necesita ENVIO AUTO MENSAJES."
-                    else -> "Ni bot ni app de Telegram: ahora mismo no se enviaria nada."
-                }
-            ) {
-                Text(
-                    "Bot conectado: ${botTargets.size} de ${telegramContacts.size} contactos con chat id. " +
-                        "Enlace t.me: ${linkTargets.size} contacto(s) por accesibilidad.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedTextField(
-                    value = telegramToken,
-                    onValueChange = { telegramToken = it.trim() },
-                    label = { Text("Token del bot (@BotFather)") },
-                    singleLine = true,
-                    enabled = !criticalSettingsLocked,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        enabled = !criticalSettingsLocked,
-                        modifier = Modifier.weight(1f),
-                        contentPadding = CompactButtonPadding,
-                        onClick = {
-                            val normalized = TelegramSos.normalizeBotToken(telegramToken)
-                            if (normalized == null) {
-                                telegramFeedback = "Token no valido: debe ser 123456789:AAAA..."
-                            } else {
-                                telegramRepository.setTelegramBotToken(normalized)
-                                telegramToken = normalized
-                                telegramFeedback = "Token guardado"
-                            }
-                        }
-                    ) { TightButtonLabel("GUARDAR") }
-                    OutlinedButton(
-                        enabled = !criticalSettingsLocked && !telegramTesting && botTargets.isNotEmpty(),
-                        modifier = Modifier.weight(1f),
-                        contentPadding = CompactButtonPadding,
-                        onClick = {
-                            val target = botTargets.firstOrNull() ?: return@OutlinedButton
-                            val token = TelegramSos.normalizeBotToken(telegramToken)
-                            if (token == null) {
-                                telegramFeedback = "Guarda primero un token valido"
-                                return@OutlinedButton
-                            }
-                            telegramTesting = true
-                            telegramFeedback = "Enviando prueba..."
-                            telegramScope.launch {
-                                val result = withContext(Dispatchers.IO) {
-                                    TelegramSos.sendViaBot(
-                                        token,
-                                        target.telegramChatId,
-                                        "Segu-Luky: mensaje de prueba para ${target.name}"
-                                    )
-                                }
-                                telegramTesting = false
-                                telegramFeedback = if (result.ok) {
-                                    "Prueba enviada a ${target.name}"
-                                } else {
-                                    "Fallo: ${result.detail}"
+            item {
+                SeguCard(
+                    title = "SMS SOS AUTOMATICO",
+                    status = if (smsAuto) "ACTIVADO" else "DESACTIVADO",
+                    tone = if (smsAuto) Tone.OK else Tone.OFF,
+                    trailing = {
+                        Switch(
+                            checked = smsAuto,
+                            enabled = !criticalSettingsLocked,
+                            colors = activeSwitchColors(),
+                            onCheckedChange = { enabled ->
+                                if (!SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
+                                    if (enabled && !hasSendSmsPermission(context)) {
+                                        smsPermissionLauncher.launch(Manifest.permission.SEND_SMS)
+                                    } else {
+                                        smsAuto = enabled
+                                        SafetyMonitorService.saveSmsAuto(context, enabled)
+                                    }
                                 }
                             }
-                        }
-                    ) { TightButtonLabel("ENVIAR PRUEBA") }
-                }
-                if (telegramToken.isNotBlank()) {
-                    TextButton(
-                        enabled = !criticalSettingsLocked,
-                        onClick = {
-                            telegramRepository.setTelegramBotToken("")
-                            telegramToken = ""
-                            telegramFeedback = "Token borrado"
-                        }
-                    ) { Text("BORRAR TOKEN") }
-                }
-                if (telegramFeedback.isNotEmpty()) {
-                    Text(telegramFeedback, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-                }
-                Text(
-                    "1) Crea el bot en @BotFather y copia el token. " +
-                        "2) Cada contacto debe escribir /start al bot. " +
-                        "3) Pega su chat id en el contacto (o el enlace t.me como respaldo). " +
-                        "4) Pulsa ENVIAR PRUEBA para comprobar la entrega. " +
-                        "El detalle esta en INSTRUCCIONES DE USO, pasos 7 y 8.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    description = "Envia por SMS el mensaje con el enlace de Maps a TODOS los contactos, sin confirmacion y " +
+                        "con la pantalla apagada o bloqueada. Puede tener coste de operador."
                 )
-                if (telegramContacts.isNotEmpty() && botTargets.isEmpty()) {
-                    Text(
-                        "Ningun contacto de Telegram tiene chat id: ahora mismo solo funcionaria el enlace t.me.",
-                        color = Tone.BAD.text,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
             }
         }
-        item {
-            SeguCard(
-                title = "SMS SOS AUTOMATICO",
-                status = if (smsAuto) "ACTIVADO" else "DESACTIVADO",
-                tone = if (smsAuto) Tone.OK else Tone.OFF,
-                trailing = {
-                    Switch(
-                        checked = smsAuto,
-                        enabled = !criticalSettingsLocked,
-                        colors = activeSwitchColors(),
-                        onCheckedChange = { enabled ->
-                            if (!SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
-                                if (enabled && !hasSendSmsPermission(context)) {
-                                    smsPermissionLauncher.launch(Manifest.permission.SEND_SMS)
-                                } else {
-                                    smsAuto = enabled
-                                    SafetyMonitorService.saveSmsAuto(context, enabled)
-                                }
-                            }
-                        }
-                    )
-                },
-                description = "Envia por SMS el mensaje con el enlace de Maps a TODOS los contactos, sin confirmacion y " +
-                    "con la pantalla apagada o bloqueada. Puede tener coste de operador."
-            )
-        }
-        item {
-            SectionHeader("DIAGNOSTICO")
-        }
-        item {
-            val calibration by CalibrationStateStore.state.collectAsStateWithLifecycle()
-            var calibrationActivity by remember { mutableStateOf(CalibrationRepository.loadLastActivity(context)) }
-            LaunchedEffect(calibration.recording) {
-                CalibrationStateStore.update {
-                    it.copy(files = CalibrationRepository.listFiles(context))
-                }
+        if (section == SettingsSection.SENSORS) {
+            item {
+                SectionHeader("DIAGNOSTICO")
             }
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            item {
+                val calibration by CalibrationStateStore.state.collectAsStateWithLifecycle()
+                var calibrationActivity by remember { mutableStateOf(CalibrationRepository.loadLastActivity(context)) }
+                LaunchedEffect(calibration.recording) {
+                    CalibrationStateStore.update {
+                        it.copy(files = CalibrationRepository.listFiles(context))
+                    }
+                }
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
-                    Text("GRABACION DE SENSORES (OPCIONAL)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(
-                        "La app ya se ajusta sola con el uso: la sensibilidad se afina con el ruido y el " +
-                            "traqueteo de este movil, y con PRUEBA DE GOLPE (arriba) compruebas que se entera de " +
-                            "un golpe en 15 s. Grabar solo sirve para diagnostico: adjuntar datos reales a una " +
-                            "incidencia o comparar dos moviles.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        "Dispositivo: ${CalibrationRepository.deviceModel()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    val deviceProfile = remember {
-                        SafetyMonitorService.loadDeviceProfile(context)
-                    }
-                    Text(
-                        "Aprendizaje: ${deviceProfile.usageMs / 60_000L} min · ruido " +
-                            "${String.format(Locale.US, "%.2f", deviceProfile.noiseG)} g · marcha p99 " +
-                            "${String.format(Locale.US, "%.2f", deviceProfile.p99G)} g · " +
-                            "${String.format(Locale.US, "%.0f", deviceProfile.deliveredHz)} Hz",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    TextButton(
-                        onClick = {
-                            SafetyMonitorService.resetDeviceProfile(context)
-                            SafetyStateStore.log("Aprendizaje del movil reiniciado")
-                        }
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("REINICIAR APRENDIZAJE", style = MaterialTheme.typography.labelSmall)
-                    }
-                    CalibrationActivity.entries.chunked(3).forEach { rowItems ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            rowItems.forEach { act ->
-                                val selected = calibrationActivity == act
-                                Button(
-                                    onClick = {
-                                        calibrationActivity = act
-                                        CalibrationRepository.saveLastActivity(context, act)
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    enabled = !calibration.recording,
-                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                        containerColor = if (selected) StrongGreen else Color(0xFFE0E0E0),
-                                        contentColor = if (selected) Color.White else StatusTextColor
-                                    ),
-                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 6.dp)
-                                ) {
-                                    Text(
-                                        act.label,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 2,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            }
-                            repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
-                        }
-                    }
-                    if (calibration.recording) {
-                        Button(
-                            onClick = { SensorCalibrationService.stop(context) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFC62828),
-                                contentColor = Color.White
-                            )
-                        ) {
-                            Text("DETENER REGISTRO", fontWeight = FontWeight.Bold)
-                        }
+                        Text("GRABACION DE SENSORES (OPCIONAL)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(
-                            "Grabando ${calibration.activity.label}: ${calibration.samples} muestras, " +
-                                "${calibration.elapsedMs / 1000}s\nArchivo: ${calibration.fileName}",
+                            "La app ya se ajusta sola con el uso: la sensibilidad se afina con el ruido y el " +
+                                "traqueteo de este movil, y con PRUEBA DE GOLPE (arriba) compruebas que se entera de " +
+                                "un golpe en 15 s. Grabar solo sirve para diagnostico: adjuntar datos reales a una " +
+                                "incidencia o comparar dos moviles.",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            "Dispositivo: ${CalibrationRepository.deviceModel()}",
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold
                         )
-                    } else {
-                        Button(
-                            onClick = { SensorCalibrationService.start(context, calibrationActivity) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("INICIAR REGISTRO", fontWeight = FontWeight.Bold)
+                        val deviceProfile = remember {
+                            SafetyMonitorService.loadDeviceProfile(context)
                         }
-                    }
-                    Text("ARCHIVOS DE CALIBRACION", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
+                        Text(
+                            "Aprendizaje: ${deviceProfile.usageMs / 60_000L} min · ruido " +
+                                "${String.format(Locale.US, "%.2f", deviceProfile.noiseG)} g · marcha p99 " +
+                                "${String.format(Locale.US, "%.2f", deviceProfile.p99G)} g · " +
+                                "${String.format(Locale.US, "%.0f", deviceProfile.deliveredHz)} Hz",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        TextButton(
                             onClick = {
-                                calibrationScope.launch {
-                                    val zip = withContext(Dispatchers.IO) {
-                                        CalibrationRepository.exportAll(context)
-                                    }
-                                    if (zip == null) {
-                                        SafetyStateStore.log("Calibracion: no hay archivos para exportar")
-                                    } else {
-                                        val path = withContext(Dispatchers.IO) {
-                                            CalibrationRepository.exportToDownloads(context, zip)
-                                        }
-                                        if (path != null) {
-                                            SafetyStateStore.log("Calibracion exportada: $path")
-                                            android.widget.Toast.makeText(
-                                                context, "Exportado en $path", android.widget.Toast.LENGTH_LONG
-                                            ).show()
-                                        } else {
-                                            CalibrationRepository.shareExport(context, zip, viaWhatsApp = false)
-                                        }
+                                SafetyMonitorService.resetDeviceProfile(context)
+                                SafetyStateStore.log("Aprendizaje del movil reiniciado")
+                            }
+                        ) {
+                            Text("REINICIAR APRENDIZAJE", style = MaterialTheme.typography.labelSmall)
+                        }
+                        CalibrationActivity.entries.chunked(3).forEach { rowItems ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                rowItems.forEach { act ->
+                                    val selected = calibrationActivity == act
+                                    Button(
+                                        onClick = {
+                                            calibrationActivity = act
+                                            CalibrationRepository.saveLastActivity(context, act)
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        enabled = !calibration.recording,
+                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                            containerColor = if (selected) StrongGreen else Color(0xFFE0E0E0),
+                                            contentColor = if (selected) Color.White else StatusTextColor
+                                        ),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            act.label,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            maxLines = 2,
+                                            textAlign = TextAlign.Center
+                                        )
                                     }
                                 }
-                            },
-                            modifier = Modifier.weight(1f),
-                            contentPadding = CompactButtonPadding
-                        ) {
-                            TightButtonLabel("EXPORTAR")
+                                repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                            }
                         }
-                        Button(
-                            onClick = {
-                                calibrationScope.launch {
-                                    val zip = withContext(Dispatchers.IO) {
-                                        CalibrationRepository.exportAll(context)
-                                    }
-                                    if (zip == null) {
-                                        SafetyStateStore.log("Calibracion: no hay archivos para enviar")
-                                    } else {
-                                        withContext(Dispatchers.IO) {
-                                            CalibrationRepository.exportToDownloads(context, zip)
-                                        }
-                                        CalibrationRepository.shareExport(context, zip, viaWhatsApp = true)
-                                    }
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            contentPadding = CompactButtonPadding,
-                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF25D366),
-                                contentColor = Color.White
+                        if (calibration.recording) {
+                            Button(
+                                onClick = { SensorCalibrationService.stop(context) },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFC62828),
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Text("DETENER REGISTRO", fontWeight = FontWeight.Bold)
+                            }
+                            Text(
+                                "Grabando ${calibration.activity.label}: ${calibration.samples} muestras, " +
+                                    "${calibration.elapsedMs / 1000}s\nArchivo: ${calibration.fileName}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold
                             )
-                        ) {
-                            TightButtonLabel("WHATSAPP")
+                        } else {
+                            Button(
+                                onClick = { SensorCalibrationService.start(context, calibrationActivity) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("INICIAR REGISTRO", fontWeight = FontWeight.Bold)
+                            }
                         }
-                    }
-                    if (calibration.files.isEmpty()) {
-                        Text("Sin archivos todavia.", style = MaterialTheme.typography.bodySmall)
-                    } else {
-                        calibration.files.forEach { f ->
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(f.name, style = MaterialTheme.typography.bodySmall, maxLines = 2)
-                                    Text("${f.sizeBytes / 1024} KB", style = MaterialTheme.typography.labelSmall)
-                                }
-                                TextButton(
-                                    onClick = {
-                                        CalibrationRepository.delete(context, f.name)
-                                        CalibrationStateStore.update {
-                                            it.copy(files = CalibrationRepository.listFiles(context))
+                        Text("ARCHIVOS DE CALIBRACION", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = {
+                                    calibrationScope.launch {
+                                        val zip = withContext(Dispatchers.IO) {
+                                            CalibrationRepository.exportAll(context)
+                                        }
+                                        if (zip == null) {
+                                            SafetyStateStore.log("Calibracion: no hay archivos para exportar")
+                                        } else {
+                                            val path = withContext(Dispatchers.IO) {
+                                                CalibrationRepository.exportToDownloads(context, zip)
+                                            }
+                                            if (path != null) {
+                                                SafetyStateStore.log("Calibracion exportada: $path")
+                                                android.widget.Toast.makeText(
+                                                    context, "Exportado en $path", android.widget.Toast.LENGTH_LONG
+                                                ).show()
+                                            } else {
+                                                CalibrationRepository.shareExport(context, zip, viaWhatsApp = false)
+                                            }
                                         }
                                     }
-                                ) {
-                                    Text("BORRAR")
+                                },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = CompactButtonPadding
+                            ) {
+                                TightButtonLabel("EXPORTAR")
+                            }
+                            Button(
+                                onClick = {
+                                    calibrationScope.launch {
+                                        val zip = withContext(Dispatchers.IO) {
+                                            CalibrationRepository.exportAll(context)
+                                        }
+                                        if (zip == null) {
+                                            SafetyStateStore.log("Calibracion: no hay archivos para enviar")
+                                        } else {
+                                            withContext(Dispatchers.IO) {
+                                                CalibrationRepository.exportToDownloads(context, zip)
+                                            }
+                                            CalibrationRepository.shareExport(context, zip, viaWhatsApp = true)
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                contentPadding = CompactButtonPadding,
+                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF25D366),
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                TightButtonLabel("WHATSAPP")
+                            }
+                        }
+                        if (calibration.files.isEmpty()) {
+                            Text("Sin archivos todavia.", style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            calibration.files.forEach { f ->
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(f.name, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                                        Text("${f.sizeBytes / 1024} KB", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                    TextButton(
+                                        onClick = {
+                                            CalibrationRepository.delete(context, f.name)
+                                            CalibrationStateStore.update {
+                                                it.copy(files = CalibrationRepository.listFiles(context))
+                                            }
+                                        }
+                                    ) {
+                                        Text("BORRAR")
+                                    }
                                 }
                             }
                         }
@@ -1873,105 +2116,179 @@ private fun EmergencySettingsScreen(
                 }
             }
         }
-        item {
-            IntercomCard(
-                installation = intercomInstallation,
-                noticeFeedback = intercomNoticeFeedback,
-                onRefreshIntercom = onRefreshIntercom,
-                onOpenIntercom = onOpenIntercom,
-                onTestIntercomNotice = onTestIntercomNotice
-            )
+        if (section == SettingsSection.CHANNELS) {
+            item {
+                IntercomCard(
+                    installation = intercomInstallation,
+                    noticeFeedback = intercomNoticeFeedback,
+                    onRefreshIntercom = onRefreshIntercom,
+                    onOpenIntercom = onOpenIntercom,
+                    onTestIntercomNotice = onTestIntercomNotice
+                )
+            }
         }
-        item {
-            SectionHeader("CONTACTOS")
+        if (section == SettingsSection.CONTACTS) {
+            item {
+                SectionHeader("CONTACTOS")
+            }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "CONTACTOS SOS",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatusPill(
+                        if (contacts.isEmpty()) "NINGUNO" else "${contacts.size}",
+                        if (contacts.isEmpty()) Tone.BAD else Tone.OK
+                    )
+                }
+                Text(
+                    "La lista marca el orden de llamada: 1o, luego 2o si no responde en 1 minuto, luego 3o. " +
+                        "El mensaje de WhatsApp se enviara a todos los contactos que lo tengan activado.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            if (editorVisible) {
+                item {
+                    EmergencyContactEditor(
+                        contact = editingContact,
+                        editable = !criticalSettingsLocked,
+                        onSave = { updated ->
+                            val saved = if (SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
+                                false
+                            } else if (addingContact) {
+                                repository.add(updated)
+                            } else {
+                                editingContact?.let { repository.update(it, updated) } ?: false
+                            }
+                            if (saved) onContactsChanged(repository.load())
+                            saved
+                        },
+                        onDone = {
+                            addingContact = false
+                            editingContact = null
+                        }
+                    )
+                }
+            } else {
+                item {
+                    Button(
+                        onClick = { addingContact = true },
+                        enabled = !criticalSettingsLocked,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("ANADIR CONTACTO")
+                    }
+                }
+                if (contacts.isEmpty()) {
+                    item {
+                        SeguCard(
+                            title = "Sin contactos",
+                            status = "OBLIGATORIO",
+                            tone = Tone.BAD,
+                            description = "Anade al menos un contacto antes de usar el SOS: sin contactos no hay aviso."
+                        )
+                    }
+                }
+                items(contacts, key = { "${it.name}|${it.phone}" }) { contact ->
+                    EmergencyContactCard(
+                        contact = contact,
+                        editable = !criticalSettingsLocked,
+                        onEdit = { editingContact = contact },
+                        onRemove = {
+                            if (!SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
+                                repository.remove(contact)
+                                onContactsChanged(repository.load())
+                            }
+                        }
+                    )
+                }
+            }
+            item {
+                SeguCard(
+                    title = "COMO SE ENVIA LA UBICACION",
+                    description = "El marcador {MAPA} se sustituye por un enlace Google Maps con la ultima posicion GPS " +
+                        "precisa y reciente. FUNCIONALIDAD SOS debe estar activada: desactivala para probar los sensores " +
+                        "reales sin avisar a nadie."
+                )
+            }
         }
-        item {
+        item { Spacer(Modifier.height(24.dp)) }
+    }
+}
+
+/** Fila del indice de Configuracion: titulo, estado y una linea de resumen. */
+@androidx.compose.runtime.Composable
+private fun SettingsEntryRow(
+    title: String,
+    status: String,
+    tone: Tone,
+    description: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    "CONTACTOS SOS",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f)
+                    title,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
-                StatusPill(
-                    if (contacts.isEmpty()) "NINGUNO" else "${contacts.size}",
-                    if (contacts.isEmpty()) Tone.BAD else Tone.OK
+                StatusPill(status, tone)
+                Text(
+                    "\u203A",
+                    fontSize = 20.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Text(
-                "La lista marca el orden de llamada: 1o, luego 2o si no responde en 1 minuto, luego 3o. " +
-                    "El mensaje de WhatsApp se enviara a todos los contactos que lo tengan activado.",
-                style = MaterialTheme.typography.bodyMedium
+                description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        if (editorVisible) {
-            item {
-                EmergencyContactEditor(
-                    contact = editingContact,
-                    editable = !criticalSettingsLocked,
-                    onSave = { updated ->
-                        val saved = if (SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
-                            false
-                        } else if (addingContact) {
-                            repository.add(updated)
-                        } else {
-                            editingContact?.let { repository.update(it, updated) } ?: false
-                        }
-                        if (saved) onContactsChanged(repository.load())
-                        saved
-                    },
-                    onDone = {
-                        addingContact = false
-                        editingContact = null
-                    }
-                )
-            }
-        } else {
-            item {
-                Button(
-                    onClick = { addingContact = true },
-                    enabled = !criticalSettingsLocked,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("ANADIR CONTACTO")
-                }
-            }
-            if (contacts.isEmpty()) {
-                item {
-                    SeguCard(
-                        title = "Sin contactos",
-                        status = "OBLIGATORIO",
-                        tone = Tone.BAD,
-                        description = "Anade al menos un contacto antes de usar el SOS: sin contactos no hay aviso."
-                    )
-                }
-            }
-            items(contacts, key = { "${it.name}|${it.phone}" }) { contact ->
-                EmergencyContactCard(
-                    contact = contact,
-                    editable = !criticalSettingsLocked,
-                    onEdit = { editingContact = contact },
-                    onRemove = {
-                        if (!SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
-                            repository.remove(contact)
-                            onContactsChanged(repository.load())
-                        }
-                    }
-                )
-            }
-        }
-        item {
-            SeguCard(
-                title = "COMO SE ENVIA LA UBICACION",
-                description = "El marcador {MAPA} se sustituye por un enlace Google Maps con la ultima posicion GPS " +
-                    "precisa y reciente. FUNCIONALIDAD SOS debe estar activada: desactivala para probar los sensores " +
-                    "reales sin avisar a nadie."
+    }
+}
+
+/** Cabecera de un submenu: volver al indice y el titulo del bloque. */
+@androidx.compose.runtime.Composable
+private fun SettingsBackRow(title: String, onBack: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        TextButton(
+            onClick = onBack,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                horizontal = 4.dp,
+                vertical = 2.dp
+            )
+        ) {
+            Text(
+                "\u2039 CONFIGURACION",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold
             )
         }
-        item { Spacer(Modifier.height(24.dp)) }
+        Text(
+            title,
+            modifier = Modifier.padding(start = 4.dp),
+            style = MaterialTheme.typography.titleLarge
+        )
     }
 }
 
