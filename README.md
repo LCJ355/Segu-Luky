@@ -112,6 +112,19 @@ that same APK attached, because **Buscar actualizacion** reads the GitHub API:
 gh release create V-1.64s "APK´s/Segu-Luky-1.64s.apk" --title "Segu-Luky V-1.64s" --notes "..."
 ```
 
+The published APK carries **no personal data**: contacts, phone numbers, the bot
+key and the position live only in the phone's `SharedPreferences` (the app
+declares `allowBackup="false"`). Before uploading, check the file itself:
+
+```text
+powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-1.64s.apk"
+```
+
+It fails if the package contains anything that is not code, resources or
+signatures, if it finds Spanish phone numbers, Telegram bot tokens, coordinate
+pairs or the names passed in `-Nombres`, or if the signature does not match
+`docs/SIGNING.md`.
+
 ## Safe device test
 
 1. Install the debug APK without uninstalling InterCOM-Luky.

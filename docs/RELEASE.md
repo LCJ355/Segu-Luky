@@ -19,18 +19,30 @@
 6. Verify the signature before publishing:
    `apksigner verify --print-certs app-release.apk` must show the certificate
    SHA-256 listed in [SIGNING.md](SIGNING.md).
-7. **Create the GitHub release, not just the tag**:
+7. Check that the APK carries no personal data:
+   ```text
+   powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-<versionName>.apk"
+   ```
+   The script fails if the package contains anything that is not code, resources
+   or signatures (a CSV, JSON, database or preferences file that slipped into
+   `assets/`), if it finds Spanish phone numbers, Telegram bot tokens or
+   coordinate pairs, if it finds the names passed in `-Nombres` (by default
+   `Pilar` and `Antonio`, the contacts used for the on-phone tests), or if the
+   signing certificate is not the published one. Contacts, phone numbers, the bot
+   key and the position exist only in the phone's `SharedPreferences` and the app
+   declares `allowBackup="false"`, so no user data can reach the published file.
+8. **Create the GitHub release, not just the tag**:
    `gh release create V-<versionName> "APK´s/Segu-Luky-<versionName>.apk" ...`.
    A tag alone is not enough: **Buscar actualizacion** only falls back to tags when there is
    *no release at all*, so with older releases published a tag-only version is invisible and the
    app reports "you are up to date" (this happened with 1.48s). Without `gh`, create it in the web
    UI and attach the APK — the tag must already be pushed.
-8. Commit and push the APK, the mapping, the tag and the document updates together, so
+9. Commit and push the APK, the mapping, the tag and the document updates together, so
    `APK´s/`, `README.md`, `CHANGELOG.md`, `Instrucciones/Estado.txt` and the bug report agree
    with the version installed on the phone.
-9. Check the result as the app does: `GET /repos/LCJ355/Segu-Luky/releases` must list the new
-   version first with the APK asset attached.
-10. Refresh `APK´s/SHA256SUMS.txt` (all published APKs plus the certificate fingerprint) and put
+10. Check the result as the app does: `GET /repos/LCJ355/Segu-Luky/releases` must list the new
+    version first with the APK asset attached.
+11. Refresh `APK´s/SHA256SUMS.txt` (all published APKs plus the certificate fingerprint) and put
     the new APK's SHA-256 in the release notes: it is how anyone verifies a download, together
     with `docs/SEGURIDAD.md`.
 
