@@ -118,15 +118,20 @@ class AccidentDetectorTest {
     }
 
     @Test
-    fun strongDynamicMovementWakesScreenWithCooldown() {
+    fun strongMovementDuringCountdownNotifiesWithCooldown() {
         val events = RecordingListener()
         val detector = AccidentDetector(events)
+        detector.setGolpeSensitivity(3f)
 
-        detector.onDynamicAcceleration(g(2.5f), 0f, 0f, timestamp = 1_000L)
-        detector.onDynamicAcceleration(g(2.5f), 0f, 0f, timestamp = 5_000L)
+        // Primer golpe: cuenta atras. Despues, los golpes solo pueden avisar (pantalla)
+        // con el enfriamiento de 10 s, que es lo que evita encenderla en cada bache.
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_000L)
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 2_000L)
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 5_000L)
         detector.onDynamicAcceleration(0f, 0f, 0f, timestamp = 5_100L)
-        detector.onDynamicAcceleration(g(2.5f), 0f, 0f, timestamp = 11_001L)
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 12_101L)
 
+        assertEquals(1, events.manualReasons.size)
         assertEquals(2, events.vibrations)
     }
 
@@ -337,10 +342,140 @@ class AccidentDetectorTest {
 
         detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_000L)
         assertEquals(SafetyPhase.FALL_CANDIDATE, detector.runtimeState().phase)
-        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_400L)
+        // Una sacudida de verdad pasa por cero al invertir el sentido: ese valle es lo
+        // que rearma el detector y permite contar el segundo pico.
+        detector.onDynamicAcceleration(0f, 0f, 0f, timestamp = 1_150L)
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_300L)
 
         assertEquals(SafetyPhase.COUNTDOWN, detector.runtimeState().phase)
         assertEquals(listOf("sacudida de emergencia"), events.manualReasons)
+    }
+
+    @Test
+    fun elReboteDeUnSoloGolpeNoEsUnaSacudida() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        detector.setGolpeSensitivity(3f)
+        detector.setFallOrientationGateEnabled(true)
+
+        // Un golpe real oscila: 4 g, 3,6 g, 3,7 g sin bajar del rearme (0,6 x 3,5).
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_000L)
+        detector.onDynamicAcceleration(g(3.6f), 0f, 0f, timestamp = 1_020L)
+        detector.onDynamicAcceleration(g(3.7f), 0f, 0f, timestamp = 1_040L)
+
+        assertEquals(SafetyPhase.FALL_CANDIDATE, detector.runtimeState().phase)
+        assertTrue(events.manualReasons.isEmpty())
+    }
+
+    @Test
+    fun dosPicosSinValleNoCuentanComoSacudida() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        detector.setGolpeSensitivity(3f)
+        detector.setFallOrientationGateEnabled(true)
+
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_000L)
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_400L)
+
+        assertEquals(SafetyPhase.FALL_CANDIDATE, detector.runtimeState().phase)
+        assertTrue(events.manualReasons.isEmpty())
+    }
+
+    @Test
+    fun dosPicosseparadosPorMenosDe250msNoCuentan() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        detector.setGolpeSensitivity(3f)
+        detector.setFallOrientationGateEnabled(true)
+
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_000L)
+        detector.onDynamicAcceleration(0f, 0f, 0f, timestamp = 1_010L)
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_100L)
+
+        assertEquals(SafetyPhase.FALL_CANDIDATE, detector.runtimeState().phase)
+        assertTrue(events.manualReasons.isEmpty())
+    }
+
+    @Test
+    fun elPisoAdaptativoMandaSobreElAjuste() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        detector.setGolpeSensitivity(1.5f)
+        detector.setAdaptiveFloor(2.6f)
+
+        assertEquals(2.6f, detector.effectiveSensitivityG, 0.001f)
+        detector.onDynamicAcceleration(g(2.5f), 0f, 0f, timestamp = 1_000L)
+        assertTrue(events.manualReasons.isEmpty())
+
+        detector.onDynamicAcceleration(g(2.7f), 0f, 0f, timestamp = 2_000L)
+        assertEquals(listOf("golpe fuerte detectado"), events.manualReasons)
+    }
+
+    @Test
+    fun elPicoDelGolpeYElDelViajeSeMiden() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        detector.setGolpeSensitivity(3f)
+
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_000L)
+        detector.onDynamicAcceleration(g(5.2f), 0f, 0f, timestamp = 1_100L)
+
+        assertEquals(5.2f, detector.lastHitPeakG, 0.05f)
+        assertEquals(5.2f, detector.ridePeakG, 0.05f)
+
+        detector.resetRidePeak()
+        assertEquals(0f, detector.ridePeakG, 0.001f)
+    }
+
+    @Test
+    fun candidatoAVelocidadSinMovimientoPasaAValidacion() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        detector.setGolpeSensitivity(3f)
+        detector.setFallOrientationGateEnabled(true)
+
+        detector.onLocation(40f, timestamp = 900L)
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_000L)
+        assertEquals(SafetyPhase.FALL_CANDIDATE, detector.runtimeState().phase)
+
+        detector.tick(timestamp = 16_100L)
+
+        assertEquals(SafetyPhase.VALIDATING, detector.runtimeState().phase)
+        assertTrue(events.promotedToValidation)
+        assertTrue(events.manualReasons.isEmpty())
+        assertEquals(1, events.validations)
+    }
+
+    @Test
+    fun candidatoAVelocidadConMovimientoVuelveAMonitor() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        detector.setGolpeSensitivity(3f)
+        detector.setFallOrientationGateEnabled(true)
+
+        detector.onLocation(40f, timestamp = 900L)
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_000L)
+        // A los 3 s el movil sigue moviendose: no es el caso del bolsillo quieto.
+        detector.onDynamicAcceleration(g(0.5f), 0f, 0f, timestamp = 4_000L)
+        detector.tick(timestamp = 16_100L)
+
+        assertEquals(SafetyPhase.MONITORING, detector.runtimeState().phase)
+        assertFalse(events.promotedToValidation)
+        assertEquals(0, events.validations)
+    }
+
+    @Test
+    fun candidatoSinVelocidadNoPasaAValidacion() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        detector.setGolpeSensitivity(3f)
+        detector.setFallOrientationGateEnabled(true)
+
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_000L)
+        detector.tick(timestamp = 16_100L)
+
+        assertEquals(SafetyPhase.MONITORING, detector.runtimeState().phase)
+        assertFalse(events.promotedToValidation)
     }
 
     @Test
@@ -406,6 +541,7 @@ class AccidentDetectorTest {
         var vibrations = 0
         var motionDetected = false
         var candidateAborted = false
+        var promotedToValidation = false
 
         override fun onValidationStarted(startedAt: Long) {
             validations++
@@ -433,6 +569,10 @@ class AccidentDetectorTest {
 
         override fun onFallCandidateAborted() {
             candidateAborted = true
+        }
+
+        override fun onFallCandidatePromotedToValidation() {
+            promotedToValidation = true
         }
     }
 }

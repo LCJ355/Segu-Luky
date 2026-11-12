@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.53s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.54s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -12,8 +12,8 @@ desactivala: la cuenta atras se ejecuta sin avisar a nadie.
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.53s.apk        <- version actual
-Las anteriores (1.44s a 1.52s) se conservan solo como historico.
+    Segu-Luky-1.54s.apk        <- version actual
+Las anteriores (1.44s a 1.53s) se conservan solo como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -31,7 +31,7 @@ Nota: si tenias una version anterior, basta con instalar encima; contactos y
 ajustes se conservan. No hace falta desinstalar.
 
 --------------------------------------------------------------------------
-2b) SI PLAY PROTECT DICE QUE "PUEDE SER DAÑINA"
+2b) SI PLAY PROTECT DICE QUE "PUEDE SER DAÃ‘INA"
 --------------------------------------------------------------------------
 Es normal y no significa que se haya encontrado un virus. Play Protect avisa
 de cualquier APK que no venga de Google Play y que combine permisos de riesgo
@@ -48,7 +48,7 @@ Como comprobar que es la app oficial y no una copia modificada:
    debe coincidir con la de docs/SEGURIDAD.md del repositorio.
 2. En el PC, con la APK descargada:
      certutil -hashfile "Segu-Luky-<version>.apk" SHA256
-   y compara con APK´s/SHA256SUMS.txt.
+   y compara con APKÂ´s/SHA256SUMS.txt.
 La huella de firma (E0:E5:A8:FD:...:E2:10:9E) es la misma desde la primera
 version publicada: si cambia, no instales ese archivo.
 El detalle de permisos, destinos de red y datos guardados esta en
@@ -80,8 +80,42 @@ docs/SEGURIDAD.md.
 5. SENSORES:
    - CAIDA / ORIENTACION: activalo (MODO MOTO) para que un golpe aislado no
      dispare el SOS.
-   - SENSIBILIDAD A LOS GOLPES: empieza en 3.5 g y ajusta en pruebas reales.
+   - SENSIBILIDAD A LOS GOLPES: empieza en 3.5 g. La app se ajusta sola a tu
+     movil (ver 3b); el deslizador es el punto de partida, no el numero final.
+   - ADAPT.: dejalo en AUTO. Tambien puedes fijarlo a 1, 2 o 3 minutos.
 6. INTERCOM-LUKY (opcional, ver punto 6).
+
+--------------------------------------------------------------------------
+3b) AJUSTAR LA SENSIBILIDAD CON EL PICO DEL VIAJE
+--------------------------------------------------------------------------
+La app mide el ruido y el traqueteo de TU movil y calcula un umbral efectivo
+(el que de verdad se aplica). Por eso debajo del deslizador veras:
+
+   PICO 2,8 g      pico de aceleracion del viaje (o del ultimo viaje)
+   EFECT 3,9 g     umbral que se esta aplicando (puede no ser tu ajuste)
+   SUG 3,5 g       sensibilidad recomendada: pico x 1,2, en pasos de 0,5 g
+
+- Con el monitor en marcha esos datos solo informan: para cambiarlos, deten el
+  monitor.
+- Si aparece USAR, aplicalo con un toque: ajusta el deslizador al sugerido.
+- Regla practica: el ajuste debe quedar POR ENCIMA del pico normal del viaje y
+  POR DEBAJO de un golpe de verdad (6-8 g). El 3,5 g por defecto esta pensado
+  para eso; en un movil ruidoso el efectivo subira solo.
+
+PRUEBA DE GOLPE (15 segundos, sin avisar a nadie)
+1. Deten el monitor.
+2. Pulsa PROBAR GOLPE y sacude el movil como pedirias ayuda.
+3. Al terminar te dice si habria disparado ("pico 4,2 g / umbral 3,9 g") o si
+   no llegaria, con el ajuste recomendado.
+4. No graba archivos, no inicia la cuenta atras y no envia nada.
+
+ADAPT. (ventana de aprendizaje)
+- AUTO: empieza en 2 minutos y se acorta a 1 si el camino cambia mucho, o se
+  alarga a 3 si lleva rato estable.
+- 1 / 2 / 3 MIN: valor fijo elegido por ti.
+- Cuanto mas uses la app, mas afinado queda el perfil del movil (a partir de 5
+  minutos de uso). En Configuracion > DIAGNOSTICO puedes ver lo aprendido y
+  reiniciarlo si cambias de soporte o de moto.
 
 --------------------------------------------------------------------------
 4) USO DIARIO
@@ -97,7 +131,10 @@ docs/SEGURIDAD.md.
 
 QUE DISPARA UN SOS
 - Golpe fuerte + movil inclinado 55 grados o mas durante 4 s (MODO MOTO).
-- Sacudida: dos picos fuertes en 1,2 s.
+- Golpe fuerte a 20 km/h o mas con el movil quieto y sin inclinarse (caida con
+  el telefono en el bolsillo): se vigila la inmovilidad durante 5 min.
+- Sacudida: dos picos fuertes separados por un valle, de 250 ms o mas y dentro
+  de 1,2 s (el rebote de un solo golpe no cuenta).
 - Boton S O S mantenido 5 s.
 - Decir AYUDA o SOCORRO (si VOZ AYUDA / SOCORRO esta activado).
 
@@ -180,4 +217,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.53s (versionCode 45) - paquete com.intercom.segluky.
+Version: V-1.54s (versionCode 46) - paquete com.intercom.segluky.

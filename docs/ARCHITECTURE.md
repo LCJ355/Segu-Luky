@@ -12,6 +12,12 @@
   countdown, notifications, voice and SOS delivery.
 - `AccidentDetector` and `FallOrientationDetector` are pure Kotlin state machines
   (unit tested).
+- `AdaptiveSensitivity` (window statistics, per-device profile, effective
+  threshold and sampling tiers) and `SensitivityAdvisor` (recommended setting)
+  are pure Kotlin as well, so the whole detection chain is JVM tested.
+- `SafetyMonitorService` feeds every motion sample to `AdaptiveSensitivity` and
+  applies the resulting floor to `AccidentDetector`; it re-registers only the
+  motion sensor when the sampling tier changes, never the gravity one.
 - `SafetyStateStore` is an in-process `StateFlow<SafetySnapshot>` observed by
   Compose.
 - `SafetyRuntimeRepository` persists crash-recovery state in SharedPreferences,

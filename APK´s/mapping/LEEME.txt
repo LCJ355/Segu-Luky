@@ -9,7 +9,8 @@ Sin el, las trazas de fallo de la app publicada muestran nombres como
 
 Aqui se guarda uno comprimido por cada version publicada:
 
-    Segu-Luky-1.53s-mapping.txt.gz   <- version actual (versionCode 45)
+    Segu-Luky-1.54s-mapping.txt.gz   <- version actual (versionCode 46)
+    Segu-Luky-1.53s-mapping.txt.gz   <- historico (versionCode 45)
     Segu-Luky-1.52s-mapping.txt.gz   <- historico (versionCode 44)
     Segu-Luky-1.51s-mapping.txt.gz   <- historico (versionCode 43)
     Segu-Luky-1.50s-mapping.txt.gz   <- historico (versionCode 42)
@@ -19,7 +20,14 @@ Aqui se guarda uno comprimido por cada version publicada:
 
 Cada archivo solo sirve para las trazas del codigo con el que se genero.
 
-Procedencia de la 1.53s (actual)
+Procedencia de la 1.54s (actual)
+--------------------------------
+- Generado con `gradlew assembleRelease` sobre el commit que declara
+  `versionCode = 46` / `versionName = "1.54s"`.
+- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
+- Compilado el 12/11/2026.
+
+Procedencia de la 1.53s
 --------------------------------
 - Generado con `gradlew assembleRelease` sobre el commit que declara
   `versionCode = 45` / `versionName = "1.53s"`.
@@ -81,7 +89,7 @@ se recompila con otro commit, hace falta su propio mapping.
 Como usarlo
 -----------
 1. Descomprimir:
-   `gzip -dk Segu-Luky-1.53s-mapping.txt.gz`
+   `gzip -dk Segu-Luky-1.54s-mapping.txt.gz`
 2. Con la traza ofuscada en `trace.txt`, ejecutar desde la raiz del SDK:
    `java -jar build-tools\35.0.0\lib\d8.jar retrace.jar mapping.txt trace.txt`
    o la tarea de Gradle `retrace` si esta disponible.

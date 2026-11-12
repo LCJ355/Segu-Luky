@@ -1544,6 +1544,61 @@ huella que muestra la app coincide con la de docs/SEGURIDAD.md.
 ======================================================================
 V-1.53s
 ======================================================================
+V-1.54s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.54s (versionCode 46)
+
+Cambio:
+- Sensibilidad adaptativa por movil: el ajuste en g ya no es el umbral que
+  se aplica. La app aprende el ruido en reposo (x5, minimo 0,30 g), el nivel
+  normal de marcha (p99 x 1,30) y la frecuencia real que entrega el sensor
+  (compensacion sqrt(hz/100), acotada al 30 %) para calcular un umbral
+  efectivo propio de cada telefono. Motivo: el mismo 3,5 g dispara solo en un
+  movil con sensor ruidoso y no detecta nada en otro que suaviza los picos.
+- Dos perfiles: ventana corta (1-3 min) y perfil aprendido que se funde entre
+  viajes con alfa = min(0,35, ventana/(uso+ventana)). A partir de 5 min de uso
+  manda el aprendido, con tope de 1,6x el ajuste y +2 g. Los golpes nunca
+  entran en el promedio (subirian el umbral que los detecta).
+- Ventana ADAPT. AUTO por defecto o fija a 1/2/3 min: compara el p99 de las
+  dos ultimas mitades, acorta a 1 min si cambia >=30 % y alarga a 3 min tras
+  dos ventanas cambiando <=10 %.
+- Muestreo adaptativo 25/50/100 Hz (quieto/crucero/demanda o tras un golpe) y
+  se mide la frecuencia real, no la pedida. El rebindeo toca solo el sensor de
+  movimiento: la actitud de inclinacion aprendida se conserva.
+- AccidentDetector: histeresis de rearme (0,6x) y separacion minima de 250 ms
+  entre picos contados, para que el rebote de un solo golpe no se lea como una
+  segunda sacudida. Picos medidos (lastHitPeakG, ridePeakG).
+- Rescate de caida sin inclinacion: golpe a >=20 km/h con el movil quieto toda
+  la ventana de candidato -> se pasa a vigilar inmovilidad en vez de descartar
+  (accidente con el telefono en el bolsillo).
+- PRUEBA DE GOLPE de 15 s en la tarjeta del monitor: dice si habria disparado
+  o si no llegaria, con el ajuste recomendado. No graba, no dispara la cuenta
+  atras y no avisa a nadie; se bloquea con el monitor en marcha.
+- Ajuste guiado PICO / EFECTIVO / SUGERIDO bajo el deslizador, con USAR.
+- La grabacion CSV/ZIP pasa a Configuracion > DIAGNOSTICO (ya no hace falta
+  para ajustar) y se anade REINICIAR APRENDIZAJE.
+- Nuevos modulos AdaptiveSensitivity.kt y SensitivityAdvisor.kt,
+  docs/SENSIBILIDAD.md y 32 pruebas nuevas.
+
+Motivo: pedido del usuario ("optimizar sensibilidad") con dos aclaraciones
+suyas: el promedio es para que el ajuste funcione igual en moviles distintos y
+el movil debe quedar mas afinado cuanto mas se use.
+
+Prueba realizada: testDebugUnitTest (145 pruebas, 0 fallos; 18 de
+AdaptiveSensitivityTest, 7 de SensitivityAdvisorTest y 12 casos nuevos o
+reescritos en AccidentDetectorTest), lintDebug (0 errores) y assembleRelease.
+Resultado: compila y verifica; pendiente la comprobacion en el movil (25/50/100
+Hz, efectivo subiendo en camino roto y PRUEBA DE GOLPE).
+APK generado: APK´s/Segu-Luky-1.54s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.54s-mapping.txt.gz
+Pendientes: instalar en el OPPO y comprobar (1) que el log muestra el cambio
+de muestreo, (2) que el umbral efectivo sube en camino roto y vuelve en llano,
+(3) que PRUEBA DE GOLPE acierta, y (4) las tres pruebas de comportamiento que
+siguen abiertas (seccion 5, 6 y 8 del informe).
+
+======================================================================
 
 Fecha: 12/11/2026
 Version: 1.53s (versionCode 45)

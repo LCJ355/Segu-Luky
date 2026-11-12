@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.54s (versionCode 46)
+
+### La sensibilidad se afina sola con cada móvil y con el uso
+- **Umbral efectivo por dispositivo**: el ajuste en g deja de ser el número que se aplica. La app
+  aprende el **ruido en reposo** (5×, mínimo 0,30 g), el **nivel normal de marcha** (p99 × 1,30) y
+  la **frecuencia real** que entrega el sensor (compensación `sqrt(hz/100)`, acotada al 30 %) para
+  calcular un umbral propio de cada teléfono. Motivo: el mismo 3,5 g dispara solo en un móvil con
+  el sensor ruidoso y no detecta nada en otro que suaviza los picos.
+- **Aprendizaje acumulado**: dos perfiles, uno corto (ventana de 1-3 min) y otro largo que se funde
+  entre viajes con `α = min(0,35, ventana/(uso+ventana))`. A partir de 5 min de uso manda el
+  aprendido, con tope de **1,6× el ajuste** y **+2 g** para que un perfil malo no pueda dejar el
+  móvil sordo. Los golpes **nunca** entran en el promedio: si entraran, subirían el umbral que los
+  detecta.
+- **Ventana AUTO** (por defecto) o fija a 1/2/3 min: compara el p99 de las dos últimas mitades,
+  acorta a 1 min si el camino cambia ≥30 % y alarga a 3 min si lleva dos ventanas cambiando ≤10 %.
+  Un escalón por ventana y permanencia mínima.
+- **Muestreo adaptativo**: 25 Hz con el móvil quieto, 50 Hz normal, 100 Hz en demanda o tras un
+  golpe/candidato. Se **mide** la frecuencia real (no la pedida) y es la que se muestra y se
+  compensa. Cambiar de nivel re-registra solo el sensor de movimiento: la actitud de inclinación
+  aprendida no se pierde.
+- **PRUEBA DE GOLPE** (15 s, en la tarjeta del monitor): dice si el móvil habría disparado
+  (`pico 4,2 g / umbral 3,9 g`) o si no llegaría, con el ajuste recomendado. No graba CSV, no
+  inicia la cuenta atrás y no avisa a nadie. Se bloquea con el monitor en marcha.
+- **Histéresis y separación de picos** en `AccidentDetector`: un pico cuenta solo si el detector
+  está rearmado (haber bajado a 0,6× el umbral) y entre dos picos contados deben pasar ≥250 ms.
+  Así el **rebote de un solo golpe** ya no se lee como una segunda sacudida (antes disparaba el SOS
+  sin confirmar inclinación) y un bache con doble impacto tampoco.
+- **Rescate de caída sin inclinación**: si el golpe fue a ≥20 km/h, el móvil no se movió en toda la
+  ventana de candidato y no reanuda la marcha, el candidato ya no se descarta: pasa a vigilar
+  inmovilidad (el caso del teléfono en el bolsillo, donde la actitud nunca confirma nada).
+- **Ajuste guiado**: bajo el deslizador aparecen `PICO`, `EFECTIVO` y `SUGERIDO` (pico × 1,20 en
+  pasos de 0,5 g con la misma fórmula que `analizar_calibracion.py`) y `USAR` aplica el valor.
+- **La calibración deja de ser un paso**: la grabación CSV/ZIP se mueve a **Configuración →
+  DIAGNÓSTICO** (adjuntar datos a una incidencia o comparar móviles) y añade `REINICIAR
+  APRENDIZAJE`. El ZIP incluye ahora umbral efectivo, ventana, ruido, p99, Hz y pico del viaje.
+- Nuevos módulos puros `AdaptiveSensitivity.kt` y `SensitivityAdvisor.kt`, `docs/SENSIBILIDAD.md`,
+  y 32 pruebas nuevas (145 en total, 0 fallos).
+
 ## 1.53s (versionCode 45)
 
 ### El historial vuelve a estar completo y la cola de Telegram deja de perder avisos

@@ -1,4 +1,4 @@
-# Segu-Luky V-1.53s
+# Segu-Luky V-1.54s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -11,13 +11,23 @@ key; InterCOM is a separate app reached only through its exported bridge (see
   off), the gravity sensor for the fall attitude, the gyroscope only while a
   candidate or countdown needs it, and the platform GPS provider.
 - A single strong hit arms a 15 s **fall candidate**. The countdown starts only
-  when the gravity tracker confirms a sustained crash tilt (55 degrees for 4 s)
-  or when two strong hits arrive inside the 1.2 s shake window. With
-  `CAIDA / ORIENTACION` disabled, every configured strong hit starts the countdown
-  immediately.
+  when the gravity tracker confirms a sustained crash tilt (55 degrees for 4 s),
+  when a hit at 20 km/h or more leaves the phone perfectly still through the whole
+  window, or when two strong hits arrive inside the 1.2 s shake window after a
+  dip. With `CAIDA / ORIENTACION` disabled, every configured strong hit starts the
+  countdown immediately.
 - The candidate wakes the screen and asks GPS for 2 s fixes so the rider can see
   and cancel the event. A candidate aborts when the phone returns upright, when
-  GPS reports 30 km/h or more, or when the 15 s window expires.
+  GPS reports 30 km/h or more, or when the 15 s window expires while moving.
+- The hit threshold is **not** the slider value alone: `AdaptiveSensitivity`
+  learns each device's rest noise, normal riding level and measured sample rate,
+  and derives an effective threshold that is always shown on screen. A short
+  window (`ADAPT.` auto 1/2/3 min) follows the current road and a long profile
+  refines itself with usage. See [docs/SENSIBILIDAD.md](docs/SENSIBILIDAD.md).
+- A peak only counts after re-arming (0.6x the threshold) and at least 250 ms
+  apart, so the rebound of a single hit is no longer read as a deliberate shake.
+- `PROBAR GOLPE` runs a 15 s shake test that says whether the phone would have
+  fired, without recording files and without notifying anyone.
 - The screen only wakes for a fall candidate, a countdown or an SOS; a simple
   bump no longer lights the display.
 - GPS speed and signal never gate a configured impact. They refine the report and
@@ -76,14 +86,14 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every version is published in `APK´s/` as
-`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.53s.apk`), ready to download
+`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.54s.apk`), ready to download
 and install on the phone without Android Studio.
 
 Every version is also published as a GitHub release tagged `V-<version>` with
 that same APK attached, because **Buscar actualizacion** reads the GitHub API:
 
 ```text
-gh release create V-1.53s "APK´s/Segu-Luky-1.53s.apk" --title "Segu-Luky V-1.53s" --notes "..."
+gh release create V-1.54s "APK´s/Segu-Luky-1.54s.apk" --title "Segu-Luky V-1.54s" --notes "..."
 ```
 
 ## Safe device test

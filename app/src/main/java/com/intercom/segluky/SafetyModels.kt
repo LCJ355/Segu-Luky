@@ -35,7 +35,26 @@ data class SafetySnapshot(
     val voiceLevelDb: Float? = null,
     val voiceRecognizing: Boolean = false,
     val voiceDetail: String = "",
-    val dispatchInProgress: Boolean = false
+    val dispatchInProgress: Boolean = false,
+    /** Umbral realmente aplicado (ajuste del usuario o piso aprendido del movil). */
+    val effectiveThresholdG: Float? = null,
+    /** Pico de aceleracion desde que arranco el monitor. */
+    val ridePeakG: Float? = null,
+    /** Ruido en reposo que ha medido este movil. */
+    val deviceNoiseG: Float? = null,
+    /** p99 de la aceleracion normal de marcha de este movil. */
+    val deviceP99G: Float? = null,
+    /** Muestras por segundo que entrega el sensor de verdad (medidas, no pedidas). */
+    val samplingHz: Int? = null,
+    /** Ventana de aprendizaje activa, en minutos. */
+    val adaptationWindowMinutes: Int = 2,
+    /** true cuando la ventana la elige la app y no el usuario. */
+    val adaptationWindowAuto: Boolean = true,
+    /** Uso acumulado con el que se ha afinado el perfil de este movil. */
+    val learningUsageMs: Long = 0L,
+    /** Resultado de la PRUEBA DE GOLPE. */
+    val hitTestVerdict: String? = null,
+    val hitTestRunning: Boolean = false
 )
 
 data class EmergencyContact(

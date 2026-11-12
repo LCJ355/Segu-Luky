@@ -185,9 +185,23 @@ object CalibrationRepository {
     }
 
     private fun settingsSummary(context: Context): String = buildString {
+        val profile = SafetyMonitorService.loadDeviceProfile(context)
+        val sensitivity = SafetyMonitorService.loadSensitivity(context)
+        val effective = if (profile.usageMs >= SensitivityMath.PROFILE_MIN_USAGE_MS) {
+            maxOf(sensitivity, profile.floorG)
+        } else {
+            sensitivity
+        }
         appendLine("Segu-Luky - resumen de ajustes")
         appendLine("dispositivo=${deviceModel()}")
-        appendLine("sensibilidad_g=${SafetyMonitorService.loadSensitivity(context)}")
+        appendLine("sensibilidad_g=$sensitivity")
+        appendLine("umbral_efectivo_g=$effective")
+        appendLine("ventana_adaptacion=${SafetyMonitorService.adaptationWindowLabel(SafetyMonitorService.loadAdaptationWindowMode(context))}")
+        appendLine("ruido_movil_g=${profile.noiseG}")
+        appendLine("marcha_p99_g=${profile.p99G}")
+        appendLine("muestreo_hz=${profile.deliveredHz}")
+        appendLine("uso_acumulado_min=${profile.usageMs / 60_000L}")
+        appendLine("pico_ultimo_viaje_g=${SafetyMonitorService.loadRidePeak(context)}")
         appendLine("modo_moto_caida=${SafetyMonitorService.loadFallOrientationGate(context)}")
         appendLine("voz_ayuda_socorro=${SafetyMonitorService.loadVoiceKeywordsGate(context)}")
         appendLine("contactos=${ContactsRepository(context).load().size}")

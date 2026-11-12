@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.53s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.54s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 44). Los valores entre parentesis son los del codigo.
+archivo (versionCode 46). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -32,25 +32,54 @@ inclinacion, giroscopio (solo durante validacion), GPS (mapa y velocidad), voz
 opcional y el boton S O S de la app.
 
 La sensibilidad (SENSIBILIDAD A LOS GOLPES, 0,5 a 7 g; por defecto 3,5 g) es el
-unico umbral de golpe. No hay umbral fijo de 7 g ni filtros de GPS/velocidad que
-bloqueen un golpe.
+ajuste del usuario, pero NO es el umbral que se aplica: el umbral real es el
+UMBRAL EFECTIVO, que sale del ajuste y del perfil que la app aprende para este
+movil concreto. La razon (1.54s) es que el mismo numero en g no significa lo
+mismo en moviles distintos: uno con el sensor ruidoso dispara solo y otro que
+suaviza los picos mide el golpe mas bajo.
+
+   - Ruido en reposo: se mide en los tramos quietos; el suelo es 5 x el ruido
+     (minimo 0,30 g).
+   - Nivel de marcha: p99 de la aceleracion normal (solo muestras por debajo del
+     umbral), x 1,30.
+   - Frecuencia real: un movil que entrega menos Hz de los pedidos ve los picos
+     mas bajos, asi que su umbral se compensa hasta un 30 %.
+   - Perfil aprendido: se guarda y se refina con el uso. A partir de 5 min
+     acumulados manda, con tope de 1,6 x el ajuste y +2 g (un perfil malo no
+     puede dejar el movil sordo).
+   - Un golpe NUNCA sube el umbral que lo detecta: los golpes no entran en el
+     promedio.
+   - Ventana ADAPT.: AUTO (empieza en 2 min y se acorta a 1 min si el camino
+     cambia mucho, o se alarga a 3 min si lleva rato estable) o fija a 1/2/3.
+   - Muestreo: 25 Hz con el movil quieto, 50 Hz normal, 100 Hz en demanda o tras
+     golpe/candidato/cuenta atras. Se mide lo que entrega el sensor y se muestra.
+
+No hay umbral fijo de 7 g ni filtros de GPS/velocidad que bloqueen un golpe.
 
 A) CAIDA DE MOTO AUTOMATICA (interruptor CAIDA / ORIENTACION, activado por defecto)
-   - Un golpe aislado >= sensibilidad NO dispara el SOS: arma un CANDIDATO A
+   - Un golpe aislado >= umbral efectivo NO dispara el SOS: arma un CANDIDATO A
      CAIDA con ventana de 15 s.
+   - (1.54s) Un pico solo cuenta si el detector esta REARMADO: tras un golpe hay
+     que bajar a 0,6 x umbral, y entre dos picos contados deben pasar 250 ms. El
+     rebote del propio golpe ya no se lee como una segunda sacudida.
    - El SOS salta si dentro de la ventana el movil queda inclinado >= 55 grados
      durante 4 s seguidos, medido con el sensor de gravedad (la guinada de una
      curva no cuenta). La actitud se calibra en los primeros 2 s.
+   - (1.54s) Si el golpe fue a 20 km/h o mas y el movil NO se movio en toda la
+     ventana (accidente con el telefono en el bolsillo, donde la inclinacion no
+     confirma nada), el candidato no se descarta: se pasa a vigilar inmovilidad y
+     el SOS salta si sigue quieto 5 min.
    - El candidato se ABORTA sin SOS si el movil vuelve a vertical (menos de 25
      grados, 12 muestras seguidas), si el GPS da 30 km/h o mas, o si expira la
-     ventana.
+     ventana con movimiento.
    - Mientras hay candidato la pantalla se enciende 20 s y el GPS pasa a 2 s /
      0 m; al expirar o abortar vuelve a 20 s / 25 m.
-   - DESACTIVADO: todo golpe que alcance la sensibilidad inicia la cuenta atras
-     al instante, sin confirmar inclinacion.
+   - DESACTIVADO: todo golpe que alcance el umbral efectivo inicia la cuenta
+     atras al instante, sin confirmar inclinacion.
 
 B) SOS DELIBERADO (inmediato)
-   - Sacudida: 2 picos >= sensibilidad dentro de 1,2 s.
+   - Sacudida: 2 picos >= umbral efectivo dentro de 1,2 s, con un valle entre
+     ellos (el movil pasa por debajo de 0,6 x umbral) y separados 250 ms o mas.
    - Boton S O S mantenido 5 s (las columnas laterales se llenan de verde).
    - Decir "ayuda" o "socorro" si VOZ AYUDA / SOCORRO esta activado. La captura
      la hace el servicio: funciona con la pantalla apagada. El reconocimiento se
@@ -174,6 +203,14 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   contacto nuevo mientras el de red anotaba una entrega, se perdia uno de los dos
   apuntes y ese contacto se quedaba sin aviso y sin reintento. Ahora todas las
   mutaciones van bajo un candado compartido y se persisten antes de soltarlo.
+- (1.54s) La adaptacion por movil es una estimacion, no una igualdad exacta: el
+  soporte, la postura y el suavizado propio de cada sensor solo se compensan en
+  parte. Por eso el umbral efectivo se muestra siempre y existe PRUEBA DE GOLPE
+  (15 s, no graba nada, no avisa a nadie) para comprobar el margen real.
+- (1.54s) Con la moto parada el muestreo baja a 25 Hz: un alcance por detras se
+  sigue viendo (el vehiculo acelera durante decenas de ms, no 10 ms).
+- (1.54s) La grabacion de sensores (CSV/ZIP) ya no hace falta para ajustar: queda
+  en DIAGNOSTICO para adjuntar datos a una incidencia o comparar dos moviles.
 
 9) DIAGRAMA DE FLUJO
 --------------------
@@ -184,7 +221,8 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
    +------+------------------+-------------------+-----------+
           |                  |                   |
           v                  v                   v
-   golpe >= sensib.    2 picos en 1,2 s    SOS manual (boton 5 s / voz)
+   golpe >= umbral     2 picos con valle   SOS manual (boton 5 s / voz)
+   efectivo            separados >=250 ms       |
           |                  |                   |
           v                  |                   |
    CAIDA/ORIENTACION on?     |                   |
@@ -194,6 +232,7 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   (15 s)     |               |                   |
      |       |               |                   |
      | inclinacion >= 55 grados durante 4 s      |
+     | o (1.54s) golpe a >=20 km/h y movil quieto|
      +-------+---------------+-------------------+
                              |
                              v
@@ -215,4 +254,4 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.53s (versionCode 45) - 12/11/2026
+Version: V-1.54s (versionCode 46) - 12/11/2026

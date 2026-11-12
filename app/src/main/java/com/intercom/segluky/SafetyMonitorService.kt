@@ -1,4 +1,4 @@
-﻿package com.intercom.segluky
+package com.intercom.segluky
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -37,6 +37,7 @@ import android.telephony.TelephonyManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
@@ -130,6 +131,11 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private var lastMovementUpdateAt = 0L
     private var lastPublishedMovementLevel = Int.MIN_VALUE
     private var lastPublishedMovementG = Int.MIN_VALUE
+    /** Perfil aprendido de este movil: umbral efectivo y frecuencia de muestreo. */
+    private lateinit var adaptive: AdaptiveSensitivity
+    private var lastAdaptiveMergeAt = 0L
+    private var lastAdaptivePublishAt = 0L
+    private var lastAdaptivePublishKey = Int.MIN_VALUE
     private var lastRuntimeSyncAt = 0L
     private var lastSyncedValidationStart: Long? = null
     private var lastSyncedImmobileSince: Long? = null
@@ -172,6 +178,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                         if (startingOrientationFall) "Caida confirmada; validacion iniciada" else "Validacion iniciada"
                     )
                     syncGyroscopeListener()
+                    adaptive.onEvent(SystemClock.elapsedRealtime())
                     persistRuntime()
                 }
 
@@ -224,7 +231,12 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                             detail = "POSIBLE CAIDA: golpe detectado, verificando inclinacion..."
                         )
                     }
-                    SafetyStateStore.log("Golpe detectado; esperando caida confirmada (inclinacion 55 grados / 4 s)")
+                    SafetyStateStore.log(
+                        "Golpe detectado (pico ${formatG(detector.lastHitPeakG)} g, " +
+                            "umbral ${formatG(detector.effectiveSensitivityG)} g); " +
+                            "esperando caida confirmada (inclinacion 55 grados / 4 s)"
+                    )
+                    adaptive.onEvent(SystemClock.elapsedRealtime())
                     // The candidate is the only phase where the rider can still
                     // cancel before the countdown, so make it visible immediately.
                     wakeScreenController.wakeFor(CANDIDATE_SCREEN_WAKE_MS)
@@ -269,10 +281,33 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                     persistRuntime()
                     updateNotification(force = true)
                 }
+
+                override fun onFallCandidatePromotedToValidation() {
+                    SafetyStateStore.update {
+                        it.copy(
+                            phase = SafetyPhase.VALIDATING,
+                            detail = "Golpe a velocidad sin inclinacion: vigilando inmovilidad"
+                        )
+                    }
+                    SafetyStateStore.log(
+                        "Caida sin inclinacion (movil en el bolsillo): golpe a " +
+                            "${formatG(detector.lastHitPeakG)} g, se vigila la inmovilidad"
+                    )
+                    syncGyroscopeListener()
+                    setLocationUpdateInterval(LOCATION_INTERVAL_VALIDATION_MS, 0f)
+                    persistRuntime()
+                    updateNotification(force = true)
+                }
             },
             now = { SystemClock.elapsedRealtime() }
         )
         detector.setGolpeSensitivity(loadSensitivity(this))
+        adaptive = AdaptiveSensitivity(
+            mode = loadAdaptationWindowMode(this),
+            initialProfile = loadDeviceProfile(this)
+        )
+        adaptive.setUserSensitivity(loadSensitivity(this))
+        detector.setAdaptiveFloor(adaptive.effectiveThresholdG)
         orientationConfigured = loadFallOrientationGate(this)
         detector.setFallOrientationGateEnabled(orientationConfigured)
         voiceMonitor = VoiceKeywordMonitor(
@@ -333,7 +368,11 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             ACTION_ESCALATE -> handleEscalationAlarm()
             ACTION_SET_SENSITIVITY -> {
                 val g = intent.getFloatExtra(EXTRA_SENSITIVITY_G, Float.NaN)
-                if (!monitoringEnabled && g.isFinite()) detector.setGolpeSensitivity(g)
+                if (!monitoringEnabled && g.isFinite()) {
+                    detector.setGolpeSensitivity(g)
+                    adaptive.setUserSensitivity(g)
+                    detector.setAdaptiveFloor(adaptive.effectiveThresholdG)
+                }
             }
             ACTION_RELOAD_CONFIG -> {
                 val wasOrientationConfigured = orientationConfigured
@@ -341,6 +380,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 val sensitivity = loadSensitivity(this)
                 detector.setFallOrientationGateEnabled(orientationConfigured)
                 detector.setGolpeSensitivity(sensitivity)
+                adaptive.setUserSensitivity(sensitivity)
+                adaptive.setMode(loadAdaptationWindowMode(this), SystemClock.elapsedRealtime())
+                detector.setAdaptiveFloor(adaptive.effectiveThresholdG)
                 if (monitoringEnabled && foregroundMode != ForegroundMode.NONE) {
                     val registered = primaryMotionSensor
                     val needsRebind = registered == null ||
@@ -380,6 +422,12 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     }
 
     override fun onDestroy() {
+        // DETENER MONITOR usa stopService, asi que aqui tambien se guarda lo aprendido:
+        // si no, el perfil y el pico del viaje se perderian en cada parada normal.
+        if (monitoringEnabled || detector.currentPhase != SafetyPhase.STOPPED) {
+            saveDeviceProfile(this, adaptive.mergeIntoProfile())
+            saveRidePeak(this, detector.ridePeakG)
+        }
         stopTicker()
         window.removeCallbacksAndMessages(null)
         unregisterSensors()
@@ -449,6 +497,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                     event.values[2],
                     eventTime
                 )
+                onMotionSample(dynamicG, eventTime)
                 updateMovementLevel(
                     level = (dynamicG / AccidentDetector.MAX_SENSITIVITY_G).coerceIn(0f, 1f),
                     dynamicG = dynamicG
@@ -463,6 +512,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                     event.values[2],
                     eventTime
                 )?.let { dynamicG ->
+                    onMotionSample(dynamicG, eventTime)
                     updateMovementLevel(
                         level = (dynamicG / AccidentDetector.MAX_SENSITIVITY_G).coerceIn(0f, 1f),
                         dynamicG = dynamicG
@@ -745,6 +795,12 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             activeEventId = null
             countdownReason = ""
         }
+        // Viaje nuevo: se olvida el pico anterior y la ventana corta, pero no el perfil
+        // aprendido del movil (eso es justo lo que se afina con el uso).
+        detector.resetRidePeak()
+        adaptive.resetWindow(SystemClock.elapsedRealtime())
+        detector.setAdaptiveFloor(adaptive.effectiveThresholdG)
+        saveRidePeak(this, 0f)
         registerSensors()
         if (!sensorsRegistered) {
             failAndStop("No hay un sensor de movimiento utilizable")
@@ -1056,6 +1112,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private fun beginCountdown(reason: String) {
         if (countdownEndsAt != null) return
         val now = SystemClock.elapsedRealtime()
+        adaptive.onEvent(now)
         countdownEndsAt = now + COUNTDOWN_MS
         countdownEndsAtWallTime = System.currentTimeMillis() + COUNTDOWN_MS
         countdownReason = reason
@@ -2191,6 +2248,13 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         countdownEndsAtWallTime = null
         countdownReason = ""
         activeEventId = null
+        // Antes de soltar los sensores: funde la ventana en el perfil y guarda el pico
+        // del viaje para poder enseÃ±arlo con el monitor ya detenido.
+        saveDeviceProfile(this, adaptive.mergeIntoProfile())
+        saveRidePeak(this, detector.ridePeakG)
+        adaptive.resetWindow(SystemClock.elapsedRealtime())
+        detector.setAdaptiveFloor(adaptive.effectiveThresholdG)
+        detector.resetRidePeak()
         detector.resumeMonitoring()
         runtimeRepository.clearActiveState()
         releaseCountdownWakeLock()
@@ -2335,8 +2399,93 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         }
     }
 
-    private fun updateMovementLevel(level: Float, dynamicG: Float) {
-        val now = SystemClock.elapsedRealtime()
+    /**
+     * Alimenta el aprendizaje por movil: umbral efectivo, frecuencia de muestreo y
+     * ficha del dispositivo. Se ejecuta en cada muestra, asi que solo hace trabajo
+     * barato (histograma, comparaciones y, como mucho, un rebindeo por permanencia).
+     */
+    private fun onMotionSample(dynamicG: Float, timestamp: Long) {
+        adaptive.record(dynamicG, timestamp)
+        detector.setAdaptiveFloor(adaptive.effectiveThresholdG)
+        maybeRebindMotionSensor(timestamp)
+        maybeMergeProfile(timestamp)
+        publishAdaptiveState(timestamp)
+    }
+
+    /**
+     * Cambia la frecuencia del sensor de movimiento sin tocar el de gravedad: rebindear
+     * solo este sensor conserva la actitud de inclinacion ya aprendida.
+     */
+    private fun maybeRebindMotionSensor(timestamp: Long) {
+        val sensor = primaryMotionSensor ?: return
+        if (!sensorsRegistered) return
+        if (detector.currentPhase != SafetyPhase.MONITORING) return
+        if (!adaptive.shouldRebind(timestamp)) return
+        val tier = adaptive.desiredTier(timestamp)
+        sensorManager.unregisterListener(this, sensor)
+        val registered = sensorManager.registerListener(
+            this,
+            sensor,
+            tier.periodUs,
+            SENSOR_BATCH_LATENCY_US
+        )
+        if (!registered) {
+            // Nunca dejar el monitor sordo por no poder reajustar la frecuencia.
+            val fallback = sensorManager.registerListener(
+                this,
+                sensor,
+                SensorManager.SENSOR_DELAY_GAME,
+                SENSOR_BATCH_LATENCY_US
+            )
+            if (!fallback) {
+                sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME)
+            }
+            sensorAccuracyReliable = true
+            SafetyStateStore.log("No se pudo cambiar el muestreo a ${tier.hz} Hz; se mantiene 50 Hz")
+            return
+        }
+        adaptive.onTierApplied(timestamp)
+        SafetyStateStore.log("Muestreo del sensor: ${tier.hz} Hz (${tier.label})")
+    }
+
+    /** Vuelca la ventana aprendida en el perfil guardado, como mucho una vez por minuto. */
+    private fun maybeMergeProfile(timestamp: Long) {
+        if (lastAdaptiveMergeAt != 0L && timestamp - lastAdaptiveMergeAt < PROFILE_MERGE_INTERVAL_MS) return
+        lastAdaptiveMergeAt = timestamp
+        saveDeviceProfile(this, adaptive.mergeIntoProfile())
+    }
+
+    /**
+     * Publica la ficha del movil y el umbral efectivo. Throttle de 1 s y solo cuando
+     * algun valor cambia: es un StateFlow que observa Compose.
+     */
+    private fun publishAdaptiveState(timestamp: Long) {
+        if (timestamp - lastAdaptivePublishAt < ADAPTIVE_PUBLISH_MS) return
+        val adaptiveState = adaptive.snapshot()
+        val hz = adaptiveState.deliveredHz.toInt().coerceIn(0, 999)
+        val signature = (adaptiveState.effectiveThresholdG * 20f).toInt() * 1_000_000 +
+            hz * 10_000 +
+            (detector.ridePeakG * 10f).toInt().coerceIn(0, 9_999)
+        if (signature == lastAdaptivePublishKey) return
+        lastAdaptivePublishAt = timestamp
+        lastAdaptivePublishKey = signature
+        SafetyStateStore.update {
+            it.copy(
+                effectiveThresholdG = adaptiveState.effectiveThresholdG,
+                ridePeakG = detector.ridePeakG,
+                deviceNoiseG = adaptiveState.noiseG,
+                deviceP99G = adaptiveState.p99G,
+                samplingHz = hz.takeIf { it > 0 },
+                adaptationWindowMinutes = adaptiveState.activeMinutes,
+                adaptationWindowAuto = adaptiveState.auto,
+                learningUsageMs = adaptiveState.usageMs
+            )
+        }
+    }
+
+    private fun formatG(value: Float): String = String.format(Locale.US, "%.1f", value)
+
+    private fun updateMovementLevel(level: Float, dynamicG: Float) {        val now = SystemClock.elapsedRealtime()
         movementLevel = maxOf(level, movementLevel * MOVEMENT_DECAY)
         if (now - lastMovementUpdateAt < MOVEMENT_UPDATE_INTERVAL_MS) return
         // Standing still keeps producing the same rounded values; publishing them
@@ -2629,6 +2778,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         private const val MAP_LINK_LOCATION_WINDOW_MS = 5 * 60_000L
         private const val LOCATION_WALL_TIME_PERSIST_INTERVAL_MS = 15_000L
         private const val SENSOR_BATCH_LATENCY_US = 250_000
+        private const val ADAPTIVE_PUBLISH_MS = 1_000L
+        private const val PROFILE_MERGE_INTERVAL_MS = 60_000L
         private const val FALL_SUSTAINED_TILT_MS = 4_000L
         private const val FALL_CALIBRATION_MS = 2_000L
         /** Keeps the screen awake while a fall candidate may still be confirmed. */
@@ -2667,6 +2818,13 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         private const val PREFERENCES = "segu_prefs"
         private const val KEY_SENSITIVITY_G = "sensitivity_g"
         private const val DEFAULT_SENSITIVITY_G = 3.5f
+        private const val KEY_ADAPTATION_WINDOW_MODE = "adaptation_window_mode"
+        private const val KEY_DEVICE_NOISE_G = "device_noise_g"
+        private const val KEY_DEVICE_P99_G = "device_p99_g"
+        private const val KEY_DEVICE_HZ = "device_hz"
+        private const val KEY_DEVICE_USAGE_MS = "device_usage_ms"
+        private const val KEY_RIDE_PEAK_G = "ride_peak_g"
+        private const val KEY_RIDE_PEAK_AT = "ride_peak_at"
         private const val KEY_FALL_ORIENTATION_GATE = "fall_orientation_gate"
         private const val KEY_VOICE_KEYWORDS_GATE = "voice_keywords_gate"
         private const val KEY_SMS_AUTO = "sms_sos_auto"
@@ -2702,6 +2860,87 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
                 .getFloat(KEY_SENSITIVITY_G, DEFAULT_SENSITIVITY_G)
                 .coerceIn(AccidentDetector.MIN_SENSITIVITY_G, AccidentDetector.MAX_SENSITIVITY_G)
+
+        /** Guarda la ventana de aprendizaje y recarga la configuracion si el monitor vive. */
+        internal fun setAdaptationWindow(context: Context, mode: AdaptationWindowMode) {
+            saveAdaptationWindowMode(context, mode)
+            SafetyStateStore.update {
+                it.copy(
+                    adaptationWindowAuto = mode.isAuto,
+                    adaptationWindowMinutes = if (mode.isAuto) it.adaptationWindowMinutes else mode.minutes
+                )
+            }
+            SafetyStateStore.log("Ventana de adaptacion: ${adaptationWindowLabel(mode)}")
+            if (SafetyStateStore.snapshot.value.phase != SafetyPhase.STOPPED) {
+                notifyConfigChanged(context)
+            }
+        }
+
+        internal fun adaptationWindowLabel(mode: AdaptationWindowMode): String =
+            if (mode.isAuto) "automatica" else "${mode.minutes} min"
+
+        internal fun loadAdaptationWindowMode(context: Context): AdaptationWindowMode =
+            AdaptationWindowMode.fromId(
+                context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                    .getString(KEY_ADAPTATION_WINDOW_MODE, AdaptationWindowMode.AUTO.id)
+            )
+
+        private fun saveAdaptationWindowMode(context: Context, mode: AdaptationWindowMode) {
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .edit().putString(KEY_ADAPTATION_WINDOW_MODE, mode.id).apply()
+        }
+
+        internal fun loadDeviceProfile(context: Context): DeviceProfile {
+            val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+            return DeviceProfile(
+                noiseG = preferences.getFloat(KEY_DEVICE_NOISE_G, 0f),
+                p99G = preferences.getFloat(KEY_DEVICE_P99_G, 0f),
+                deliveredHz = preferences.getFloat(KEY_DEVICE_HZ, 0f),
+                usageMs = preferences.getLong(KEY_DEVICE_USAGE_MS, 0L)
+            )
+        }
+
+        internal fun saveDeviceProfile(context: Context, profile: DeviceProfile) {
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .edit()
+                .putFloat(KEY_DEVICE_NOISE_G, profile.noiseG)
+                .putFloat(KEY_DEVICE_P99_G, profile.p99G)
+                .putFloat(KEY_DEVICE_HZ, profile.deliveredHz)
+                .putLong(KEY_DEVICE_USAGE_MS, profile.usageMs)
+                .apply()
+        }
+
+        /** Olvida el perfil aprendido: el movil vuelve a empezar de cero. */
+        internal fun resetDeviceProfile(context: Context) {
+            saveDeviceProfile(context, DeviceProfile())
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .edit()
+                .remove(KEY_RIDE_PEAK_G)
+                .remove(KEY_RIDE_PEAK_AT)
+                .apply()
+        }
+
+        internal fun loadRidePeak(context: Context): Float =
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .getFloat(KEY_RIDE_PEAK_G, 0f)
+
+        internal fun loadRidePeakAt(context: Context): Long =
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .getLong(KEY_RIDE_PEAK_AT, 0L)
+
+        private fun saveRidePeak(context: Context, g: Float) {
+            val value = if (g.isFinite()) g.coerceAtLeast(0f) else 0f
+            if (value <= 0f) {
+                context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                    .edit().remove(KEY_RIDE_PEAK_G).remove(KEY_RIDE_PEAK_AT).apply()
+                return
+            }
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .edit()
+                .putFloat(KEY_RIDE_PEAK_G, value)
+                .putLong(KEY_RIDE_PEAK_AT, System.currentTimeMillis())
+                .apply()
+        }
 
         fun canScheduleExactAlarms(context: Context): Boolean =
             Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||

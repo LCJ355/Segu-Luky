@@ -51,6 +51,13 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
     private var locationRegistered = false
     private var lastFlushAt = 0L
 
+    // Prueba de golpe: 15 s sin fichero, para validar el movil sin grabar nada.
+    private var testing = false
+    private var testThresholdG = 3.5f
+    private var testPeakG = 0f
+    private val testGravity = FloatArray(3) { 0f }
+    private var testGravityReady = false
+
     override fun onCreate() {
         super.onCreate()
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
@@ -63,6 +70,10 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
             ACTION_START -> {
                 val activity = CalibrationActivity.fromId(intent.getStringExtra(EXTRA_ACTIVITY))
                 startRecording(activity)
+            }
+            ACTION_TEST -> {
+                val threshold = intent.getFloatExtra(EXTRA_TEST_THRESHOLD_G, Float.NaN)
+                startHitTest(threshold)
             }
             ACTION_STOP -> stopRecording()
             else -> if (!running) stopSelf()
@@ -151,6 +162,10 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
     }
 
     override fun onSensorChanged(event: SensorEvent) {
+        if (testing) {
+            trackHitTestSample(event)
+            return
+        }
         val w = writer ?: return
         val tMs = event.timestamp / 1_000_000L
         val kind = when (event.sensor.type) {
@@ -190,6 +205,14 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
     private val tick = object : Runnable {
         override fun run() {
             if (!running) return
+            if (testing) {
+                if (SystemClock.elapsedRealtime() - startedAtElapsed >= TEST_DURATION_MS) {
+                    finishHitTest()
+                    return
+                }
+                handler.postDelayed(this, UI_TICK_INTERVAL_MS)
+                return
+            }
             CalibrationStateStore.update {
                 it.copy(
                     recording = true,
@@ -209,6 +232,112 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
             handler.postDelayed(this, UI_TICK_INTERVAL_MS)
         }
     }
+
+    /**
+     * PRUEBA DE GOLPE: 15 s midiendo el pico real con el umbral vigente, sin fichero y
+     * sin disparar nada. Sustituye a "grabar un CSV y analizarlo en el PC" para
+     * comprobar que el movil se entera de un golpe.
+     */
+    private fun startHitTest(thresholdG: Float) {
+        if (running) return
+        if (SafetyStateStore.snapshot.value.phase != SafetyPhase.STOPPED) {
+            SafetyStateStore.update {
+                it.copy(hitTestRunning = false, hitTestVerdict = "Deten el monitor antes de probar el golpe")
+            }
+            SafetyStateStore.log("Prueba de golpe: el monitor esta en marcha")
+            stopSelf()
+            return
+        }
+        testThresholdG = if (thresholdG.isFinite() && thresholdG > 0f) {
+            thresholdG
+        } else {
+            SafetyMonitorService.loadSensitivity(this)
+        }
+        testPeakG = 0f
+        testGravityReady = false
+        testing = true
+        running = true
+        startedAtElapsed = SystemClock.elapsedRealtime()
+        registerSensors()
+        startForegroundSafely()
+        handler.post(tick)
+        SafetyStateStore.update { it.copy(hitTestRunning = true, hitTestVerdict = null) }
+        SafetyStateStore.log("Prueba de golpe: sacude el movil como pedirias ayuda")
+    }
+
+    private fun trackHitTestSample(event: SensorEvent) {
+        val dynamicG = when (event.sensor.type) {
+            Sensor.TYPE_LINEAR_ACCELERATION ->
+                magnitude(event.values[0], event.values[1], event.values[2]) /
+                    AccidentDetector.STANDARD_GRAVITY
+            Sensor.TYPE_ACCELEROMETER -> accelerometerDynamicG(event.values)
+            else -> return
+        }
+        if (dynamicG.isFinite() && dynamicG > testPeakG) {
+            testPeakG = dynamicG
+            SafetyStateStore.update {
+                it.copy(hitTestVerdict = "Sacudiendo... pico ${SensitivityAdvisor.formatG(testPeakG)} g")
+            }
+        }
+    }
+
+    /** Quita la gravedad con una media lenta: en 15 s basta para medir el pico. */
+    private fun accelerometerDynamicG(values: FloatArray): Float {
+        val x = values[0]
+        val y = values[1]
+        val z = values[2]
+        if (!testGravityReady) {
+            testGravity[0] = x
+            testGravity[1] = y
+            testGravity[2] = z
+            testGravityReady = true
+            return 0f
+        }
+        testGravity[0] += (x - testGravity[0]) * TEST_GRAVITY_ALPHA
+        testGravity[1] += (y - testGravity[1]) * TEST_GRAVITY_ALPHA
+        testGravity[2] += (z - testGravity[2]) * TEST_GRAVITY_ALPHA
+        return magnitude(
+            x - testGravity[0],
+            y - testGravity[1],
+            z - testGravity[2]
+        ) / AccidentDetector.STANDARD_GRAVITY
+    }
+
+    private fun finishHitTest() {
+        if (!testing) return
+        testing = false
+        running = false
+        handler.removeCallbacks(tick)
+        runCatching { sensorManager.unregisterListener(this) }
+        ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        val verdict = hitTestVerdict(testPeakG, testThresholdG)
+        SafetyStateStore.update { it.copy(hitTestRunning = false, hitTestVerdict = verdict) }
+        SafetyStateStore.log(verdict)
+        stopSelf()
+    }
+
+    private fun hitTestVerdict(peak: Float, threshold: Float): String {
+        val peakText = SensitivityAdvisor.formatG(peak)
+        val thresholdText = SensitivityAdvisor.formatG(threshold)
+        return if (peak >= threshold) {
+            "Prueba de golpe: habria disparado (pico $peakText g / umbral $thresholdText g)"
+        } else {
+            val suggested = SensitivityAdvisor.suggest(
+                peakG = peak,
+                currentG = threshold,
+                rideMs = Long.MAX_VALUE
+            )?.recommendedG
+            val hint = if (suggested != null) {
+                " - baja el ajuste a ${SensitivityAdvisor.formatG(suggested)} g"
+            } else {
+                ""
+            }
+            "Prueba de golpe: no llegaria (pico $peakText g / umbral $thresholdText g)$hint"
+        }
+    }
+
+    private fun magnitude(x: Float, y: Float, z: Float): Float =
+        kotlin.math.sqrt(x * x + y * y + z * z)
 
     private fun stopRecording() {
         running = false
@@ -245,6 +374,10 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
             runCatching { writer?.close() }
             writer = null
         }
+        if (testing) {
+            testing = false
+            SafetyStateStore.update { it.copy(hitTestRunning = false) }
+        }
         super.onDestroy()
     }
 
@@ -263,8 +396,10 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
 
     private fun notification() = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(android.R.drawable.ic_menu_mylocation)
-        .setContentTitle("Segu-Luky: calibracion")
-        .setContentText("Grabando: ${activity.label}")
+        .setContentTitle(if (testing) "Segu-Luky: prueba de golpe" else "Segu-Luky: calibracion")
+        .setContentText(
+            if (testing) "Sacude el movil durante ${TEST_DURATION_MS / 1000} s" else "Grabando: ${activity.label}"
+        )
         .setOngoing(true)
         .setContentIntent(
             PendingIntent.getActivity(
@@ -287,13 +422,25 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         private const val FLUSH_INTERVAL_MS = 5_000L
         private const val ACTION_START = "com.intercom.segluky.CALIB_START"
         private const val ACTION_STOP = "com.intercom.segluky.CALIB_STOP"
+        private const val ACTION_TEST = "com.intercom.segluky.CALIB_TEST"
         private const val EXTRA_ACTIVITY = "activity"
+        private const val EXTRA_TEST_THRESHOLD_G = "test_threshold_g"
+        private const val TEST_DURATION_MS = 15_000L
+        private const val TEST_GRAVITY_ALPHA = 0.05f
 
         fun start(context: Context, activity: CalibrationActivity) {
             val intent = Intent(context, SensorCalibrationService::class.java)
                 .setAction(ACTION_START)
                 .putExtra(EXTRA_ACTIVITY, activity.id)
             ContextCompat.startForegroundService(context, intent)
+        }
+
+        /** PRUEBA DE GOLPE de 15 s: mide el pico y lo compara con [thresholdG]. */
+        fun testHit(context: Context, thresholdG: Float) {
+            val intent = Intent(context, SensorCalibrationService::class.java)
+                .setAction(ACTION_TEST)
+                .putExtra(EXTRA_TEST_THRESHOLD_G, thresholdG)
+            runCatching { ContextCompat.startForegroundService(context, intent) }
         }
 
         fun stop(context: Context) {

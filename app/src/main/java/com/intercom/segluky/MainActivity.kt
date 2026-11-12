@@ -331,6 +331,15 @@ class MainActivity : ComponentActivity() {
                                 SafetyMonitorService.saveSensitivity(context, g)
                             }
                         },
+                        onWindowChange = { mode ->
+                            SafetyMonitorService.setAdaptationWindow(context, mode)
+                        },
+                        onHitTest = {
+                            SensorCalibrationService.testHit(
+                                context,
+                                snapshot.effectiveThresholdG ?: sensitivityG
+                            )
+                        },
                         intercomState = installation.state,
                         onStart = { startMonitoring() },
                         onStop = { SafetyMonitorService.stop(context) }
@@ -1107,6 +1116,8 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.54s - La sensibilidad se afina sola: aprende el ruido y el traqueteo de cada movil, " +
+        "adapta el muestreo y el umbral en ventanas de 1-3 minutos, y anade PRUEBA DE GOLPE.")
     appendLine("1.53s - La cola del bot de Telegram ya no pierde avisos si se escribe a la vez, y el historial " +
         "recupera todas las versiones.")
     appendLine("1.52s - Verificar instalacion muestra la huella de la firma para comprobar que la APK es la " +
@@ -1678,7 +1689,7 @@ private fun EmergencySettingsScreen(
             )
         }
         item {
-            SectionHeader("CALIBRACION")
+            SectionHeader("DIAGNOSTICO")
         }
         item {
             val calibration by CalibrationStateStore.state.collectAsStateWithLifecycle()
@@ -1697,10 +1708,12 @@ private fun EmergencySettingsScreen(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("CALIBRACION DE SENSORES", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("GRABACION DE SENSORES (OPCIONAL)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(
-                        "Graba datos reales etiquetados por actividad para ajustar la deteccion. Elige que estas " +
-                            "haciendo, pulsa INICIAR REGISTRO y al terminar COMPARTE el archivo CSV.",
+                        "La app ya se ajusta sola con el uso: la sensibilidad se afina con el ruido y el " +
+                            "traqueteo de este movil, y con PRUEBA DE GOLPE (arriba) compruebas que se entera de " +
+                            "un golpe en 15 s. Grabar solo sirve para diagnostico: adjuntar datos reales a una " +
+                            "incidencia o comparar dos moviles.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Text(
@@ -1708,6 +1721,24 @@ private fun EmergencySettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold
                     )
+                    val deviceProfile = remember {
+                        SafetyMonitorService.loadDeviceProfile(context)
+                    }
+                    Text(
+                        "Aprendizaje: ${deviceProfile.usageMs / 60_000L} min · ruido " +
+                            "${String.format(Locale.US, "%.2f", deviceProfile.noiseG)} g · marcha p99 " +
+                            "${String.format(Locale.US, "%.2f", deviceProfile.p99G)} g · " +
+                            "${String.format(Locale.US, "%.0f", deviceProfile.deliveredHz)} Hz",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    TextButton(
+                        onClick = {
+                            SafetyMonitorService.resetDeviceProfile(context)
+                            SafetyStateStore.log("Aprendizaje del movil reiniciado")
+                        }
+                    ) {
+                        Text("REINICIAR APRENDIZAJE", style = MaterialTheme.typography.labelSmall)
+                    }
                     CalibrationActivity.entries.chunked(3).forEach { rowItems ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             rowItems.forEach { act ->
@@ -2241,7 +2272,13 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "3. Ajusta la sensibilidad",
-                text = "El control usa aceleracion dinamica entre 0.5 y 7 g. Con MODO MOTO activo, un golpe aislado arma un candidato; dos picos fuertes en 1,2 s (sacudida) inician la cuenta atras al instante. GPS y VELOCIDAD son informativos y nunca bloquean un golpe. Prueba la sensibilidad con seguridad antes de usarlo en moto."
+                text = "El control usa aceleracion dinamica entre 0.5 y 7 g, pero la app aprende el ruido y el " +
+                    "traqueteo de este movil: bajo el deslizador veras PICO, EFECTIVO y SUGERIDO, y la ventana " +
+                    "ADAPT. (AUTO, 1, 2 o 3 min) decide cada cuanto se recalcula. El muestreo tambien se ajusta " +
+                    "solo (25, 50 o 100 Hz). Con MODO MOTO activo un golpe aislado arma un candidato; dos picos " +
+                    "separados por un valle dentro de 1,2 s (sacudida) inician la cuenta atras al instante. GPS y " +
+                    "VELOCIDAD son informativos y nunca bloquean un golpe. PRUEBA DE GOLPE comprueba en 15 s que " +
+                    "el movil se entera de una sacudida, sin avisar a nadie."
             )
         }
         item {
@@ -2563,6 +2600,8 @@ private fun PhaseHeroCard(
     audioLevel: AudioLevelReading,
     sensitivityG: Float,
     onSensitivityChange: (Float) -> Unit,
+    onWindowChange: (AdaptationWindowMode) -> Unit,
+    onHitTest: () -> Unit,
     intercomState: IntercomState,
     onStart: () -> Unit,
     onStop: () -> Unit
@@ -2686,8 +2725,16 @@ private fun PhaseHeroCard(
             MovementLevelLine(snapshot.movementLevel)
             SensitivityControl(
                 sensitivityG = sensitivityG,
+                effectiveG = snapshot.effectiveThresholdG ?: sensitivityG,
+                livePeakG = snapshot.ridePeakG,
+                activeWindowMinutes = snapshot.adaptationWindowMinutes,
+                windowAuto = snapshot.adaptationWindowAuto,
+                hitTestRunning = snapshot.hitTestRunning,
+                hitTestVerdict = snapshot.hitTestVerdict,
                 enabled = phase == SafetyPhase.STOPPED,
-                onSensitivityChange = onSensitivityChange
+                onSensitivityChange = onSensitivityChange,
+                onWindowChange = onWindowChange,
+                onHitTest = onHitTest
             )
         }
     }
@@ -2983,12 +3030,30 @@ private fun MonitorCard(
         tone = if (running) Tone.OK else Tone.OFF,
         description = "Los avisos nunca dependen del GPS: solo del golpe, la voz o el boton."
     ) {
+        val effectiveSensitivity = snapshot.effectiveThresholdG ?: sensitivityG
         ServiceRow(
             "SENSOR",
             "${snapshot.movementG?.let { String.format(Locale.US, "%.2f g", it) } ?: "--"} / " +
-                String.format(Locale.US, "%.1f g", sensitivityG),
+                "efectivo ${String.format(Locale.US, "%.1f g", effectiveSensitivity)}",
             if (snapshot.sensorAvailable) IndicatorState.GOOD else IndicatorState.PENDING,
-            "Lectura actual / ajuste. ${snapshot.sensorDetail}"
+            buildString {
+                append("Lectura actual / umbral efectivo (tu ajuste: ")
+                append(String.format(Locale.US, "%.1f", sensitivityG))
+                append(" g). ")
+                append(snapshot.sensorDetail)
+                snapshot.deviceNoiseG?.let {
+                    append(" · ruido ").append(String.format(Locale.US, "%.2f", it)).append(" g")
+                }
+                snapshot.deviceP99G?.let {
+                    append(" · marcha p99 ").append(String.format(Locale.US, "%.2f", it)).append(" g")
+                }
+                snapshot.samplingHz?.let { append(" · ").append(it).append(" Hz") }
+                snapshot.ridePeakG?.takeIf { it > 0f }?.let {
+                    append(" · pico ").append(String.format(Locale.US, "%.2f", it)).append(" g")
+                }
+                append(" · ventana ").append(snapshot.adaptationWindowMinutes).append(" min")
+                if (snapshot.adaptationWindowAuto) append(" (auto)")
+            }
         )
         ServiceRow(
             "ORIENTACION",
@@ -3354,9 +3419,51 @@ private fun RowScope.SegTrack(weight: Float, color: Color) {
 @androidx.compose.runtime.Composable
 private fun SensitivityControl(
     sensitivityG: Float,
+    effectiveG: Float,
+    livePeakG: Float?,
+    activeWindowMinutes: Int,
+    windowAuto: Boolean,
+    hitTestRunning: Boolean,
+    hitTestVerdict: String?,
     enabled: Boolean,
-    onSensitivityChange: (Float) -> Unit
+    onSensitivityChange: (Float) -> Unit,
+    onWindowChange: (AdaptationWindowMode) -> Unit,
+    onHitTest: () -> Unit
 ) {
+    val context = LocalContext.current
+    val storedMode = remember(windowAuto, activeWindowMinutes) {
+        SafetyMonitorService.loadAdaptationWindowMode(context)
+    }
+    // Con el monitor detenido se enseña el pico del ultimo viaje guardado; mientras
+    // corre, el pico en vivo que publica el servicio.
+    val storedPeak = remember(enabled, livePeakG) {
+        if (livePeakG == null) SafetyMonitorService.loadRidePeak(context) else 0f
+    }
+    val peak = livePeakG?.takeIf { it > 0f } ?: storedPeak.takeIf { it > 0f }
+    val suggestion = peak?.let {
+        SensitivityAdvisor.suggest(peakG = it, currentG = sensitivityG, rideMs = Long.MAX_VALUE)
+    }
+    val canApply = enabled && suggestion != null &&
+        suggestion.verdict != SensitivityAdvisor.Verdict.CORRECT
+    val infoText = buildString {
+        if (peak != null) {
+            append(if (livePeakG != null) "PICO " else "ULTIMO ")
+            append(SensitivityAdvisor.formatG(peak))
+            append(" g")
+        }
+        if (effectiveG > sensitivityG + 0.05f) {
+            if (isNotEmpty()) append(" · ")
+            append("EFECT ")
+            append(SensitivityAdvisor.formatG(effectiveG))
+        }
+        if (suggestion != null && suggestion.verdict != SensitivityAdvisor.Verdict.CORRECT) {
+            if (isNotEmpty()) append(" · ")
+            append("SUG ")
+            append(SensitivityAdvisor.formatG(suggestion.recommendedG))
+        }
+        if (isEmpty()) append(if (enabled) "Sin datos del viaje" else "Midiendo...")
+    }
+
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -3383,7 +3490,105 @@ private fun SensitivityControl(
                 Text("$g", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
             }
         }
+        Spacer(Modifier.height(5.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "ADAPT.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            AdaptationWindowChip("AUTO", selected = windowAuto, enabled = enabled) {
+                onWindowChange(AdaptationWindowMode.AUTO)
+            }
+            AdaptationWindowMode.fixed.forEach { mode ->
+                AdaptationWindowChip(
+                    label = "${mode.minutes}",
+                    selected = !windowAuto && storedMode == mode,
+                    enabled = enabled
+                ) {
+                    onWindowChange(mode)
+                }
+            }
+            Text(
+                "MIN",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.weight(1f))
+            if (windowAuto) {
+                Text(
+                    "auto: $activeWindowMinutes min",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Spacer(Modifier.height(3.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                infoText,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+            if (canApply && suggestion != null) {
+                TextButton(onClick = { onSensitivityChange(suggestion.recommendedG) }) {
+                    Text(
+                        "USAR",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            if (enabled) {
+                TextButton(onClick = onHitTest, enabled = !hitTestRunning) {
+                    Text(
+                        if (hitTestRunning) "MIDIENDO..." else "PROBAR GOLPE",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+        if (hitTestVerdict != null) {
+            Text(
+                hitTestVerdict,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
+}
+
+/** Chip pequeno de la ventana de aprendizaje: AUTO, 1, 2 o 3 minutos. */
+@androidx.compose.runtime.Composable
+private fun AdaptationWindowChip(
+    label: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val foreground = when {
+        !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+        selected -> StrongGreen
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Text(
+        text = label,
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (selected) StrongGreen.copy(alpha = 0.16f) else Color.Transparent)
+            .clickable(enabled = enabled) { onClick() }
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        color = foreground
+    )
 }
 
 private data class AudioLevelReading(

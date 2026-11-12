@@ -20,6 +20,13 @@ class AccidentDetector(
         fun onFallCandidateArmed() = Unit
         fun onFallCandidateExpired() = Unit
         fun onFallCandidateAborted() = Unit
+
+        /**
+         * El candidato expiro pero el golpe fue a velocidad y el movil no se movio:
+         * tipico accidente con el telefono en el bolsillo, donde la inclinacion no
+         * confirma nada. Se empieza a vigilar inmovilidad en vez de descartarlo.
+         */
+        fun onFallCandidatePromotedToValidation() = Unit
     }
 
     data class RuntimeState(
@@ -38,12 +45,27 @@ class AccidentDetector(
     private var lastStrongHitAt = UNSET_TIME
     private var fallConfirmationEnabled = false
     private var lastVibrationAt = UNSET_TIME
-    private var sideTapG = DEFAULT_SIDE_TAP_G
-    private var singleSosG = DEFAULT_SINGLE_SOS_G
     private var lastLocationAt = UNSET_TIME
     private var lastDynamicAccelerationAt = UNSET_TIME
     private var lastAccelerometerAt = UNSET_TIME
     private var lastGyroscopeAt = UNSET_TIME
+
+    // Umbral: lo que elige el usuario y lo que aprende la adaptacion por movil.
+    private var userSensitivityG = DEFAULT_USER_SENSITIVITY_G
+    private var adaptiveFloorG = 0f
+    private var effectiveThresholdG = DEFAULT_USER_SENSITIVITY_G
+    private var hitArmed = true
+
+    // Picos: valor real del golpe y maximo del viaje, para registros y sugerencia.
+    private var lastHitPeakValue = 0f
+    private var hitPeakUntil = UNSET_TIME
+    private var ridePeakValue = 0f
+
+    // Rescate de candidato: velocidad del golpe y si hubo movimiento despues.
+    private var lastQualifiedSpeedKmh: Float? = null
+    private var lastQualifiedSpeedAt = UNSET_TIME
+    private var candidateHitSpeedKmh: Float? = null
+    private var motionSinceHit = false
 
     private var gravityInitialized = false
     private var gravityX = 0f
@@ -51,12 +73,41 @@ class AccidentDetector(
     private var gravityZ = 0f
     private var gravityUpdatedAt = UNSET_TIME
 
+    /** Ajuste elegido por el usuario, en g dinamicas. */
+    val sensitivityG: Float get() = userSensitivityG
+
+    /** Umbral realmente aplicado: el ajuste o el piso aprendido, el mayor. */
+    val effectiveSensitivityG: Float get() = effectiveThresholdG
+
+    /** Pico de aceleracion del ultimo golpe que conto. */
+    val lastHitPeakG: Float get() = lastHitPeakValue
+
+    /** Pico de aceleracion desde que arranco el monitor. */
+    val ridePeakG: Float get() = ridePeakValue
+
     /** Sets all user-facing movement thresholds in dynamic g (gravity removed). */
     fun setGolpeSensitivity(g: Float) {
         if (!g.isFinite()) return
-        val sensitivity = g.coerceIn(MIN_SENSITIVITY_G, MAX_SENSITIVITY_G)
-        sideTapG = sensitivity
-        singleSosG = sensitivity
+        userSensitivityG = g.coerceIn(MIN_SENSITIVITY_G, MAX_SENSITIVITY_G)
+        recomputeEffectiveThreshold()
+    }
+
+    /**
+     * Piso que aprende [AdaptiveSensitivity] con el ruido y el traqueteo de este
+     * movil. Nunca puede bajar el umbral por debajo del ajuste del usuario.
+     */
+    fun setAdaptiveFloor(g: Float) {
+        val floor = if (g.isFinite()) g.coerceIn(0f, MAX_SENSITIVITY_G) else 0f
+        if (abs(floor - adaptiveFloorG) < ADAPTIVE_FLOOR_DEADBAND_G) return
+        adaptiveFloorG = floor
+        recomputeEffectiveThreshold()
+    }
+
+    /** Olvida el pico del viaje al arrancar el monitor. */
+    fun resetRidePeak() {
+        ridePeakValue = 0f
+        lastHitPeakValue = 0f
+        hitPeakUntil = UNSET_TIME
     }
 
     /**
@@ -114,6 +165,10 @@ class AccidentDetector(
         lastLocationAt = timestamp
 
         val validSpeed = speedKmh?.takeIf { it.isFinite() && it >= 0f }
+        if (validSpeed != null) {
+            lastQualifiedSpeedKmh = validSpeed
+            lastQualifiedSpeedAt = timestamp
+        }
         if (validSpeed != null &&
             phase == SafetyPhase.VALIDATING &&
             validSpeed > IMMOBILE_MAX_SPEED_KMH
@@ -130,6 +185,8 @@ class AccidentDetector(
 
     fun clearLocation() {
         lastLocationAt = UNSET_TIME
+        lastQualifiedSpeedKmh = null
+        lastQualifiedSpeedAt = UNSET_TIME
     }
 
     /**
@@ -189,12 +246,24 @@ class AccidentDetector(
         val dynamicG = magnitude / STANDARD_GRAVITY
         if (!dynamicG.isFinite()) return 0f
         lastDynamicAccelerationAt = timestamp
+        if (dynamicG > ridePeakValue) ridePeakValue = dynamicG
+        trackHitPeak(timestamp, dynamicG)
 
-        val thresholdHit = dynamicG >= singleSosG
-        if (thresholdHit && (phase == SafetyPhase.MONITORING ||
+        val threshold = effectiveThresholdG
+        // Histeresis: tras un golpe hay que bajar a REARM_RATIO del umbral para que
+        // otro pico cuente. Sin esto, el rebote del mismo golpe se leia como una
+        // segunda sacudida y disparaba el SOS sin confirmar nada.
+        if (dynamicG <= threshold * REARM_RATIO) hitArmed = true
+
+        val thresholdHit = dynamicG >= threshold
+        val countedHit = thresholdHit && hitArmed && hitsAreSeparated(timestamp)
+        if (countedHit && (phase == SafetyPhase.MONITORING ||
                 phase == SafetyPhase.VALIDATING ||
                 phase == SafetyPhase.FALL_CANDIDATE)
         ) {
+            hitArmed = false
+            lastHitPeakValue = dynamicG
+            hitPeakUntil = timestamp + HIT_PEAK_WINDOW_MS
             val secondHit = lastStrongHitAt != UNSET_TIME &&
                 timestamp >= lastStrongHitAt &&
                 timestamp - lastStrongHitAt <= SHAKE_WINDOW_MS
@@ -212,6 +281,8 @@ class AccidentDetector(
             if (phase == SafetyPhase.MONITORING) {
                 phase = SafetyPhase.FALL_CANDIDATE
                 candidateDeadlineAt = timestamp + FALL_CANDIDATE_WINDOW_MS
+                candidateHitSpeedKmh = recentQualifiedSpeed(timestamp)
+                motionSinceHit = false
                 listener.onFallCandidateArmed()
             } else if (phase == SafetyPhase.FALL_CANDIDATE) {
                 candidateDeadlineAt = timestamp + FALL_CANDIDATE_WINDOW_MS
@@ -219,8 +290,13 @@ class AccidentDetector(
             return dynamicG
         }
 
-        if (dynamicG >= sideTapG) notifySignificantMovement(timestamp)
+        if (thresholdHit) notifySignificantMovement(timestamp)
         if (dynamicG > MOTION_THRESHOLD_G) {
+            if (phase == SafetyPhase.FALL_CANDIDATE &&
+                timestamp - lastStrongHitAt >= POCKET_SETTLE_MS
+            ) {
+                motionSinceHit = true
+            }
             if (phase == SafetyPhase.VALIDATING) markMoving(timestamp)
         } else if (phase == SafetyPhase.VALIDATING && immobileSince == null) {
             immobileSince = timestamp
@@ -246,8 +322,17 @@ class AccidentDetector(
         if (phase == SafetyPhase.FALL_CANDIDATE) {
             val deadline = candidateDeadlineAt
             if (deadline == null || timestamp >= deadline) {
-                resumeMonitoring()
-                listener.onFallCandidateExpired()
+                if (shouldPromoteCandidate()) {
+                    // Se vuelve a MONITORING para poder abrir la validacion: el
+                    // candidato no confirmo inclinacion, pero el golpe fue a velocidad
+                    // y el movil se quedo quieto (accidente con el telefono encima).
+                    resumeMonitoring()
+                    startValidation(timestamp)
+                    listener.onFallCandidatePromotedToValidation()
+                } else {
+                    resumeMonitoring()
+                    listener.onFallCandidateExpired()
+                }
             }
             return
         }
@@ -296,6 +381,9 @@ class AccidentDetector(
         immobileSince = null
         candidateDeadlineAt = null
         lastStrongHitAt = UNSET_TIME
+        hitArmed = true
+        candidateHitSpeedKmh = null
+        motionSinceHit = false
     }
 
     fun restoreRuntime(state: RuntimeState) {
@@ -321,6 +409,9 @@ class AccidentDetector(
         }
         candidateDeadlineAt = null
         lastStrongHitAt = UNSET_TIME
+        hitArmed = true
+        candidateHitSpeedKmh = null
+        motionSinceHit = false
     }
 
     /**
@@ -341,6 +432,9 @@ class AccidentDetector(
         immobileSince = null
         candidateDeadlineAt = null
         lastStrongHitAt = UNSET_TIME
+        hitArmed = true
+        candidateHitSpeedKmh = null
+        motionSinceHit = false
     }
 
     private fun markMoving(timestamp: Long) {
@@ -366,8 +460,45 @@ class AccidentDetector(
         phase = SafetyPhase.VALIDATING
         validationStartedAt = timestamp
         immobileSince = timestamp
+        candidateHitSpeedKmh = null
+        motionSinceHit = false
         listener.onValidationStarted(timestamp)
         return true
+    }
+
+    /** Un pico nuevo solo cuenta si el anterior quedo atras: el rebote no suma. */
+    private fun hitsAreSeparated(timestamp: Long): Boolean =
+        lastStrongHitAt == UNSET_TIME ||
+            timestamp < lastStrongHitAt ||
+            timestamp - lastStrongHitAt >= SHAKE_MIN_SEPARATION_MS
+
+    private fun trackHitPeak(timestamp: Long, dynamicG: Float) {
+        if (hitPeakUntil == UNSET_TIME || timestamp >= hitPeakUntil) return
+        if (dynamicG > lastHitPeakValue) lastHitPeakValue = dynamicG
+    }
+
+    /**
+     * Candidato que expira sin inclinacion, pero el golpe fue a velocidad de moto y
+     * el telefono no se movio: es el accidente con el movil en el bolsillo, donde la
+     * actitud nunca confirma nada. Se vigila la inmovilidad en vez de descartarlo.
+     */
+    private fun shouldPromoteCandidate(): Boolean {
+        if (!fallConfirmationEnabled) return false
+        if (motionSinceHit) return false
+        val speed = candidateHitSpeedKmh ?: return false
+        return speed >= POCKET_MIN_SPEED_KMH
+    }
+
+    private fun recentQualifiedSpeed(timestamp: Long): Float? {
+        val speed = lastQualifiedSpeedKmh ?: return null
+        val at = lastQualifiedSpeedAt
+        if (at == UNSET_TIME || timestamp < at) return null
+        if (timestamp - at > RECENT_LOCATION_WINDOW_MS) return null
+        return speed
+    }
+
+    private fun recomputeEffectiveThreshold() {
+        effectiveThresholdG = maxOf(userSensitivityG, adaptiveFloorG.coerceAtMost(MAX_SENSITIVITY_G))
     }
 
     private fun initializeGravity(x: Float, y: Float, z: Float, timestamp: Long) {
@@ -412,8 +543,23 @@ class AccidentDetector(
         const val FALL_TILT_THRESHOLD_DEGREES = 55f
         const val FALL_UPRIGHT_ABORT_DEGREES = 25f
 
-        private const val DEFAULT_SIDE_TAP_G = 2.0f
-        private const val DEFAULT_SINGLE_SOS_G = 99f
+        /** Tras un golpe hay que bajar a este tanto del umbral para rearmar. */
+        const val REARM_RATIO = 0.6f
+
+        /** Dos picos mas juntos son el rebote del mismo golpe, no una sacudida. */
+        const val SHAKE_MIN_SEPARATION_MS = 250L
+
+        /** Ventana en la que se sigue midiendo el pico real del golpe. */
+        const val HIT_PEAK_WINDOW_MS = 500L
+
+        /** Velocidad minima del golpe para considerar el rescate de bolsillo. */
+        const val POCKET_MIN_SPEED_KMH = 20f
+
+        /** Margen tras el golpe antes de contar movimiento (deja pasar el rebote). */
+        const val POCKET_SETTLE_MS = 2_000L
+
+        private const val DEFAULT_USER_SENSITIVITY_G = 3.5f
+        private const val ADAPTIVE_FLOOR_DEADBAND_G = 0.01f
         private const val MOTION_THRESHOLD_G = 0.15f
         private const val GYROSCOPE_MOTION_RAD_S = 2.5f
         private const val IMMOBILE_MAX_SPEED_KMH = 3f
