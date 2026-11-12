@@ -105,8 +105,11 @@ The shareable build of every version is published in `APK´s/` as
 `Segu-Luky-<version>.apk` (currently `Segu-Luky-1.64s.apk`), ready to download
 and install on the phone without Android Studio.
 
-Every version is also published as a GitHub release tagged `V-<version>` with
-that same APK attached, because **Buscar actualizacion** reads the GitHub API:
+Only the newest version stays published as a GitHub release: `V-1.64s` with
+`Segu-Luky-1.64s.apk` attached. Older releases are deleted so the download page
+always shows a single APK (the git tags stay, so the source of every version is
+still reachable). **Buscar actualizacion** reads the GitHub API and compares
+against that one release:
 
 ```text
 gh release create V-1.64s "APK´s/Segu-Luky-1.64s.apk" --title "Segu-Luky V-1.64s" --notes "..."

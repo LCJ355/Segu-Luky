@@ -42,7 +42,16 @@
    with the version installed on the phone.
 10. Check the result as the app does: `GET /repos/LCJ355/Segu-Luky/releases` must list the new
     version first with the APK asset attached.
-11. Refresh `APK´s/SHA256SUMS.txt` (all published APKs plus the certificate fingerprint) and put
+11. Delete the previous release once the new one downloads correctly, so the public page shows a
+    single APK. Deleting a release does **not** delete its git tag, which is what keeps the source
+    of every version and the fallback of **Buscar actualizacion** intact:
+    ```text
+    curl -X DELETE -H "Authorization: token <token>" \
+         https://api.github.com/repos/LCJ355/Segu-Luky/releases/<id_of_old_release>
+    ```
+    The archived APKs stay in `APK´s/` with their mappings and digests in `APK´s/SHA256SUMS.txt`;
+    only the public release list is pruned.
+12. Refresh `APK´s/SHA256SUMS.txt` (all archived APKs plus the certificate fingerprint) and put
     the new APK's SHA-256 in the release notes: it is how anyone verifies a download, together
     with `docs/SEGURIDAD.md`.
 
