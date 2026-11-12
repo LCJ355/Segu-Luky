@@ -1469,14 +1469,17 @@ Motivo: dos fallos del INFORME-BUGS-1.47s.md que podian dejar el SOS a medias
 o perder el unico canal que avisa con el movil en el bolsillo.
 
 Prueba realizada: testDebugUnitTest (99 pruebas, 0 fallos), lintDebug
-(0 errores) y assembleRelease. Sin dispositivo conectado, asi que la prueba
-en el Redmi (aviso de voz con InterCOM encendido y apagado; Telegram con datos
-cortados a proposito para ver el reintento) queda pendiente.
-Resultado: compila y verifica; pendiente la prueba real.
+(0 errores) y assembleRelease.
+- Instalacion en el OPPO: actualizado de la 1.49s a la 1.50s sin problemas
+  (misma firma, se instala encima; informado por el usuario el 12/11/2026).
+- Pendiente en dispositivo: aviso de voz con InterCOM encendido y apagado, y
+  Telegram con los datos cortados a proposito para ver el reintento.
+Resultado: compila, verifica y actualiza en el OPPO; pendiente la prueba de los
+dos comportamientos corregidos.
 APK generado: APK´s/Segu-Luky-1.50s.apk
 Mapping archivado: APK´s/mapping/Segu-Luky-1.50s-mapping.txt.gz
-Pendientes: §8 (WhatsAppUnlockActivity), prueba en dispositivo y decidir si se
-prueba el reintento de Telegram con el movil sin datos.
+Pendientes: §8 (WhatsAppUnlockActivity) y las dos pruebas de comportamiento
+(aviso InterCOM y reintento de Telegram).
 
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
