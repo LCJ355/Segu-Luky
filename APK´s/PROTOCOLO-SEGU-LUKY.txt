@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.49s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.50s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 41). Los valores entre parentesis son los del codigo.
+archivo (versionCode 42). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -90,10 +90,13 @@ Si FUNCIONALIDAD SOS esta DESACTIVADA: no se envia nada; solo queda el registro.
 
 Si esta ACTIVADA, en este orden:
 1. Se calcula el enlace {MAPA} con la ultima posicion valida (<= 5 min).
-2. Telegram por bot (si hay token global y el contacto tiene chat id): hilo
-   propio con wake lock de 2 min; un POST a api.telegram.org por contacto, 15 s
-   de conexion + 15 s de lectura. El resultado se registra ("TELEGRAM bot: n/m
-   avisos enviados"), pero NO se reintenta ni se persiste.
+2. Telegram por bot (si hay token global y el contacto tiene chat id): cada aviso
+   se guarda en una cola durable y se envia en un hilo propio, 15 s de conexion +
+   15 s de lectura. Si falla se reintenta con espera creciente (20 s, 60 s, 120 s,
+   300 s; maximo 5 intentos, dentro de los 10 min del despacho) y los fallos
+   definitivos (token, chat o bot bloqueado) no se reintentan. El resultado se
+   registra ("TELEGRAM bot: n/m entregados en este intento; quedan k") y al
+   cerrar la ronda queda el resumen de lo entregado y lo que no.
 3. SMS automatico (si esta activado y hay permiso): un SMS por contacto, partido
    si es largo. Funciona con la pantalla apagada.
 4. WhatsApp y Telegram por enlace (si ENVIO AUTO esta activo, hay Accesibilidad y
@@ -157,7 +160,9 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
 - (corregido en 1.48s) El monitor declara el tipo `microphone` y lo pide en primer
   plano mientras la voz esta activa, para que Android 14+ no entregue silencio. Si
   el sistema rechaza ese tipo, la activacion por voz se queda sin oir y lo anota.
-- El envio por bot de Telegram no tiene cola ni reintento.
+- (corregido en 1.50s) El bot de Telegram tiene cola durable y reintentos con
+  espera creciente; antes era un unico POST y un fallo de datos en el punto del
+  accidente perdia el aviso para siempre.
 - (corregido en 1.49s) «Buscar actualizacion» lee releases y etiquetas y elige la
   mas alta, asi una version etiquetada sin release tambien se ofrece.
 - WhatsAppUnlockActivity abre el chat aunque se cancele el desbloqueo.
@@ -202,4 +207,4 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.49s (versionCode 41) - 12/11/2026
+Version: V-1.50s (versionCode 42) - 12/11/2026

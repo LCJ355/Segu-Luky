@@ -1,6 +1,20 @@
 # Changelog
 
-## Sin publicar
+## 1.50s (versionCode 42)
+
+Publicada con APK, mapping, protocolo e instrucciones: `APK´s/Segu-Luky-1.50s.apk`,
+`APK´s/mapping/Segu-Luky-1.50s-mapping.txt.gz`, release `V-1.50s` con el APK adjunto.
+
+### Cola durable del bot de Telegram
+- `dispatchTelegramBot()` hacía **un único** POST por contacto: sin datos en el punto del accidente
+  (el caso normal), un 502 o un timeout y ese contacto no recibía nada, sin reintento ni aviso.
+  Ahora cada aviso es un trabajo en `TelegramBotOutbox` (persistido, sobrevive a reinicios) que se
+  reintenta con espera creciente —20 s, 60 s, 120 s, 300 s, máximo 5 intentos— dentro de la
+  ventana de 10 min que ya vigilaba el despacho, tanto en cada vuelta del vigilante como al
+  reanudar un SOS interrumpido. Los fallos definitivos (token revocado, chat inexistente, bot
+  bloqueado) no se reintentan: gastarían la ventana sin poder mejorar.
+- Al cerrar la ronda el registro resume lo entregado y lo que quedó sin entregar, con el motivo.
+- 5 tests nuevos (99 en total) sobre la escala de espera, la ventana y los fallos definitivos.
 
 ### Aviso a InterCOM fuera del hilo del SOS
 - `dispatchIntercomNotice()` hacía dos llamadas binder a otra app (`query` del estado y `call`

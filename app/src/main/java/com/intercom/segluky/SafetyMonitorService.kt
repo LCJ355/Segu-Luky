@@ -38,6 +38,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -99,6 +100,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private var dispatchInProgress = false
     private var dispatchWatchdogStartedAt: Long? = null
     private var exactAlarmFallbackLogged = false
+    /** Un solo hilo de entrega a la vez: la cola del bot de Telegram es compartida. */
+    private val telegramWorkerRunning = AtomicBoolean(false)
+    private var telegramRetry: Runnable? = null
 
     private val callStateListener = object : PhoneStateListener() {
         override fun onCallStateChanged(state: Int, phoneNumber: String?) {
@@ -631,6 +635,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         val dispatch = EmergencyDispatchRepository(this).load() ?: return false
         if (runtimeRepository.wasEventCompleted(dispatch.eventId)) {
             EmergencyDispatchRepository(this).clear()
+            // Un evento ya cerrado no debe dejar avisos de Telegram en la cola.
+            TelegramBotOutbox(this).clearEvent(dispatch.eventId)
             return false
         }
         if (monitoringEnabled && !sensorsRegistered) {
@@ -642,6 +648,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             it.copy(dispatchInProgress = true, detail = "Reanudando avisos SOS pendientes")
         }
         scheduleDispatchWatchdog(DISPATCH_WATCHDOG_INITIAL_MS)
+        // Un SOS interrumpido puede dejar avisos de Telegram a medias: se reintentan.
+        processTelegramBotOutbox()
         continueEmergencyDispatch()
         return true
     }
@@ -1200,7 +1208,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         }
 
         if (telegramBotContacts.isNotEmpty() && telegramBotToken != null) {
-            dispatchTelegramBot(telegramBotToken, telegramBotContacts, mapLink)
+            dispatchTelegramBot(telegramBotContacts, mapLink)
         }
 
         if ((autoSend && whatsappPackage != null && whatsappContacts.isNotEmpty()) || telegramLinkAuto) {
@@ -1591,6 +1599,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     )
 
     private fun handleDispatchWatchdog() {
+        // Los reintentos del bot no dependen del resto del despacho: cada vuelta del
+        // vigilante (alarma cada 10 s durante 10 min) es una ocasion de reintentar.
+        processTelegramBotOutbox()
         val dispatch = EmergencyDispatchRepository(this).load()
         if (dispatch == null) {
             dispatchInProgress = false
@@ -1669,9 +1680,11 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     }
 
     private fun finishProtocolState() {
+        val finishedEventId = activeEventId
         activeEventId = null
         dispatchInProgress = false
         cancelDispatchWatchdog()
+        reportTelegramBot(finishedEventId)
         val restoreMonitoring = monitoringEnabled || wasMonitoringBeforeEmergency
         wasMonitoringBeforeEmergency = false
         if (restoreMonitoring) {
@@ -1893,39 +1906,142 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     /**
      * Via principal de Telegram: Bot API. No abre ninguna app ni necesita la
      * pantalla desbloqueada, pero requiere token del bot y chat id del contacto.
-     * Corre en segundo plano para no retrasar llamadas ni WhatsApp.
+     *
+     * Los avisos se guardan en una cola durable y se reintentan con espera
+     * creciente ([TelegramBotRetry]): antes se hacia un unico POST y, si el movil
+     * no tenia datos en el punto del accidente, ese contacto no recibia nada.
      */
     private fun dispatchTelegramBot(
-        token: String,
         contacts: List<EmergencyContact>,
         mapLink: String?
     ) {
         if (contacts.isEmpty()) return
+        val eventId = activeEventId ?: return
         val targets = contacts.map { it.telegramChatId to it.sosMessageFor(mapLink) }
-        val label = contacts.size
-        Thread {
-            val powerManager = getSystemService(PowerManager::class.java)
-            val wakeLock = powerManager?.newWakeLock(
-                PowerManager.PARTIAL_WAKE_LOCK,
-                "Segu-Luky:telegram-bot"
-            )?.apply { runCatching { acquire(TELEGRAM_BOT_WAKE_LOCK_MS) } }
+        TelegramBotOutbox(this).enqueue(eventId, targets)
+        processTelegramBotOutbox()
+    }
+
+    /**
+     * Entrega lo que toca ahora y programa el siguiente reintento. Idempotente y
+     * sin bloquear: la red y el envio corren en su propio hilo.
+     */
+    private fun processTelegramBotOutbox() {
+        if (!telegramWorkerRunning.compareAndSet(false, true)) return
+        val context = applicationContext
+        val worker = Thread {
             try {
-                var sent = 0
-                val problems = mutableListOf<String>()
-                targets.forEach { (chatId, message) ->
-                    val result = TelegramSos.sendViaBot(token, chatId, message)
-                    if (result.ok) {
-                        sent += 1
+                val outbox = TelegramBotOutbox(context)
+                val repository = ContactsRepository(context)
+                val token = if (repository.isTelegramBotConfigured()) {
+                    repository.telegramBotToken()
+                } else {
+                    null
+                }
+                val due = outbox.due()
+                if (due.isNotEmpty()) {
+                    if (token.isNullOrBlank()) {
+                        // Sin token no se puede entregar: cada trabajo gasta un intento
+                        // para no reintentar en bucle hasta cerrar la ronda.
+                        due.forEach { job ->
+                            outbox.record(job, ok = false, error = "falta el token del bot")
+                        }
+                        SafetyStateStore.log("TELEGRAM bot: no hay token; avisos sin entregar")
                     } else {
-                        problems += "$chatId (${result.detail})"
+                        deliverTelegramJobs(outbox, due, token)
                     }
                 }
-                val detail = if (problems.isEmpty()) "" else ": ${problems.joinToString("; ")}"
-                SafetyStateStore.log("TELEGRAM bot: $sent/$label avisos enviados$detail")
+                scheduleTelegramRetry(outbox)
+            } catch (error: Exception) {
+                SafetyStateStore.log("TELEGRAM bot: error inesperado (${error.javaClass.simpleName})")
             } finally {
-                runCatching { if (wakeLock?.isHeld == true) wakeLock.release() }
+                telegramWorkerRunning.set(false)
             }
-        }.apply { isDaemon = true }.start()
+        }
+        worker.isDaemon = true
+        worker.name = "segluky-telegram-bot"
+        runCatching { worker.start() }.onFailure {
+            // Sin hilo no hay entrega, pero la marca no puede quedarse tomada.
+            telegramWorkerRunning.set(false)
+            SafetyStateStore.log("TELEGRAM bot: no se pudo lanzar la entrega")
+        }
+    }
+
+    private fun deliverTelegramJobs(
+        outbox: TelegramBotOutbox,
+        jobs: List<TelegramBotJob>,
+        token: String
+    ) {
+        val powerManager = getSystemService(PowerManager::class.java)
+        val wakeLock = powerManager?.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "Segu-Luky:telegram-bot"
+        )?.apply { runCatching { acquire(TELEGRAM_BOT_WAKE_LOCK_MS) } }
+        try {
+            val results = jobs.map { job ->
+                val result = TelegramSos.sendViaBot(token, job.chatId, job.message)
+                outbox.record(
+                    job = job,
+                    ok = result.ok,
+                    error = result.detail,
+                    permanent = !result.ok && TelegramBotRetry.isPermanent(result.detail)
+                )
+                job to result
+            }
+            results.groupBy { it.first.eventId }.forEach { (eventId, sent) ->
+                val status = outbox.status(eventId)
+                val ok = sent.count { it.second.ok }
+                val failures = sent.filterNot { it.second.ok }
+                    .joinToString("; ") { "${it.first.chatId} (${it.second.detail})" }
+                val retry = when {
+                    status.pending > 0 -> "; quedan ${status.pending} por reintentar"
+                    status.exhausted > 0 -> "; ${status.exhausted} sin entregar"
+                    else -> ""
+                }
+                val detail = if (failures.isBlank()) "" else ": $failures"
+                SafetyStateStore.log(
+                    "TELEGRAM bot: $ok/${sent.size} entregados en este intento$retry" +
+                        detail.take(180)
+                )
+            }
+        } finally {
+            runCatching { if (wakeLock?.isHeld == true) wakeLock.release() }
+        }
+    }
+
+    private fun scheduleTelegramRetry(outbox: TelegramBotOutbox) {
+        val next = outbox.nextAttemptAtWall() ?: return
+        val delay = (next - System.currentTimeMillis()).coerceIn(1_000L, 300_000L)
+        window.post {
+            telegramRetry?.let { window.removeCallbacks(it) }
+            val runnable = Runnable { processTelegramBotOutbox() }
+            telegramRetry = runnable
+            window.postDelayed(runnable, delay)
+        }
+    }
+
+    /**
+     * Deja en el registro el resultado de los avisos de Telegram y limpia la cola:
+     * al cerrar la ronda ya no hay quien reintente y un mensaje viejo no debe
+     * salir con el siguiente SOS.
+     */
+    private fun reportTelegramBot(eventId: String?) {
+        if (eventId == null) return
+        val outbox = TelegramBotOutbox(this)
+        val status = outbox.status(eventId)
+        if (status.total > 0) {
+            val detail = when {
+                status.pending > 0 ->
+                    "TELEGRAM bot: quedan ${status.pending} sin entregar; se cierra la ronda"
+                status.exhausted > 0 ->
+                    "TELEGRAM bot: ${status.delivered}/${status.total} entregados y " +
+                        "${status.exhausted} sin entregar"
+                else -> "TELEGRAM bot: ${status.delivered}/${status.total} entregados"
+            }
+            val failures = if (status.failures.isBlank()) "" else ": ${status.failures}"
+            SafetyStateStore.log("$detail$failures")
+        }
+        outbox.clearEvent(eventId)
     }
 
     private fun postManualTelegramActions(contacts: List<EmergencyContact>, mapLink: String?) {

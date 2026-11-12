@@ -4,9 +4,10 @@ Proyecto: `G:\-IA-\GitHub-repos-\Segu-Luky`
 Commit analizado: `173d7a8` (`origin/main`, `versionCode = 39`, `versionName = "1.47s"`)
 APK de referencia: `APK´s/Segu-Luky-1.47s.apk`, SHA-256 `0726b6ed…`
 
-> **Estado:** §1, §2, §3 y §4 corregidos en **1.48s** (`versionCode 40`); §7 corregido en
-> **1.49s** (`versionCode 41`, `APK´s/Segu-Luky-1.49s.apk`). Cada apartado corregido indica qué
-> se cambió. El resto sigue pendiente en el orden de la última sección.
+> **Estado:** §1, §2, §3 y §4 corregidos en **1.48s** (`versionCode 40`); §7 en **1.49s**
+> (`versionCode 41`); §5 y §6 en **1.50s** (`versionCode 42`, `APK´s/Segu-Luky-1.50s.apk`). Cada
+> apartado corregido indica qué se cambió. El resto sigue pendiente en el orden de la última
+> sección.
 
 ## Corrección del análisis anterior
 
@@ -115,7 +116,7 @@ diciendo:
 
 ---
 
-## 5. [ALTO · corregido, sin publicar] El aviso a InterCOM (dos IPC a otra app) se ejecuta en la ruta crítica del SOS
+## 5. [ALTO · corregido] El aviso a InterCOM (dos IPC a otra app) se ejecuta en la ruta crítica del SOS
 
 **Verificado.** `SafetyMonitorService.completeProtocol()` llama a `dispatchIntercomNotice()`
 (línea 1153), que en el mismo hilo hace:
@@ -138,7 +139,7 @@ bloqueante en main.
 **Fix:** mover a E/S con timeout (la caché negativa de 30 s ya existe) y, en el SOS, no esperar
 a InterCOM: lanzar el aviso y seguir con SMS/WhatsApp/llamadas.
 
-**Corregido (pendiente de publicar).** El aviso sale en un hilo propio
+**Corregido en 1.50s.** El aviso sale en un hilo propio
 (`segluky-intercom-notice`): `completeProtocol()` sigue con SMS, WhatsApp y llamadas sin esperar y
 el resultado se anota cuando llega (`IntercomNotice.detail`, con 4 tests). El sondeo de la
 pantalla y «PROBAR AVISO» también pasan a `Dispatchers.IO`, así que la UI ya no se congela si
@@ -148,7 +149,7 @@ a propósito: es una sola vez, fuera del SOS, y hacerla diferida mostraría un e
 
 ---
 
-## 6. [ALTO] El envío por bot de Telegram es "dispara y olvida"
+## 6. [ALTO · corregido] El envío por bot de Telegram es "dispara y olvida"
 
 **Verificado.** `dispatchTelegramBot()` lanza un hilo daemon con `PARTIAL_WAKE_LOCK`, recorre
 los contactos con `TelegramSos.sendViaBot()` (15 s de conexión + 15 s de lectura **por
@@ -162,6 +163,14 @@ la vía bot.
 
 **Fix:** integrar el bot en el pipeline (`DispatchStep.TELEGRAM` con cola persistida por
 contacto, TTL y reintentos), reutilizando el patrón de `WhatsAppAutoSend`.
+
+**Corregido en 1.50s.** `TelegramBotOutbox` guarda un trabajo por
+`(evento, chatId)` en SharedPreferences y `TelegramBotRetry` define la espera creciente (20 s,
+60 s, 120 s, 300 s; máximo 5 intentos; la suma cabe en los 10 min del despacho). Los reintentos
+se disparan en cada vuelta del vigilante del despacho y al reanudar un SOS interrumpido; los
+fallos definitivos (token, chat, bot bloqueado) se marcan agotados sin esperar. Al cerrar la
+ronda el registro resume lo entregado y lo que quedó pendiente, y la cola se limpia para que un
+mensaje viejo no salga en el SOS siguiente. 5 tests nuevos.
 
 ---
 
@@ -217,5 +226,5 @@ cancelar.
 1. ~~§1 y §2~~ (corregidos: no se cuelga ni se marca sobre una llamada activa; la ronda ya no se
    corta por un timbrado).
 2. ~~§3 (voz con pantalla apagada) y §4 (instrucciones del APK)~~ (corregidos en 1.48s).
-3. ~~§5~~ (corregido, pendiente de publicar) y §6 (Telegram bot durable).
+3. ~~§5 y §6~~ (corregidos en 1.50s).
 4. ~~§7~~ (corregido en 1.49s) y §8.

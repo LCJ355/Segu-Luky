@@ -1447,6 +1447,37 @@ Mapping archivado: APK´s/mapping/Segu-Luky-1.49s-mapping.txt.gz
 Pendientes: §5 (IPC de InterCOM en el hilo principal), §6 (Telegram sin
 reintento), §8 (WhatsAppUnlockActivity) y la prueba en dispositivo.
 
+======================================================================
+V-1.50s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.50s (versionCode 42)
+
+Cambio:
+- §5: el aviso de voz a InterCOM sale en un hilo propio (segluky-intercom-
+  notice). El protocolo ya no espera dos llamadas binder a otra app antes de
+  SMS, WhatsApp y llamadas, y el sondeo de la pantalla y PROBAR AVISO pasan a
+  Dispatchers.IO.
+- §6: el bot de Telegram tiene cola durable (TelegramBotOutbox) y reintentos
+  con espera creciente (20 s, 60 s, 120 s, 300 s; maximo 5 intentos) dentro de
+  la ventana de 10 min del despacho; los fallos definitivos (token, chat, bot
+  bloqueado) no se reintentan; al cerrar la ronda el registro resume lo
+  entregado y lo que quedo pendiente.
+
+Motivo: dos fallos del INFORME-BUGS-1.47s.md que podian dejar el SOS a medias
+o perder el unico canal que avisa con el movil en el bolsillo.
+
+Prueba realizada: testDebugUnitTest (99 pruebas, 0 fallos), lintDebug
+(0 errores) y assembleRelease. Sin dispositivo conectado, asi que la prueba
+en el Redmi (aviso de voz con InterCOM encendido y apagado; Telegram con datos
+cortados a proposito para ver el reintento) queda pendiente.
+Resultado: compila y verifica; pendiente la prueba real.
+APK generado: APK´s/Segu-Luky-1.50s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.50s-mapping.txt.gz
+Pendientes: §8 (WhatsAppUnlockActivity), prueba en dispositivo y decidir si se
+prueba el reintento de Telegram con el movil sin datos.
+
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 
