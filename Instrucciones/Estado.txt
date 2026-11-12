@@ -1541,6 +1541,47 @@ Mapping archivado: APK´s/mapping/Segu-Luky-1.52s-mapping.txt.gz
 Pendientes: las tres pruebas de comportamiento (§5, §6, §8) y verificar que la
 huella que muestra la app coincide con la de docs/SEGURIDAD.md.
 
+======================================================================
+V-1.53s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.53s (versionCode 45)
+
+Cambio:
+- Historial: la lista de Informacion > Historial seguia parada en 1.41s y no
+  mencionaba ninguna version de la 1.42s a la 1.52s. Se anaden las doce
+  entradas que faltaban y la 1.53s va arriba del todo.
+- TelegramBotOutbox: cada mutacion de la cola era un ciclo
+  leer-modificar-escribir sin proteccion sobre un JSON de SharedPreferences.
+  El servicio crea una instancia en el hilo del manejador y el trabajador de
+  red apunta ahi el resultado de cada envio; si un enqueue leia la lista justo
+  antes de que el trabajador apuntara una entrega, la escritura del enqueue
+  borraba ese apunte. Ese contacto se quedaba sin aviso y sin reintento, justo
+  en el canal que existe porque el movil va en el bolsillo. Ahora enqueue,
+  record, clearEvent y clear pasan por un candado compartido por instancias y
+  la escritura se persiste con commit() antes de soltarlo.
+- closeEvent(eventId): resumen final y borrado del evento bajo el mismo
+  candado. Antes se leia el resumen y luego se borraba, asi que un aviso
+  entregado entre las dos llamadas quedaba en el registro como "sin entregar".
+- La cola ya no depende de Context: TelegramOutboxStore esconde el almacen y
+  las pruebas usan una version en memoria. Se anade
+  testImplementation("org.json:json:20240303") porque las clases org.json de
+  android.jar son stubs ("not mocked") en las pruebas JVM.
+
+Motivo: los dos fallos que quedaban abiertos de la revision de la 1.52s; el del
+outbox podia perder un aviso de SOS sin dejar rastro en el registro.
+
+Prueba realizada: testDebugUnitTest (113 pruebas, 0 fallos; 10 nuevas de la
+cola en TelegramBotOutboxTest), lintDebug (0 errores) y assembleRelease.
+Comprobado que la prueba de los dos hilos escribiendo a la vez falla al quitar
+el candado y pasa con el puesto.
+Resultado: compila y verifica; pendiente ver el historial completo en el movil.
+APK generado: APK´s/Segu-Luky-1.53s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.53s-mapping.txt.gz
+Pendientes: las tres pruebas de comportamiento (§5, §6, §8) y verificar que el
+Historial del movil llega hasta la 1.53s.
+
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

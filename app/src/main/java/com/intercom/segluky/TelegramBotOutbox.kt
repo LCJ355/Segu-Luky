@@ -1,5 +1,6 @@
 package com.intercom.segluky
 
+import android.annotation.SuppressLint
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
@@ -69,15 +70,44 @@ internal data class TelegramBotStatus(
 }
 
 /**
+ * Almacen de la cola.
+ *
+ * Existe para poder probar la cola sin un `Context`: las pruebas usan una version en
+ * memoria que imita el almacen real. [write] tiene que dejar el dato persistido antes
+ * de volver (el `apply()` de SharedPreferences no lo garantiza si el proceso muere).
+ */
+internal interface TelegramOutboxStore {
+    fun read(): String
+    fun write(raw: String)
+}
+
+private class PreferencesOutboxStore(context: Context) : TelegramOutboxStore {
+    private val preferences = context.applicationContext
+        .getSharedPreferences("segu_telegram_bot", Context.MODE_PRIVATE)
+
+    override fun read(): String = preferences.getString(KEY_JOBS, "") ?: ""
+
+    // commit() y no apply(): la cola guarda avisos de SOS y apply() deja la escritura
+    // en segundo plano, asi que un proceso muerto justo despues puede perderla.
+    @SuppressLint("ApplySharedPref")
+    override fun write(raw: String) {
+        preferences.edit().putString(KEY_JOBS, raw).commit()
+    }
+
+    private companion object {
+        const val KEY_JOBS = "jobs"
+    }
+}
+
+/**
  * Cola durable de los avisos del bot de Telegram.
  *
  * Cada contacto es un trabajo independiente que sobrevive a reinicios y que se
  * reintenta con espera creciente: el WhatsApp ya tenia cola, Telegram no, y es
  * justo el canal que funciona con el movil en el bolsillo.
  */
-internal class TelegramBotOutbox(context: Context) {
-    private val preferences = context.applicationContext
-        .getSharedPreferences("segu_telegram_bot", Context.MODE_PRIVATE)
+internal class TelegramBotOutbox internal constructor(private val store: TelegramOutboxStore) {
+    constructor(context: Context) : this(PreferencesOutboxStore(context))
 
     /** Anade los avisos de un evento que aun no estaban en la cola. */
     fun enqueue(
@@ -86,35 +116,41 @@ internal class TelegramBotOutbox(context: Context) {
         nowWall: Long = System.currentTimeMillis()
     ) {
         if (eventId.isBlank() || targets.isEmpty()) return
-        val jobs = load().toMutableList()
-        val known = jobs.filter { it.eventId == eventId }.map { it.chatId }.toSet()
-        var changed = false
-        targets.forEach { (chatId, message) ->
-            if (chatId.isNotBlank() && chatId !in known) {
-                jobs += TelegramBotJob(
-                    eventId = eventId,
-                    chatId = chatId,
-                    message = message,
-                    nextAttemptAtWall = nowWall
-                )
-                changed = true
+        synchronized(LOCK) {
+            val jobs = loadLocked().toMutableList()
+            val known = jobs.filter { it.eventId == eventId }.map { it.chatId }.toSet()
+            var changed = false
+            targets.forEach { (chatId, message) ->
+                if (chatId.isNotBlank() && chatId !in known) {
+                    jobs += TelegramBotJob(
+                        eventId = eventId,
+                        chatId = chatId,
+                        message = message,
+                        nextAttemptAtWall = nowWall
+                    )
+                    changed = true
+                }
             }
+            if (changed) saveLocked(jobs)
         }
-        if (changed) save(jobs)
     }
 
     /** Trabajos que toca intentar ahora. */
-    fun due(nowWall: Long = System.currentTimeMillis()): List<TelegramBotJob> =
-        load().filter {
+    fun due(nowWall: Long = System.currentTimeMillis()): List<TelegramBotJob> {
+        val jobs = synchronized(LOCK) { loadLocked() }
+        return jobs.filter {
             !it.delivered &&
                 TelegramBotRetry.canRetry(it.attempts) &&
                 it.nextAttemptAtWall <= nowWall
         }
+    }
 
     /** Momento del siguiente reintento pendiente, o null si no queda ninguno. */
-    fun nextAttemptAtWall(): Long? =
-        load().filter { !it.delivered && TelegramBotRetry.canRetry(it.attempts) }
+    fun nextAttemptAtWall(): Long? {
+        val jobs = synchronized(LOCK) { loadLocked() }
+        return jobs.filter { !it.delivered && TelegramBotRetry.canRetry(it.attempts) }
             .minOfOrNull { it.nextAttemptAtWall }
+    }
 
     /**
      * Anota el resultado de un intento.
@@ -129,29 +165,61 @@ internal class TelegramBotOutbox(context: Context) {
         nowWall: Long = System.currentTimeMillis(),
         permanent: Boolean = false
     ) {
-        val jobs = load().toMutableList()
-        val index = jobs.indexOfFirst { it.eventId == job.eventId && it.chatId == job.chatId }
-        if (index < 0) return
-        val current = jobs[index]
-        jobs[index] = if (ok) {
-            current.copy(delivered = true, attempts = current.attempts + 1, lastError = "")
-        } else {
-            val failures = if (permanent) {
-                TelegramBotRetry.MAX_ATTEMPTS
+        synchronized(LOCK) {
+            val jobs = loadLocked().toMutableList()
+            val index = jobs.indexOfFirst { it.eventId == job.eventId && it.chatId == job.chatId }
+            if (index < 0) return
+            val current = jobs[index]
+            jobs[index] = if (ok) {
+                current.copy(delivered = true, attempts = current.attempts + 1, lastError = "")
             } else {
-                current.attempts + 1
+                val failures = if (permanent) {
+                    TelegramBotRetry.MAX_ATTEMPTS
+                } else {
+                    current.attempts + 1
+                }
+                current.copy(
+                    attempts = failures,
+                    lastError = error.ifBlank { "sin respuesta" },
+                    nextAttemptAtWall = nowWall + (TelegramBotRetry.delayAfter(failures) ?: 0L)
+                )
             }
-            current.copy(
-                attempts = failures,
-                lastError = error.ifBlank { "sin respuesta" },
-                nextAttemptAtWall = nowWall + (TelegramBotRetry.delayAfter(failures) ?: 0L)
-            )
+            saveLocked(jobs)
         }
-        save(jobs)
     }
 
-    fun status(eventId: String): TelegramBotStatus {
-        val jobs = load().filter { it.eventId == eventId }
+    fun status(eventId: String): TelegramBotStatus =
+        summarize(synchronized(LOCK) { loadLocked() }.filter { it.eventId == eventId })
+
+    /**
+     * Resumen final de un evento y borrado de su cola en una sola operacion.
+     *
+     * Leer el resumen y borrar por separado daba dos fotos distintas: un trabajo que
+     * se entregaba entre las dos llamadas aparecia como "sin entregar" en el registro
+     * aunque hubiera llegado. Con el candado se informa exactamente de lo que se
+     * descarta.
+     */
+    fun closeEvent(eventId: String): TelegramBotStatus = synchronized(LOCK) {
+        val jobs = loadLocked()
+        val eventJobs = jobs.filter { it.eventId == eventId }
+        val kept = jobs.filterNot { it.eventId == eventId }
+        if (kept.size != jobs.size) saveLocked(kept)
+        summarize(eventJobs)
+    }
+
+    fun clearEvent(eventId: String) {
+        synchronized(LOCK) {
+            val jobs = loadLocked()
+            val kept = jobs.filterNot { it.eventId == eventId }
+            if (kept.size != jobs.size) saveLocked(kept)
+        }
+    }
+
+    fun clear() {
+        synchronized(LOCK) { store.write("") }
+    }
+
+    private fun summarize(jobs: List<TelegramBotJob>): TelegramBotStatus {
         if (jobs.isEmpty()) return TelegramBotStatus(0, 0, 0, 0, "")
         val delivered = jobs.count { it.delivered }
         val failed = jobs.filter { !it.delivered }
@@ -164,21 +232,10 @@ internal class TelegramBotOutbox(context: Context) {
         return TelegramBotStatus(jobs.size, delivered, pending, exhausted, failures)
     }
 
-    /** Eventos con trabajos guardados, para el resumen al cerrar. */
-    fun eventIds(): List<String> = load().map { it.eventId }.distinct()
-
-    fun clearEvent(eventId: String) {
-        val jobs = load()
-        val kept = jobs.filterNot { it.eventId == eventId }
-        if (kept.size != jobs.size) save(kept)
-    }
-
-    fun clear() {
-        preferences.edit().remove(KEY_JOBS).apply()
-    }
-
-    private fun load(): List<TelegramBotJob> {
-        val raw = preferences.getString(KEY_JOBS, null) ?: return emptyList()
+    /** Lectura de la cola. Solo se llama con [LOCK] tomado. */
+    private fun loadLocked(): List<TelegramBotJob> {
+        val raw = store.read()
+        if (raw.isBlank()) return emptyList()
         return runCatching {
             val array = JSONArray(raw)
             buildList {
@@ -203,7 +260,8 @@ internal class TelegramBotOutbox(context: Context) {
         }.getOrDefault(emptyList())
     }
 
-    private fun save(jobs: List<TelegramBotJob>) {
+    /** Escritura de la cola. Solo se llama con [LOCK] tomado. */
+    private fun saveLocked(jobs: List<TelegramBotJob>) {
         val array = JSONArray()
         jobs.forEach { job ->
             array.put(
@@ -218,10 +276,22 @@ internal class TelegramBotOutbox(context: Context) {
                 }
             )
         }
-        preferences.edit().putString(KEY_JOBS, array.toString()).apply()
+        store.write(array.toString())
     }
 
     private companion object {
-        const val KEY_JOBS = "jobs"
+
+        /**
+         * Candado compartido por todas las instancias.
+         *
+         * Cada `load() + save()` era un ciclo leer-modificar-escribir sin proteccion.
+         * El servicio crea una instancia en el hilo del manejador y la cola se toca
+         * desde el hilo del trabajador de red: si un `enqueue` leia la lista justo
+         * antes de que el trabajador apuntara una entrega, la escritura del `enqueue`
+         * borraba ese apunte y el aviso de un contacto se perdia en silencio.
+         * El candado va en un objeto compartido (no en `this`) justo porque hay
+         * varias instancias vivas a la vez.
+         */
+        val LOCK = Any()
     }
 }

@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.53s (versionCode 45)
+
+### El historial vuelve a estar completo y la cola de Telegram deja de perder avisos
+- **Historial**: la lista de `Información → Historial` se quedó parada en 1.41s y no mencionaba
+  ninguna de las versiones 1.42s–1.52s. Se añaden las doce entradas que faltaban, con la 1.53s
+  arriba del todo.
+- **Carrera en `TelegramBotOutbox`**: cada mutación de la cola era un ciclo leer-modificar-escribir
+  sin protección sobre un JSON de `SharedPreferences`. El servicio crea una instancia en el hilo
+  del manejador y el trabajador de red apunta ahí el resultado de cada envío; si un `enqueue` leía
+  la lista justo antes de que el trabajador apuntara una entrega, la escritura del `enqueue` borraba
+  ese apunte. Consecuencia: ese contacto se quedaba **sin aviso y sin reintento** —el canal que
+  precisamente existe porque el móvil va en el bolsillo—. Ahora todas las mutaciones
+  (`enqueue`, `record`, `clearEvent`, `clear`) pasan por un candado compartido por instancias y la
+  escritura se persiste con `commit()` antes de soltarlo.
+- `closeEvent(eventId)`: el resumen final y el borrado de la cola del evento van bajo el mismo
+  candado. Antes se leía el resumen y luego se borraba, así que un aviso entregado entre las dos
+  llamadas quedaba en el registro como "sin entregar".
+- La cola ya no depende de `Context` para poder probarse: `TelegramOutboxStore` esconde el almacén
+  y las pruebas usan una versión en memoria. `testImplementation("org.json:json:20240303")` pone la
+  implementación real de `org.json` en el classpath de test (la de `android.jar` son stubs).
+- 10 pruebas nuevas en `TelegramBotOutboxTest`, incluida la de dos hilos escribiendo a la vez:
+  comprobado que **falla** sin el candado y pasa con él.
+
 ## 1.52s (versionCode 44)
 
 Publicada con APK, mapping, protocolo e instrucciones: `APK´s/Segu-Luky-1.52s.apk`,

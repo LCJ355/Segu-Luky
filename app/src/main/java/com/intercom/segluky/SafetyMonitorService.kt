@@ -2032,7 +2032,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private fun reportTelegramBot(eventId: String?) {
         if (eventId == null) return
         val outbox = TelegramBotOutbox(this)
-        val status = outbox.status(eventId)
+        // El resumen y el borrado van juntos: si se entregaba un aviso entre las dos
+        // llamadas, el registro decia "sin entregar" de algo que si habia llegado.
+        val status = outbox.closeEvent(eventId)
         if (status.total > 0) {
             val detail = when {
                 status.pending > 0 ->
@@ -2045,7 +2047,6 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             val failures = if (status.failures.isBlank()) "" else ": ${status.failures}"
             SafetyStateStore.log("$detail$failures")
         }
-        outbox.clearEvent(eventId)
     }
 
     private fun postManualTelegramActions(contacts: List<EmergencyContact>, mapLink: String?) {

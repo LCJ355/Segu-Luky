@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.52s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.53s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
@@ -169,6 +169,11 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   desbloqueo, la app ya no abre WhatsApp encima del bloqueo: cierra ese aviso en
   la cola (la ronda sigue con el resto) y deja una notificacion para abrir el
   chat cuando el usuario quiera.
+- (corregido en 1.53s) La cola del bot de Telegram se modificaba con un ciclo
+  leer-modificar-escribir sin candado: si el hilo del manejador apuntaba un
+  contacto nuevo mientras el de red anotaba una entrega, se perdia uno de los dos
+  apuntes y ese contacto se quedaba sin aviso y sin reintento. Ahora todas las
+  mutaciones van bajo un candado compartido y se persisten antes de soltarlo.
 
 9) DIAGRAMA DE FLUJO
 --------------------
@@ -210,4 +215,4 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.52s (versionCode 44) - 12/11/2026
+Version: V-1.53s (versionCode 45) - 12/11/2026

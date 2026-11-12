@@ -1107,6 +1107,22 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.53s - La cola del bot de Telegram ya no pierde avisos si se escribe a la vez, y el historial " +
+        "recupera todas las versiones.")
+    appendLine("1.52s - Verificar instalacion muestra la huella de la firma para comprobar que la APK es la " +
+        "oficial.")
+    appendLine("1.51s - Cancelar el SOS ya no abre WhatsApp: queda una notificacion de mensaje pendiente.")
+    appendLine("1.50s - Cola del bot de Telegram con reintentos (20 s, 60 s, 120 s, 300 s) fuera del hilo del SOS.")
+    appendLine("1.49s - Buscar actualizacion mira releases y etiquetas: la 1.48s solo estaba etiquetada y decia " +
+        "que estabas al dia.")
+    appendLine("1.48s - La escalada de llamadas no cuelga una llamada en curso y el microfono va en primer plano.")
+    appendLine("1.47s - INTERCOM-LUKY pasa a Configuracion con los tres estados (gris y naranja: el aviso no " +
+        "suena en ningun sitio).")
+    appendLine("1.46s - Luz INTERCOM de tres estados, boton PROBAR AVISO y puente entre apps.")
+    appendLine("1.45s - Buscar actualizacion lee el listado de releases en vez de la ultima.")
+    appendLine("1.44s - Botoneras con la etiqueta en una sola linea.")
+    appendLine("1.43s - Iconos en circulo naranja agrupados y Segu-Luky en la misma linea que la version.")
+    appendLine("1.42s - Creditos con la foto de la moto y la etiqueta de version ya no parece un boton.")
     appendLine("1.41s - Boton de informacion con buscar actualizacion, como usar, privacidad, historial, " +
         "sugerencias, compartir y creditos.")
     appendLine("1.40s - Columnas verdes a los lados del boton S O S que se llenan durante los 5 segundos.")

@@ -17,6 +17,7 @@ ef59aedea64a08bcdddf4e9a5cbb3ca9a40f9cf0e8ca448620dd900475dbb7b2  Segu-Luky-1.48
 dbc20665037ddf31742973738652b0568dd7454b49ac6d9d65981cfa8c39d74e  Segu-Luky-1.50s.apk  (5503171 bytes)
 7495ac0a121ef6c18bfbf84238bd31ae500755325bf7ddd04840a40d86316d0d  Segu-Luky-1.51s.apk  (5505179 bytes)
 ef97123015b1f15786dcbaba40d52ba24dc79284207fb88193ce23e244e2fdd8  Segu-Luky-1.52s.apk  (5508387 bytes)
+bca339294b70ae46937d4fe18e8372812ed593b8719e1e00fb048ef2c64b9874  Segu-Luky-1.53s.apk  (5510395 bytes)
 
 Firma de todas las versiones (misma clave desde la 1.44s):
   Sujeto:    CN=Segu-Luky, OU=Personal, O=Segu-Luky, C=ES

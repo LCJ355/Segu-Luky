@@ -42,8 +42,8 @@ android {
         applicationId = "com.intercom.segluky"
         minSdk = 29
         targetSdk = 35
-        versionCode = 44
-        versionName = "1.52s"
+        versionCode = 45
+        versionName = "1.53s"
     }
 
     buildTypes {
@@ -82,5 +82,8 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.core:core:1.13.1")
     testImplementation("junit:junit:4.13.2")
+    // org.json de android.jar son stubs ("not mocked") en las pruebas JVM: esta
+    // dependencia pone la implementacion real delante solo en el classpath de test.
+    testImplementation("org.json:json:20240303")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
