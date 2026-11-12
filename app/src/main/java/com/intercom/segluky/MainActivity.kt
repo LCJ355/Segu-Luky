@@ -1145,6 +1145,9 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.63s - Texto de ENVIO AUTO MENSAJES reescrito: ahora dice que la app abre el chat de " +
+        "WhatsApp o el enlace t.me en Telegram y pulsa Enviar sin confirmacion, en vez de la frase " +
+        "enrevesada anterior.")
     appendLine("1.62s - Repaso visual de todos los menus: cada tarjeta pone el titulo en una linea y la " +
         "etiqueta de estado debajo, asi \"INTERRUPTOR S O S\" ya no se parte. Los permisos quedan en dos " +
         "lineas legibles y el boton ACTUALIZAR de InterCOM deja de recortarse.")
@@ -1777,7 +1780,8 @@ private fun EmergencySettingsScreen(
                         )
                     },
                     description = if (whatsappAutoSend) {
-                        "Al terminar el SOS, WhatsApp y los enlaces t.me se abren y se pulsa Enviar sin confirmacion."
+                        "Al terminar el SOS, la app abre el chat de WhatsApp o el enlace t.me en Telegram y " +
+                            "pulsa Enviar sin confirmacion."
                     } else {
                         "WhatsApp y Telegram se abren con el mensaje listo; el envio es manual."
                     }

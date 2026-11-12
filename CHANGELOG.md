@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.63s (versionCode 55)
+
+### Texto de ENVIO AUTO MENSAJES
+- La descripción de `Configuración → Canales de salida SOS → ENVIO AUTO MENSAJES` estaba mal escrita:
+  `Al terminar el SOS, WhatsApp y los enlaces t.me se abren y se pulsa Enviar sin confirmacion`. Tenía
+  dos sujetos (los chats "se abren", alguien "pulsa Enviar") y dejaba la frase a medias.
+- Ahora dice: **"Al terminar el SOS, la app abre el chat de WhatsApp o el enlace t.me en Telegram y
+  pulsa Enviar sin confirmacion."** Un solo sujeto (la app), un solo hilo y los dos canales nombrados.
+- El texto con el interruptor en OFF no cambia: `WhatsApp y Telegram se abren con el mensaje listo; el
+  envio es manual.`
+
 ## 1.62s (versionCode 54)
 
 ### Repaso visual de todos los menús

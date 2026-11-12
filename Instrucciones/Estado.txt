@@ -1870,7 +1870,35 @@ APK generado: APK´s/Segu-Luky-1.62s.apk
 Mapping archivado: APK´s/mapping/Segu-Luky-1.62s-mapping.txt.gz
 Pendientes: ver el destello en un viaje con AUTO y las pruebas de comportamiento
 que siguen abiertas (§5, §6, §8).
+
 ======================================================================
+V-1.63s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.63s (versionCode 55)
+
+Cambio:
+- Texto de Configuracion > Canales de salida SOS > ENVIO AUTO MENSAJES
+  reescrito. Antes: "Al terminar el SOS, WhatsApp y los enlaces t.me se abren y
+  se pulsa Enviar sin confirmacion." Tenia dos sujetos (los chats se abren,
+  alguien pulsa Enviar) y se quedaba a medias.
+- Ahora: "Al terminar el SOS, la app abre el chat de WhatsApp o el enlace t.me en
+  Telegram y pulsa Enviar sin confirmacion." Un unico sujeto y los dos canales
+  nombrados, que es lo que hace WhatsAppAutoSendService: abre el chat, escribe el
+  mensaje si Telegram no lo prerrellena y pulsa el boton de enviar.
+- El texto del interruptor en OFF no cambia.
+
+Motivo: pedido del usuario ("en Configuracion, ENVIO AUTO MENSAJES error en texto
+(y los enlaces t.me se abren); corrige el texto").
+
+Prueba realizada: testDebugUnitTest (145 pruebas, 0 fallos), lintDebug (0 errores)
+y assembleRelease. Revisado en el OPPO con captura de la tarjeta.
+Resultado: compila, verifica y revisado en el movil.
+APK generado: APK´s/Segu-Luky-1.63s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.63s-mapping.txt.gz
+Pendientes: ver el destello en un viaje con AUTO y las pruebas de comportamiento
+que siguen abiertas (§5, §6, §8).======================================================================
 
 Fecha: 12/11/2026
 Version: 1.53s (versionCode 45)
