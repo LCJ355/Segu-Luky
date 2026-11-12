@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.56s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.57s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -12,8 +12,8 @@ desactivala: la cuenta atras se ejecuta sin avisar a nadie.
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.56s.apk        <- version actual
-Las anteriores (1.44s a 1.55s) se conservan solo como historico.
+    Segu-Luky-1.57s.apk        <- version actual
+Las anteriores (1.44s a 1.56s) se conservan solo como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -88,6 +88,9 @@ docs/SEGURIDAD.md.
 --------------------------------------------------------------------------
 3b) AJUSTAR LA SENSIBILIDAD CON EL PICO DEL VIAJE
 --------------------------------------------------------------------------
+El deslizador y el diagnostico estan en CONFIGURACION > SENSORES. En la
+pantalla principal solo quedan la etiqueta con el valor y la ventana ADAPT.
+
 La app mide el ruido y el traqueteo de TU movil y calcula un umbral efectivo
 (el que de verdad se aplica). Por eso debajo del deslizador veras:
 
@@ -104,7 +107,8 @@ La app mide el ruido y el traqueteo de TU movil y calcula un umbral efectivo
 
 PRUEBA DE GOLPE (15 segundos, sin avisar a nadie)
 1. Deten el monitor.
-2. Pulsa PROBAR GOLPE y sacude el movil como pedirias ayuda.
+2. Entra en Configuracion > Sensores y pulsa PROBAR GOLPE; sacude el movil
+   como pedirias ayuda.
 3. Al terminar te dice si habria disparado ("pico 4,2 g / umbral 3,9 g") o si
    no llegaria, con el ajuste recomendado.
 4. No graba archivos, no inicia la cuenta atras y no envia nada.
@@ -124,12 +128,14 @@ El engranaje abre CONFIGURACION con cuatro bloques. Cada uno muestra un
 resumen de su estado (por ejemplo "4 ACTIVOS" o "FALTAN 2") antes de entrar.
 
   SENSORES
+    - SENSIBILIDAD A LOS GOLPES: deslizador 0,5-7 g, escala 0..7, PICO /
+      EFECTIVO / SUGERIDO y PRUEBA DE GOLPE.
     - CAIDA / ORIENTACION (MODO MOTO).
     - VOZ AYUDA / SOCORRO.
     - DIAGNOSTICO: ficha del movil, REINICIAR APRENDIZAJE y grabacion
       CSV/ZIP opcional.
-    La sensibilidad, la ventana ADAPT. y PRUEBA DE GOLPE estan en la
-    pantalla principal, en la tarjeta del monitor.
+    La ventana ADAPT. (AUTO o 1/2/3 min) esta en la pantalla principal, en la
+    tarjeta del monitor.
 
   CONTACTOS SOS
     - Lista de contactos, en el orden de llamada.
@@ -159,6 +165,9 @@ Configuracion; VOLVER otra vez vuelve a la pantalla principal.
   (vigilando), naranja = OFF (detenido). Solo se ve el estado actual.
 - S O S ON/OFF (a su lado): permite o bloquea TODOS los avisos. Verde = los
   avisos saldran; rojo = no se llamara ni se enviara nada (util para probar).
+- La sensibilidad, la escala 0..7, el pico del viaje y PRUEBA DE GOLPE estan
+  en Configuracion > Sensores. En esta pantalla quedan la etiqueta con el
+  valor y la ventana ADAPT.
 - Con el monitor en marcha es un servicio en primer plano: sigue funcionando
   con la pantalla apagada y el movil bloqueado. Aparece una notificacion fija;
   no la cierres.
@@ -256,4 +265,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.56s (versionCode 48) - paquete com.intercom.segluky.
+Version: V-1.57s (versionCode 49) - paquete com.intercom.segluky.

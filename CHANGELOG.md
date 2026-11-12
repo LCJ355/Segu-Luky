@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.57s (versionCode 49)
+
+### La pantalla principal se queda solo con lo esencial
+- En la tarjeta del monitor quedan **`SENSIBILIDAD A LOS GOLPES = x,x g`** y la línea **`ADAPT.`**
+  (`AUTO` o `1`/`2`/`3` MIN, con lo elegido resaltado en verde). Desaparecen de ahí el deslizador,
+  la escala 0..7, la línea de pico y el botón `PROBAR GOLPE`.
+- Todo eso pasa a **Configuración → Sensores**, en una tarjeta nueva `SENSIBILIDAD A LOS GOLPES`
+  con el valor, el deslizador, la escala 0..7, `PICO / EFECTIVO / SUGERIDO`, `USAR` y
+  `PROBAR GOLPE` (con su veredicto). La tarjeta indica `AJUSTABLE` o `MONITOR EN MARCHA`, y con el
+  monitor en marcha los controles quedan bloqueados igual que antes.
+- La etiqueta con el valor se mantiene en las dos pantallas para no perder la referencia.
+- El control se ha dividido en piezas (`AdaptationWindowSelector`, `SensitivityPeakRow`) y un solo
+  `SensitivityControl` decide qué enseña con `showSlider` / `showWindow` / `showPeak`.
+- `onSensitivityChange` y `onHitTest` se centralizan en la actividad, así que la pantalla principal
+  y la de Sensores guardan y prueban exactamente igual.
+- Ayuda de la app, instrucciones (3b y 3c) y protocolo con las nuevas ubicaciones.
+
 ## 1.56s (versionCode 48)
 
 ### Dos botones de estado en la pantalla principal

@@ -241,6 +241,21 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // La sensibilidad se cambia en Configuracion > Sensores y se guarda aqui una
+        // sola vez, para que las dos pantallas hagan exactamente lo mismo.
+        val onSensitivityChange: (Float) -> Unit = { g ->
+            sensitivityG = g
+            if (SafetyStateStore.snapshot.value.phase == SafetyPhase.STOPPED) {
+                SafetyMonitorService.saveSensitivity(context, g)
+            }
+        }
+        val onHitTest: () -> Unit = {
+            SensorCalibrationService.testHit(
+                context,
+                SafetyStateStore.snapshot.value.effectiveThresholdG ?: sensitivityG
+            )
+        }
+
         fun permissionsNeededForConfiguredFeatures(): Array<String> = buildList {
             if (!SafetyMonitorService.hasPreciseLocationPermission(context)) {
                 add(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -340,21 +355,11 @@ class MainActivity : ComponentActivity() {
                         snapshot = snapshot,
                         audioLevel = audioLevel,
                         sensitivityG = sensitivityG,
-                        onSensitivityChange = { g ->
-                            sensitivityG = g
-                            if (snapshot.phase == SafetyPhase.STOPPED) {
-                                SafetyMonitorService.saveSensitivity(context, g)
-                            }
-                        },
+                        onSensitivityChange = onSensitivityChange,
                         onWindowChange = { mode ->
                             SafetyMonitorService.setAdaptationWindow(context, mode)
                         },
-                        onHitTest = {
-                            SensorCalibrationService.testHit(
-                                context,
-                                snapshot.effectiveThresholdG ?: sensitivityG
-                            )
-                        },
+                        onHitTest = onHitTest,
                         sosActionsEnabled = sosActionsEnabled,
                         onSosActionsEnabledChange = onSosActionsEnabledChange,
                         intercomState = installation.state,
@@ -415,6 +420,10 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     criticalSettingsLocked = criticalSettingsLocked,
+                    snapshot = snapshot,
+                    sensitivityG = sensitivityG,
+                    onSensitivityChange = onSensitivityChange,
+                    onHitTest = onHitTest,
                     fallOrientationGate = fallOrientationGate,
                     onFallOrientationGateChange = { enabled ->
                         if (!SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
@@ -1121,6 +1130,8 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.57s - La pantalla principal se queda con la etiqueta de sensibilidad y la ventana ADAPT.; el " +
+        "deslizador, la escala, el pico del viaje y PRUEBA DE GOLPE pasan a Configuracion > Sensores.")
     appendLine("1.56s - La pantalla principal tiene dos botones de estado: MONITOR ON/OFF (verde/naranja) y " +
         "S O S ON/OFF (verde/rojo). El interruptor de avisos SOS sale de Configuracion.")
     appendLine("1.55s - Configuracion se divide en cuatro submenus: Sensores, Contactos SOS, Canales de " +
@@ -1308,6 +1319,10 @@ private fun EmergencySettingsScreen(
     contacts: List<EmergencyContact>,
     onContactsChanged: (List<EmergencyContact>) -> Unit,
     criticalSettingsLocked: Boolean,
+    snapshot: SafetySnapshot,
+    sensitivityG: Float,
+    onSensitivityChange: (Float) -> Unit,
+    onHitTest: () -> Unit,
     fallOrientationGate: Boolean,
     onFallOrientationGateChange: (Boolean) -> Unit,
     sosActionsEnabled: Boolean,
@@ -1626,12 +1641,33 @@ private fun EmergencySettingsScreen(
                 SectionHeader("SENSORES")
             }
             item {
+                val monitorStopped = snapshot.phase == SafetyPhase.STOPPED
                 SeguCard(
-                    title = "AJUSTE EN LA PANTALLA PRINCIPAL",
-                    description = "La sensibilidad a los golpes, la ventana ADAPT. y PRUEBA DE GOLPE estan en la " +
-                        "tarjeta del monitor, en la pantalla principal. Aqui se configura como se confirma un golpe " +
-                        "y se diagnostica el sensor."
-                )
+                    title = "SENSIBILIDAD A LOS GOLPES",
+                    status = if (monitorStopped) "AJUSTABLE" else "MONITOR EN MARCHA",
+                    tone = if (monitorStopped) Tone.OK else Tone.WARN,
+                    description = if (monitorStopped) {
+                        "Sube el umbral para exigir un golpe mas fuerte. La ventana ADAPT. y el interruptor " +
+                            "MONITOR estan en la pantalla principal."
+                    } else {
+                        "Deten el monitor para cambiarla. La ventana ADAPT. esta en la pantalla principal."
+                    }
+                ) {
+                    SensitivityControl(
+                        sensitivityG = sensitivityG,
+                        effectiveG = snapshot.effectiveThresholdG ?: sensitivityG,
+                        livePeakG = snapshot.ridePeakG,
+                        activeWindowMinutes = snapshot.adaptationWindowMinutes,
+                        windowAuto = snapshot.adaptationWindowAuto,
+                        hitTestRunning = snapshot.hitTestRunning,
+                        hitTestVerdict = snapshot.hitTestVerdict,
+                        enabled = monitorStopped,
+                        onSensitivityChange = onSensitivityChange,
+                        onWindowChange = {},
+                        onHitTest = onHitTest,
+                        showWindow = false
+                    )
+                }
             }
             item {
                 SeguCard(
@@ -2573,12 +2609,13 @@ private fun InstructionsScreen(
             UsageInstruction(
                 title = "3. Ajusta la sensibilidad",
                 text = "El control usa aceleracion dinamica entre 0.5 y 7 g, pero la app aprende el ruido y el " +
-                    "traqueteo de este movil: bajo el deslizador veras PICO, EFECTIVO y SUGERIDO, y la ventana " +
-                    "ADAPT. (AUTO, 1, 2 o 3 min) decide cada cuanto se recalcula. El muestreo tambien se ajusta " +
-                    "solo (25, 50 o 100 Hz). Con MODO MOTO activo un golpe aislado arma un candidato; dos picos " +
-                    "separados por un valle dentro de 1,2 s (sacudida) inician la cuenta atras al instante. GPS y " +
-                    "VELOCIDAD son informativos y nunca bloquean un golpe. PRUEBA DE GOLPE comprueba en 15 s que " +
-                    "el movil se entera de una sacudida, sin avisar a nadie."
+                    "traqueteo de este movil. El deslizador, PICO, EFECTIVO, SUGERIDO y PRUEBA DE GOLPE estan en " +
+                    "Configuracion > Sensores; en la pantalla principal quedan la etiqueta con el valor y la " +
+                    "ventana ADAPT. (AUTO, 1, 2 o 3 min), que decide cada cuanto se recalcula. El muestreo tambien " +
+                    "se ajusta solo (25, 50 o 100 Hz). Con MODO MOTO activo un golpe aislado arma un candidato; dos " +
+                    "picos separados por un valle dentro de 1,2 s (sacudida) inician la cuenta atras al instante. " +
+                    "GPS y VELOCIDAD son informativos y nunca bloquean un golpe. PRUEBA DE GOLPE comprueba en 15 s " +
+                    "que el movil se entera de una sacudida, sin avisar a nadie."
             )
         }
         item {
@@ -3089,7 +3126,9 @@ private fun PhaseHeroCard(
                 enabled = phase == SafetyPhase.STOPPED,
                 onSensitivityChange = onSensitivityChange,
                 onWindowChange = onWindowChange,
-                onHitTest = onHitTest
+                onHitTest = onHitTest,
+                showSlider = false,
+                showPeak = false
             )
         }
     }
@@ -3775,7 +3814,10 @@ private fun SensitivityControl(
     enabled: Boolean,
     onSensitivityChange: (Float) -> Unit,
     onWindowChange: (AdaptationWindowMode) -> Unit,
-    onHitTest: () -> Unit
+    onHitTest: () -> Unit,
+    showSlider: Boolean = true,
+    showWindow: Boolean = true,
+    showPeak: Boolean = true
 ) {
     val context = LocalContext.current
     val storedMode = remember(windowAuto, activeWindowMinutes) {
@@ -3827,89 +3869,139 @@ private fun SensitivityControl(
                 fontWeight = FontWeight.Bold
             )
         }
-        Spacer(Modifier.height(3.dp))
-        SegmentedSensitivitySlider(
-            value = sensitivityG,
-            enabled = enabled,
-            onValueChange = onSensitivityChange
-        )
-        Row(Modifier.fillMaxWidth()) {
-            (0..7).forEach { g ->
-                Text("$g", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
-            }
-        }
-        Spacer(Modifier.height(5.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "ADAPT.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+        if (showSlider) {
+            Spacer(Modifier.height(3.dp))
+            SegmentedSensitivitySlider(
+                value = sensitivityG,
+                enabled = enabled,
+                onValueChange = onSensitivityChange
             )
-            AdaptationWindowChip("AUTO", selected = windowAuto, enabled = enabled) {
-                onWindowChange(AdaptationWindowMode.AUTO)
-            }
-            AdaptationWindowMode.fixed.forEach { mode ->
-                AdaptationWindowChip(
-                    label = "${mode.minutes}",
-                    selected = !windowAuto && storedMode == mode,
-                    enabled = enabled
-                ) {
-                    onWindowChange(mode)
+            Row(Modifier.fillMaxWidth()) {
+                (0..7).forEach { g ->
+                    Text("$g", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
                 }
             }
+        }
+        if (showWindow) {
+            AdaptationWindowSelector(
+                activeWindowMinutes = activeWindowMinutes,
+                windowAuto = windowAuto,
+                enabled = enabled,
+                onWindowChange = onWindowChange
+            )
+        }
+        if (showPeak) {
+            SensitivityPeakRow(
+                infoText = infoText,
+                suggestion = suggestion,
+                canApply = canApply,
+                hitTestRunning = hitTestRunning,
+                hitTestVerdict = hitTestVerdict,
+                enabled = enabled,
+                onSensitivityChange = onSensitivityChange,
+                onHitTest = onHitTest
+            )
+        }
+    }
+}
+
+/** Fila ADAPT.: AUTO o 1/2/3 minutos, con lo elegido en verde. */
+@androidx.compose.runtime.Composable
+private fun AdaptationWindowSelector(
+    activeWindowMinutes: Int,
+    windowAuto: Boolean,
+    enabled: Boolean,
+    onWindowChange: (AdaptationWindowMode) -> Unit
+) {
+    val context = LocalContext.current
+    val storedMode = remember(windowAuto, activeWindowMinutes) {
+        SafetyMonitorService.loadAdaptationWindowMode(context)
+    }
+    Spacer(Modifier.height(5.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            "ADAPT.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        AdaptationWindowChip("AUTO", selected = windowAuto, enabled = enabled) {
+            onWindowChange(AdaptationWindowMode.AUTO)
+        }
+        AdaptationWindowMode.fixed.forEach { mode ->
+            AdaptationWindowChip(
+                label = "${mode.minutes}",
+                selected = !windowAuto && storedMode == mode,
+                enabled = enabled
+            ) {
+                onWindowChange(mode)
+            }
+        }
+        Text(
+            "MIN",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.weight(1f))
+        if (windowAuto) {
             Text(
-                "MIN",
+                "auto: $activeWindowMinutes min",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.weight(1f))
-            if (windowAuto) {
+        }
+    }
+}
+
+/** Pico del viaje, umbral efectivo, sugerencia y PRUEBA DE GOLPE. */
+@androidx.compose.runtime.Composable
+private fun SensitivityPeakRow(
+    infoText: String,
+    suggestion: SensitivityAdvisor.Suggestion?,
+    canApply: Boolean,
+    hitTestRunning: Boolean,
+    hitTestVerdict: String?,
+    enabled: Boolean,
+    onSensitivityChange: (Float) -> Unit,
+    onHitTest: () -> Unit
+) {
+    Spacer(Modifier.height(3.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            infoText,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+        if (canApply && suggestion != null) {
+            TextButton(onClick = { onSensitivityChange(suggestion.recommendedG) }) {
                 Text(
-                    "auto: $activeWindowMinutes min",
+                    "USAR",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
-        Spacer(Modifier.height(3.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                infoText,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1
-            )
-            if (canApply && suggestion != null) {
-                TextButton(onClick = { onSensitivityChange(suggestion.recommendedG) }) {
-                    Text(
-                        "USAR",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            if (enabled) {
-                TextButton(onClick = onHitTest, enabled = !hitTestRunning) {
-                    Text(
-                        if (hitTestRunning) "MIDIENDO..." else "PROBAR GOLPE",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+        if (enabled) {
+            TextButton(onClick = onHitTest, enabled = !hitTestRunning) {
+                Text(
+                    if (hitTestRunning) "MIDIENDO..." else "PROBAR GOLPE",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
-        if (hitTestVerdict != null) {
-            Text(
-                hitTestVerdict,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+    }
+    if (hitTestVerdict != null) {
+        Text(
+            hitTestVerdict,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

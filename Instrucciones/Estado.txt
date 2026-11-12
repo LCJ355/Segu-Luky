@@ -1673,6 +1673,42 @@ pide permiso de llamadas si hay contactos, y las pruebas de comportamiento que
 siguen abiertas del informe.
 
 ======================================================================
+V-1.57s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.57s (versionCode 49)
+
+Cambio:
+- La tarjeta del monitor se queda con la etiqueta SENSIBILIDAD A LOS GOLPES
+  = x,x g y la linea ADAPT. (AUTO o 1/2/3, lo elegido en verde). Salen de
+  ahi el deslizador, la escala 0..7, la linea del pico y PROBAR GOLPE.
+- Todo eso pasa a Configuracion > Sensores en una tarjeta nueva
+  SENSIBILIDAD A LOS GOLPES: valor, deslizador, escala 0..7, PICO / EFECTIVO
+  / SUGERIDO, USAR y PROBAR GOLPE con su veredicto. Estado AJUSTABLE o
+  MONITOR EN MARCHA; con el monitor en marcha queda bloqueado, como antes.
+- El control se divide en AdaptationWindowSelector y SensitivityPeakRow; un
+  unico SensitivityControl decide que muestra con showSlider / showWindow /
+  showPeak.
+- onSensitivityChange y onHitTest se centralizan en la actividad para que las
+  dos pantallas guarden y prueben igual.
+- Ayuda de la app, instrucciones (3b y 3c) y protocolo actualizados.
+
+Motivo: pedido del usuario ("dejamos en la pantalla SENSIBILIDAD A LOS GOLPES
+y la linea ADAPT.; el deslizador, la escala, Sin datos del viaje y PROBAR
+GOLPE se mueven a Configuracion > Sensores").
+
+Prueba realizada: testDebugUnitTest (145 pruebas, 0 fallos), lintDebug (0
+errores) y assembleRelease. Revisado en el OPPO: la pantalla principal solo
+muestra etiqueta + ADAPT. y Sensores muestra el deslizador con escala, la
+linea del pico y PROBAR GOLPE.
+Resultado: compila, verifica y revisado en el movil.
+APK generado: APK´s/Segu-Luky-1.57s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.57s-mapping.txt.gz
+Pendientes: probar la sensibilidad desde Configuracion > Sensores con el
+monitor detenido y las pruebas de comportamiento que siguen abiertas.
+
+======================================================================
 
 Fecha: 12/11/2026
 Version: 1.53s (versionCode 45)
