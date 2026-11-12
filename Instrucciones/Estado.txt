@@ -1423,6 +1423,30 @@ Verificacion:
 - Sin registros nuevos en logcat -b crash.
 - APK generado: app-release.apk (1.46s).
 
+======================================================================
+V-1.49s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.49s (versionCode 41)
+
+Cambio:
+- Buscar actualizacion lee releases Y etiquetas y elige la version mas alta,
+  en lugar de mirar las etiquetas solo cuando no hay ninguna release.
+- Se publica ademas la Release V-1.49s en GitHub con el APK adjunto.
+
+Motivo: la 1.48s se publico solo como etiqueta y la app respondia "estas al
+dia" (con releases antiguas ya publicadas, la etiqueta no se miraba nunca).
+
+Prueba realizada: testDebugUnitTest (90 pruebas, 0 fallos), lintDebug
+(0 errores) y assembleRelease. Comprobado contra la API real: /releases
+devuelve V-1.49s primero, con el APK adjunto y descarga HTTP 200.
+Resultado: correcto.
+APK generado: APK´s/Segu-Luky-1.49s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.49s-mapping.txt.gz
+Pendientes: §5 (IPC de InterCOM en el hilo principal), §6 (Telegram sin
+reintento), §8 (WhatsAppUnlockActivity) y la prueba en dispositivo.
+
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

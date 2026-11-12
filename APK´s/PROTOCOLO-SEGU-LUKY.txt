@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.48s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.49s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 40). Los valores entre parentesis son los del codigo.
+archivo (versionCode 41). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -155,7 +155,8 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   plano mientras la voz esta activa, para que Android 14+ no entregue silencio. Si
   el sistema rechaza ese tipo, la activacion por voz se queda sin oir y lo anota.
 - El envio por bot de Telegram no tiene cola ni reintento.
-- «Buscar actualizacion» solo mira las etiquetas si no hay ninguna release.
+- (corregido en 1.49s) «Buscar actualizacion» lee releases y etiquetas y elige la
+  mas alta, asi una version etiquetada sin release tambien se ofrece.
 - WhatsAppUnlockActivity abre el chat aunque se cancele el desbloqueo.
 
 9) DIAGRAMA DE FLUJO
@@ -198,4 +199,4 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.48s (versionCode 40) - 12/11/2026
+Version: V-1.49s (versionCode 41) - 12/11/2026

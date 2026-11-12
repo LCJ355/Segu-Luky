@@ -4,9 +4,9 @@ Proyecto: `G:\-IA-\GitHub-repos-\Segu-Luky`
 Commit analizado: `173d7a8` (`origin/main`, `versionCode = 39`, `versionName = "1.47s"`)
 APK de referencia: `APK´s/Segu-Luky-1.47s.apk`, SHA-256 `0726b6ed…`
 
-> **Estado:** §1, §2, §3 y §4 están corregidos y publicados en **1.48s** (`versionCode 40`,
-> `APK´s/Segu-Luky-1.48s.apk`). Cada apartado corregido indica qué se cambió. El resto sigue
-> pendiente en el orden de la última sección.
+> **Estado:** §1, §2, §3 y §4 corregidos en **1.48s** (`versionCode 40`); §7 corregido en
+> **1.49s** (`versionCode 41`, `APK´s/Segu-Luky-1.49s.apk`). Cada apartado corregido indica qué
+> se cambió. El resto sigue pendiente en el orden de la última sección.
 
 ## Corrección del análisis anterior
 
@@ -157,7 +157,7 @@ contacto, TTL y reintentos), reutilizando el patrón de `WhatsAppAutoSend`.
 
 ---
 
-## 7. [MEDIO] «Buscar actualización» no ve una versión publicada solo como etiqueta
+## 7. [MEDIO · corregido] «Buscar actualización» no ve una versión publicada solo como etiqueta
 
 **Verificado.** `UpdateChecker.kt`:
 
@@ -175,6 +175,11 @@ Si existe una release antigua y la versión nueva se publica solo como **tag**, 
 así que el caso es realista.
 
 **Fix:** comparar contra el máximo entre el mejor release y el mejor tag.
+
+**Corregido en 1.49s.** `UpdateChecker.newestOf(releases, tags)` une las dos listas (la release
+manda para su enlace de descarga; una etiqueta sin release apunta a `APK´s/`) y compara la más
+alta. Se comprobó en real: la 1.48s se publicó solo como tag y la app respondía "estás al día"
+hasta que se creó su release.
 
 ---
 
@@ -205,4 +210,4 @@ cancelar.
    corta por un timbrado).
 2. ~~§3 (voz con pantalla apagada) y §4 (instrucciones del APK)~~ (corregidos en 1.48s).
 3. §5 (no bloquear el SOS por InterCOM) y §6 (Telegram bot durable).
-4. §7 y §8.
+4. ~~§7~~ (corregido en 1.49s) y §8.

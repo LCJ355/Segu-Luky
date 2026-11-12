@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.49s (versionCode 41)
+
+Publicada con APK, mapping, protocolo e instrucciones: `APK´s/Segu-Luky-1.49s.apk`,
+`APK´s/mapping/Segu-Luky-1.49s-mapping.txt.gz`, release `V-1.49s` con el APK adjunto.
+
+### Buscar actualización (crítico para distribuir)
+- `UpdateChecker` solo miraba las etiquetas cuando el listado de releases estaba vacío. Con
+  releases antiguas ya publicadas, una versión etiquetada pero sin su release quedaba invisible
+  y la app respondía "estás al día" (le pasó a la 1.48s, que hubo que publicar como release).
+  Ahora se leen las dos listas y se elige la versión más alta: la release manda para el enlace de
+  descarga y una etiqueta sin release apunta a la carpeta `APK´s/`.
+- 4 tests nuevos (90 en total, 0 fallos).
+
 ## 1.48s (versionCode 40)
 
 Publicada con APK, mapping, protocolo e instrucciones: `APK´s/Segu-Luky-1.48s.apk`,
