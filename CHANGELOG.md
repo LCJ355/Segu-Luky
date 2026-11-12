@@ -1,5 +1,55 @@
 # Changelog
 
+## 1.13s – 1.47s (versionCode 5 → 39)
+
+Resumen generado del historial de git (`7cf1c07..173d7a8`). Los mensajes de commit no siempre
+indican la versión, así que se agrupa por tema y se cita el commit.
+
+### Canales de aviso
+- Canal de Telegram (`3700f99`): bot API (token global + `chat_id` por contacto) y respaldo por
+  enlace `t.me`; el enlace reutiliza la cola duradera de WhatsApp, el bot envía en un hilo
+  propio.
+- Envío automático de WhatsApp ampliado (`df5080c`) e instrucciones de uso con Telegram
+  (`57c71c0`).
+
+### Detección, GPS y voz
+- GPS que se quedaba sin posición bajo techo (`2ffcad8`).
+- Fila de velocidad aclarada y reutiliza la última velocidad conocida (`52c241a`).
+- Escucha por voz tras reiniciar y calibración de caída conservada (`319c88e`).
+
+### Batería
+- Optimización del gasto del servicio y menos publicaciones repetidas (`7660b50`).
+
+### Gesto de dos dedos (eliminado)
+- Activación fiable (`c4ee5b5`) y corrección del bloqueo de táctil en algunas ROM (`8a1ed7f`).
+- Eliminado el gesto dentro de la app (`a12bf11`) y después el global (`2b99cd6`): en algunos
+  OPPO/ColorOS el filtro de accesibilidad dejaba la pantalla sin respuesta al tacto.
+
+### Interfaz
+- Rediseño visual (`b8b98d7`), pantalla e icono de Sensores (`0eac4f0`), luces de estado de los
+  sensores (`7fee183`), aviso SOS solo al monitorizar y color del botón (`d184098`), niveles de
+  audio y movimiento (`b26854b`), sensibilidad compacta y dentro de la tarjeta (`270e237`,
+  `f55b982`, `016e6ff`, `51aa5ca`, `56765fd`, `8d56071`, `ff99dfd`), interruptores verdes
+  (`5944fe1`), etiquetas en una línea (`0b55d67`), círculos naranjas y menú con iconos
+  (`cfb59ed`), columnas de progreso junto al botón SOS (`d317abd`).
+- Menú de información con «Buscar actualización» y créditos (`2711c72`), foto en créditos
+  (`f232217`).
+
+### Actualizaciones
+- «Buscar actualización» consulta releases y etiquetas de GitHub (`2ca84a2`), elige la release
+  más alta con independencia del orden de publicación (`91c0e86`), verificado en dispositivo
+  (`83abe3d`).
+
+### InterCOM-Luky
+- Luz de tres estados y aviso de voz al grupo (`f27847b`); tarjeta INTERCOM-LUKY en
+  Configuración (`173d7a8`).
+
+### Infraestructura
+- `versionCode 5` / 1.13s (`06c60f7`), versión real en la interfaz (`cea3690`), endurecimiento
+  del desmontaje del SOS y de los plazos de aviso (`f5d7ac8`).
+- Publicación de la APK en `APK´s/` (`40e5616`); el CI silencia el aviso de permiso de la
+  ubicación cacheada (`81d2eec`).
+
 ## 1.12s (versionCode 4)
 
 ### SOS reliability
