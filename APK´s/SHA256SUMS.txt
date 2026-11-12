@@ -37,3 +37,4 @@ Detalle de permisos, destinos de red y por que avisa Play Protect:
   docs/SEGURIDAD.md
 1c6714d4ef80dff64e62c3d7923890ccf7f0b92ba9f137d81ccceac1d7e4fca3  Segu-Luky-1.62s.apk  (5571431 bytes)
 e32e84faaf9608f6081afc7313fabe32fce1ab273a52ca41e9bffefa1a91c010  Segu-Luky-1.63s.apk  (5571643 bytes)
+e7c067d07ba7b9da3aba3e804eedffc940634c457d4fc4e8a511611e779bae7a  Segu-Luky-1.64s.apk  (5572023 bytes)

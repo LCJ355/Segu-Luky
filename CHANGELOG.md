@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.64s (versionCode 56)
+
+### Textos de la app en lenguaje llano
+Se reescriben todos los párrafos visibles para que no hagan falta conocimientos técnicos:
+
+| Antes | Ahora |
+|---|---|
+| enlace `t.me` | enlace de Telegram |
+| `chat id` | número de chat |
+| `token` del bot | clave del bot |
+| umbral / umbral efectivo | nivel de golpe / nivel que se aplica |
+| `{MAPA}` insertará el enlace | `{MAPA}` se cambia por el enlace de Google Maps |
+| la API pública de GitHub | GitHub |
+| analítica | estadísticas de uso |
+| muestreo (25/50/100 Hz) | cuantas veces por segundo mira el sensor |
+| “arma un candidato” | “deja el aviso en espera” |
+| aviso heurístico | alerta automática de Android |
+
+- Configuración → Canales de salida SOS: el texto de ENVIO AUTO MENSAJES ya no habla de `t.me`
+  (“la app abre el chat de WhatsApp o el de Telegram y pulsa Enviar sin preguntar”), el resumen del
+  bot dice “contactos listos” y “enlace de Telegram”, y la tarjeta TELEGRAM SOS usa **Clave del bot**,
+  **GUARDAR CLAVE** y **BORRAR CLAVE**.
+- Sensores: la línea del valor pasa a `NIVEL DE GOLPE =` y la ayuda explica con palabras normales qué
+  es PICO, EFECTIVO y SUGERIDO. El diagnóstico ya no dice `p99` ni `Hz`: dice `traqueteo` y
+  `medidas/s`.
+- Caída / orientación y el aviso de la cuenta atrás se explican sin “candidato”: “un golpe fuerte deja
+  el aviso en espera de 15 s”.
+- Privacidad: “la clave del bot”, “estadísticas de uso” y “GitHub” en lugar de token, analítica y API.
+- Las tarjetas de Instrucciones (1 a 8) se reescriben en el mismo tono, incluidas las de Telegram.
+
 ## 1.63s (versionCode 55)
 
 ### Texto de ENVIO AUTO MENSAJES

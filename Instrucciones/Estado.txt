@@ -1898,7 +1898,40 @@ Resultado: compila, verifica y revisado en el movil.
 APK generado: APK´s/Segu-Luky-1.63s.apk
 Mapping archivado: APK´s/mapping/Segu-Luky-1.63s-mapping.txt.gz
 Pendientes: ver el destello en un viaje con AUTO y las pruebas de comportamiento
-que siguen abiertas (§5, §6, §8).======================================================================
+que siguen abiertas (§5, §6, §8).
+
+======================================================================
+V-1.64s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.64s (versionCode 56)
+
+Cambio:
+- Todos los parrafos visibles de la app pasan a lenguaje llano: se quitan t.me,
+  chat id, token, umbral, API, analitica y heuristico. Ahora se lee enlace de
+  Telegram, numero de chat, clave del bot, nivel de golpe, GitHub y estadisticas
+  de uso.
+- Canales: ENVIO AUTO MENSAJES, TELEGRAM SOS (Clave del bot / GUARDAR CLAVE /
+  BORRAR CLAVE), el resumen del bot y los estados del canal, reescritos.
+- Sensores: NIVEL DE GOLPE en la tarjeta y ayudas que explican PICO, EFECTIVO y
+  SUGERIDO; el diagnostico dice traqueteo y medidas/s en vez de p99 y Hz.
+- Caida/orientacion y cuenta atras sin la palabra candidato.
+- Privacidad, aviso de Play Protect e Instrucciones (tarjetas 1 a 8) reescritos.
+- Docs: PROTOCOLO e INSTRUCCIONES alineados con los nombres nuevos.
+
+Motivo: pedido del usuario ("ok usar texto menos tecnico en todos los parrafos").
+
+Prueba realizada: testDebugUnitTest (145 pruebas, 0 fallos), lintDebug (0 errores)
+y assembleRelease. Revisado en el OPPO con capturas de Canales, Sensores e
+Instrucciones.
+Resultado: compila, verifica y revisado en el movil.
+APK generado: APK´s/Segu-Luky-1.64s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.64s-mapping.txt.gz
+Pendientes: ver el destello en un viaje con AUTO y las pruebas de comportamiento
+que siguen abiertas (§5, §6, §8).
+
+======================================================================
 
 Fecha: 12/11/2026
 Version: 1.53s (versionCode 45)

@@ -988,13 +988,13 @@ private fun VerifyPage(context: Context, versionLabel: String) {
         AboutParagraph(
             "La app no viene de Play y combina permisos que su detector asocia a troyanos: " +
                 "enviar SMS, marcar llamadas, grabar audio y un servicio de accesibilidad que " +
-                "lee la pantalla para pulsar Enviar en WhatsApp. Es un aviso heuristico, no una " +
+                "lee la pantalla para pulsar Enviar en WhatsApp. Es una alerta automatica de Android, no una " +
                 "deteccion de codigo malicioso. El detalle completo, con los destinos de red y " +
                 "las comprobaciones, esta en docs/SEGURIDAD.md."
         )
         AboutParagraph(
-            "Esta app no tiene cuentas, ni anuncios, ni analitica, ni servidor propio: solo habla " +
-                "con el bot de Telegram que configures y con la API publica de GitHub para buscar " +
+            "Esta app no tiene cuentas, ni anuncios, ni estadisticas de uso, ni servidor propio: solo habla " +
+                "con el bot de Telegram que configures y con GitHub, para mirar si hay " +
                 "actualizaciones."
         )
     }
@@ -1050,7 +1050,7 @@ private fun SuggestionsPage(context: Context, versionLabel: String) {
         )
         AboutParagraph(
             "Los datos copiados son version, modelo, Android, sensibilidad y estado del monitor. " +
-                "No incluyen contactos, token de Telegram ni ubicacion."
+                "No incluyen contactos, la clave de Telegram ni la ubicacion."
         )
         Button(
             onClick = { openLink(context, UpdateChecker.ISSUES_PAGE) },
@@ -1124,30 +1124,32 @@ private fun CreditsPage() {
 }
 
 private fun privacyText(): String = buildString {
-    appendLine("Todo lo que configuras (contactos, telefonos, textos de WhatsApp, token del bot de Telegram, " +
+    appendLine("Todo lo que configuras (contactos, telefonos, textos de WhatsApp, la clave del bot de Telegram, " +
         "sensibilidad e interruptores) se guarda solo dentro de este movil.")
     appendLine()
     appendLine("Ubicacion: se usa unicamente para el monitor y el SOS. La ultima posicion no se envia a ningun " +
         "servidor de Segu-Luky; viaja en el mensaje de SOS a tus contactos y solo si tiene menos de 5 minutos.")
     appendLine()
-    appendLine("Microfono: con PALABRAS CLAVE activado, el reconocedor del telefono escucha AYUDA y SOCORRO. " +
+    appendLine("Microfono: si activas la voz, el reconocedor del telefono escucha AYUDA y SOCORRO. " +
         "No se graba ni se guarda audio; NIVEL DE AUDIO solo muestra un numero en pantalla.")
     appendLine()
-    appendLine("Telegram: si guardas un token, los avisos se envian a la API de Telegram con el token y el chat id " +
-        "que tu indiques. Sin bot ni chat id configurados no sale nada de la app.")
+    appendLine("Telegram: si guardas la clave del bot, los avisos se envian a Telegram con esa clave y el numero " +
+        "de chat que tu indiques. Sin bot configurado no sale nada de la app.")
     appendLine()
-    appendLine("Ninguna otra conexion: no hay analitica, ni publicidad, ni cuentas. Buscar actualizacion solo lee la " +
+    appendLine("Ninguna otra conexion: no hay estadisticas, ni publicidad, ni cuentas. Buscar actualizacion solo lee la " +
         "pagina publica del proyecto en GitHub.")
     appendLine()
-    append("Borrar datos: al desinstalar la app se borran contactos, token y registro.")
+    append("Borrar datos: al desinstalar la app se borran contactos, clave y registro.")
 }
 
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.64s - Textos de toda la app en lenguaje llano: se quitan t.me, chat id, token, umbral, " +
+        "API, analitica y otras palabras tecnicas. Ahora se lee nivel de golpe, clave del bot, numero de " +
+        "chat y enlace de Telegram.")
     appendLine("1.63s - Texto de ENVIO AUTO MENSAJES reescrito: ahora dice que la app abre el chat de " +
-        "WhatsApp o el enlace t.me en Telegram y pulsa Enviar sin confirmacion, en vez de la frase " +
-        "enrevesada anterior.")
+        "WhatsApp o el de Telegram y pulsa Enviar sin preguntar.")
     appendLine("1.62s - Repaso visual de todos los menus: cada tarjeta pone el titulo en una linea y la " +
         "etiqueta de estado debajo, asi \"INTERRUPTOR S O S\" ya no se parte. Los permisos quedan en dos " +
         "lineas legibles y el boton ACTUALIZAR de InterCOM deja de recortarse.")
@@ -1447,7 +1449,7 @@ private fun EmergencySettingsScreen(
                         voiceKeywordsGate -> Tone.WARN
                         else -> Tone.OFF
                     },
-                    description = "Caida y orientacion, voz de socorro y diagnostico del sensor.",
+                    description = "Golpes, caidas, voz de ayuda y datos del sensor.",
                     onClick = { section = SettingsSection.SENSORS }
                 )
             }
@@ -1535,7 +1537,7 @@ private fun EmergencySettingsScreen(
                 ) {
                     if (callsBlocked) {
                         Text(
-                            "Las llamadas no estan listas hasta conceder el permiso; los mensajes configurados no se bloquean.",
+                            "Sin el permiso de llamadas no se puede llamar; los mensajes que tengas activados si salen.",
                             color = Tone.BAD.text,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold
@@ -1553,7 +1555,7 @@ private fun EmergencySettingsScreen(
                     title = "ALARMAS EXACTAS",
                     status = if (exactAlarmReady) "AUTORIZADAS" else "NO AUTORIZADAS",
                     tone = if (exactAlarmReady) Tone.OK else Tone.BAD,
-                    description = "Android puede retrasar el final del SOS y el paso al siguiente contacto si no las permite. " +
+                    description = "Si Android no las permite, el SOS puede terminar tarde y tardar mas en pasar al siguiente contacto. " +
                         "Autorizalas para que el aviso sea puntual."
                 ) {
                     if (!exactAlarmReady) {
@@ -1575,9 +1577,9 @@ private fun EmergencySettingsScreen(
                     status = if (accessibilityReady && overlayReady) "LISTO" else "INCOMPLETO",
                     tone = if (accessibilityReady && overlayReady) Tone.OK else Tone.WARN,
                     description = if (whatsappAutoSend) {
-                        "Estos dos permisos son los que permiten pulsar Enviar y abrir WhatsApp desde segundo plano."
+                        "Estos dos permisos son los que permiten que la app pulse Enviar y abra WhatsApp sin que la toques."
                     } else {
-                        "Solo hacen falta si activas ENVIO AUTO MENSAJES; sin ellos el envio es manual."
+                        "Solo hacen falta si activas ENVIO AUTO MENSAJES; sin ellos el mensaje se envia a mano."
                     }
                 ) {
                     PermissionRow(
@@ -1604,7 +1606,7 @@ private fun EmergencySettingsScreen(
                     title = "ESTADO DE LOS PERMISOS",
                     status = if (notificationsReady && locationReady) "OK" else "REVISAR",
                     tone = if (notificationsReady && locationReady) Tone.OK else Tone.WARN,
-                    description = "Se conceden en los dialogos de Android. Si alguno esta denegado, la app " +
+                    description = "Se conceden en los avisos de Android. Si alguno esta denegado, la app " +
                         "sigue detectando golpes pero pierde esa parte del aviso."
                 ) {
                     PermissionRow(
@@ -1677,10 +1679,10 @@ private fun EmergencySettingsScreen(
                     status = if (monitorStopped) "AJUSTABLE" else "MONITOR EN MARCHA",
                     tone = if (monitorStopped) Tone.OK else Tone.WARN,
                     description = if (monitorStopped) {
-                        "Sube el umbral para exigir un golpe mas fuerte. Aqui estan tambien el deslizador y " +
-                            "la ventana ADAPT.; el interruptor MONITOR esta en la pantalla principal."
+                        "Sube el nivel para exigir un golpe mas fuerte. Aqui estan tambien el deslizador y, " +
+                            "en ADAPT., cada cuanto se recalcula. El interruptor MONITOR esta en la pantalla principal."
                     } else {
-                        "Deten el monitor para cambiar la sensibilidad o la ventana ADAPT."
+                        "Para cambiar el nivel o cada cuanto se recalcula, para antes el monitor."
                     }
                 ) {
                     SensitivityControl(
@@ -1695,7 +1697,7 @@ private fun EmergencySettingsScreen(
                         onSensitivityChange = onSensitivityChange,
                         onWindowChange = onWindowChange,
                         onHitTest = onHitTest,
-                        valueLabel = "UMBRAL DE GOLPE ="
+                        valueLabel = "NIVEL DE GOLPE ="
                     )
                 }
             }
@@ -1715,11 +1717,11 @@ private fun EmergencySettingsScreen(
                 ) {
                     Text(
                         if (fallOrientationGate) {
-                            "Un golpe fuerte abre un candidato de 15 s: si el movil queda inclinado 55 grados o mas durante 4 s, " +
-                                "salta el SOS. Un bache no tumba la moto y no avisa; la sacudida y los botones siguen siendo inmediatos."
+                            "Un golpe fuerte abre un aviso en espera de 15 s: si el movil queda inclinado 55 grados o mas " +
+                                "durante 4 s, salta el SOS. Un bache no tumba la moto y no avisa; la sacudida y los botones son inmediatos."
                         } else {
-                            "Todo golpe al nivel elegido inicia la cuenta atras directamente, como agitar el movil, " +
-                                "sin confirmar inclinacion."
+                            "Cualquier golpe al nivel elegido inicia la cuenta atras al momento, aunque muevas el movil a mano: " +
+                                "no se comprueba la inclinacion."
                         } + " Se aplica al iniciar el monitor.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1751,10 +1753,10 @@ private fun EmergencySettingsScreen(
                 ) {
                     Text(
                         if (voiceKeywordsGate) {
-                            "Con el monitor activo y el microfono autorizado, decir AYUDA o SOCORRO inicia la cuenta atras " +
+                            "Con el monitor activo y el permiso de microfono, decir AYUDA o SOCORRO inicia la cuenta atras " +
                                 "aunque la pantalla este apagada. No se graba ni se guarda sonido."
                         } else {
-                            "No se escuchan palabras de emergencia; el microfono queda libre."
+                            "No escucha palabras de emergencia; el microfono queda libre."
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1780,10 +1782,10 @@ private fun EmergencySettingsScreen(
                         )
                     },
                     description = if (whatsappAutoSend) {
-                        "Al terminar el SOS, la app abre el chat de WhatsApp o el enlace t.me en Telegram y " +
-                            "pulsa Enviar sin confirmacion."
+                        "Al terminar el SOS, la app abre el chat de WhatsApp o el de Telegram y " +
+                            "pulsa Enviar sin preguntar."
                     } else {
-                        "WhatsApp y Telegram se abren con el mensaje listo; el envio es manual."
+                        "La app abre WhatsApp o Telegram con el mensaje escrito; el envio lo pulsas tu."
                     }
                 ) {
                     if (whatsappAutoSend) {
@@ -1818,7 +1820,7 @@ private fun EmergencySettingsScreen(
                         )
                         if (!accessibilityReady || !overlayReady) {
                             Text(
-                                "Sin ambos permisos no puede ser automatico; se ofrecera WhatsApp manual como respaldo.",
+                                "Sin los dos permisos no puede enviarse solo: la app te dejara el mensaje escrito para que lo envies tu.",
                                 color = Tone.BAD.text,
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -1855,20 +1857,20 @@ private fun EmergencySettingsScreen(
                     },
                     description = when {
                         botConfigured -> "El aviso sale solo, sin abrir Telegram ni desbloquear el movil."
-                        telegramInstalled -> "Se abrira Telegram y se pulsara Enviar; necesita ENVIO AUTO MENSAJES."
-                        else -> "Ni bot ni app de Telegram: ahora mismo no se enviaria nada."
+                        telegramInstalled -> "La app abrira Telegram y pulsara Enviar; hace falta ENVIO AUTO MENSAJES."
+                        else -> "No hay bot ni app de Telegram: ahora mismo el aviso no llegaria."
                     }
                 ) {
                     Text(
-                        "Bot conectado: ${botTargets.size} de ${telegramContacts.size} contactos con chat id. " +
-                            "Enlace t.me: ${linkTargets.size} contacto(s) por accesibilidad.",
+                        "Bot conectado: ${botTargets.size} de ${telegramContacts.size} contactos listos. " +
+                            "Enlace de Telegram: ${linkTargets.size} contacto(s) por Accesibilidad.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     OutlinedTextField(
                         value = telegramToken,
                         onValueChange = { telegramToken = it.trim() },
-                        label = { Text("Token del bot (@BotFather)") },
+                        label = { Text("Clave del bot (@BotFather)") },
                         singleLine = true,
                         enabled = !criticalSettingsLocked,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
@@ -1882,11 +1884,11 @@ private fun EmergencySettingsScreen(
                             onClick = {
                                 val normalized = TelegramSos.normalizeBotToken(telegramToken)
                                 if (normalized == null) {
-                                    telegramFeedback = "Token no valido: debe ser 123456789:AAAA..."
+                                    telegramFeedback = "Clave no valida: debe ser 123456789:AAAA..."
                                 } else {
                                     telegramRepository.setTelegramBotToken(normalized)
                                     telegramToken = normalized
-                                    telegramFeedback = "Token guardado"
+                                    telegramFeedback = "Clave guardada"
                                 }
                             }
                         ) { TightButtonLabel("GUARDAR") }
@@ -1898,7 +1900,7 @@ private fun EmergencySettingsScreen(
                                 val target = botTargets.firstOrNull() ?: return@OutlinedButton
                                 val token = TelegramSos.normalizeBotToken(telegramToken)
                                 if (token == null) {
-                                    telegramFeedback = "Guarda primero un token valido"
+                                    telegramFeedback = "Guarda primero la clave del bot"
                                     return@OutlinedButton
                                 }
                                 telegramTesting = true
@@ -1927,17 +1929,17 @@ private fun EmergencySettingsScreen(
                             onClick = {
                                 telegramRepository.setTelegramBotToken("")
                                 telegramToken = ""
-                                telegramFeedback = "Token borrado"
+                                telegramFeedback = "Clave borrada"
                             }
-                        ) { Text("BORRAR TOKEN") }
+                        ) { Text("BORRAR CLAVE") }
                     }
                     if (telegramFeedback.isNotEmpty()) {
                         Text(telegramFeedback, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                     }
                     Text(
-                        "1) Crea el bot en @BotFather y copia el token. " +
+                        "1) Crea el bot en @BotFather y copia la clave que te da. " +
                             "2) Cada contacto debe escribir /start al bot. " +
-                            "3) Pega su chat id en el contacto (o el enlace t.me como respaldo). " +
+                            "3) Pega en el contacto el numero de chat que te da el bot (o su enlace de Telegram). " +
                             "4) Pulsa ENVIAR PRUEBA para comprobar la entrega. " +
                             "El detalle esta en INSTRUCCIONES DE USO, pasos 7 y 8.",
                         style = MaterialTheme.typography.bodySmall,
@@ -1945,7 +1947,7 @@ private fun EmergencySettingsScreen(
                     )
                     if (telegramContacts.isNotEmpty() && botTargets.isEmpty()) {
                         Text(
-                            "Ningun contacto de Telegram tiene chat id: ahora mismo solo funcionaria el enlace t.me.",
+                            "Ningun contacto tiene el numero de chat: ahora mismo solo funcionaria su enlace de Telegram.",
                             color = Tone.BAD.text,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -2018,9 +2020,9 @@ private fun EmergencySettingsScreen(
                         }
                         Text(
                             "Aprendizaje: ${deviceProfile.usageMs / 60_000L} min · ruido " +
-                                "${String.format(Locale.US, "%.2f", deviceProfile.noiseG)} g · marcha p99 " +
+                                "${String.format(Locale.US, "%.2f", deviceProfile.noiseG)} g · traqueteo " +
                                 "${String.format(Locale.US, "%.2f", deviceProfile.p99G)} g · " +
-                                "${String.format(Locale.US, "%.0f", deviceProfile.deliveredHz)} Hz",
+                                "${String.format(Locale.US, "%.0f", deviceProfile.deliveredHz)} medidas/s",
                             style = MaterialTheme.typography.bodySmall
                         )
                         TextButton(
@@ -2072,7 +2074,7 @@ private fun EmergencySettingsScreen(
                                 Text("DETENER REGISTRO", fontWeight = FontWeight.Bold)
                             }
                             Text(
-                                "Grabando ${calibration.activity.label}: ${calibration.samples} muestras, " +
+                                "Grabando ${calibration.activity.label}: ${calibration.samples} lecturas, " +
                                     "${calibration.elapsedMs / 1000}s\nArchivo: ${calibration.fileName}",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold
@@ -2265,7 +2267,7 @@ private fun EmergencySettingsScreen(
             item {
                 SeguCard(
                     title = "COMO SE ENVIA LA UBICACION",
-                    description = "El marcador {MAPA} se sustituye por un enlace Google Maps con la ultima posicion GPS " +
+                    description = "El texto {MAPA} se cambia por un enlace de Google Maps con la ultima posicion GPS " +
                         "precisa y reciente. El interruptor $SOS_HARD ON/OFF de la pantalla principal debe estar en " +
                         "ON: si esta en OFF el aviso no sale."
                 )
@@ -2441,7 +2443,7 @@ private fun EmergencyContactEditor(
             }
             EmergencyActionSwitch(
                 label = "ENVIAR TELEGRAM",
-                detail = "Bot (si hay chat id y token) o enlace t.me como respaldo.",
+                detail = "Por el bot (con numero de chat y clave) o por su enlace de Telegram.",
                 checked = telegramEnabled,
                 enabled = editable,
                 onCheckedChange = { telegramEnabled = it }
@@ -2453,7 +2455,7 @@ private fun EmergencyContactEditor(
                     enabled = editable,
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Usuario de Telegram (opcional)") },
-                    placeholder = { Text("@nombre o https://t.me/nombre") },
+                    placeholder = { Text("@nombre o enlace de Telegram") },
                     isError = saveAttempted && telegramUsernameInvalid,
                     supportingText = {
                         Text(
@@ -2468,12 +2470,12 @@ private fun EmergencyContactEditor(
                     onValueChange = { telegramChatId = it },
                     enabled = editable,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Chat id del bot (opcional)") },
+                    label = { Text("Numero de chat del bot (opcional)") },
                     placeholder = { Text("123456789") },
                     isError = saveAttempted && telegramChatIdInvalid,
                     supportingText = {
                         Text(
-                            if (telegramChatIdInvalid) "Chat id no valido (solo digitos)"
+                            if (telegramChatIdInvalid) "Numero de chat no valido (solo digitos)"
                             else "Vacio = sin envio automatico por bot para este contacto."
                         )
                     },
@@ -2616,32 +2618,32 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "1. Configura los contactos",
-                text = "Activa ${SOS_HARD} ON/OFF en la pantalla principal para habilitar todos los avisos. Para cada telefono elige llamada, WhatsApp, Telegram o una combinacion. El texto de WhatsApp puede personalizarse y {MAPA} insertara el enlace Google Maps; ese mismo texto se usa en Telegram."
+                text = "Activa ${SOS_HARD} ON/OFF en la pantalla principal para habilitar todos los avisos. Para cada telefono elige llamada, WhatsApp, Telegram o una combinacion. Puedes cambiar el texto del mensaje: {MAPA} se cambia por el enlace de Google Maps y el mismo texto se usa en Telegram."
             )
         }
         item {
             UsageInstruction(
                 title = "2. Inicia el monitor",
-                text = "Concede ubicacion precisa para tener mapa y velocidad. Pulsa INICIAR: el monitor arranca tambien sin GPS, solo pierde el enlace de mapa. Si autorizas el microfono, NIVEL DE AUDIO mide el ambiente; con VOZ AYUDA / SOCORRO activada, gritar AYUDA o SOCORRO inicia la cuenta atras incluso con la pantalla apagada mientras el monitor este activo. No se graba ni guarda sonido; la voz la procesa el reconocedor del telefono."
+                text = "Concede la ubicacion precisa para tener mapa y velocidad. Pulsa INICIAR: el monitor arranca tambien sin GPS, solo pierde el enlace del mapa. Si das permiso al microfono, NIVEL DE AUDIO mide el ruido del ambiente; con VOZ AYUDA / SOCORRO activada, gritar AYUDA o SOCORRO empieza la cuenta atras aunque la pantalla este apagada y el monitor activo. No se graba ni se guarda sonido: la voz la entiende el propio telefono."
             )
         }
         item {
             UsageInstruction(
                 title = "3. Ajusta la sensibilidad",
-                text = "El control usa aceleracion dinamica entre 0.5 y 7 g, pero la app aprende el ruido y el " +
-                    "traqueteo de este movil. El deslizador, PICO, EFECTIVO, SUGERIDO y PRUEBA DE GOLPE estan en " +
-                    "Configuracion > Sensores; en la pantalla principal quedan la etiqueta con el valor y la " +
-                    "ventana ADAPT. (AUTO, 1, 2 o 3 min), que decide cada cuanto se recalcula. El muestreo tambien " +
-                    "se ajusta solo (25, 50 o 100 Hz). Con MODO MOTO activo un golpe aislado arma un candidato; dos " +
-                    "picos separados por un valle dentro de 1,2 s (sacudida) inician la cuenta atras al instante. " +
-                    "GPS y VELOCIDAD son informativos y nunca bloquean un golpe. PRUEBA DE GOLPE comprueba en 15 s " +
-                    "que el movil se entera de una sacudida, sin avisar a nadie."
+                text = "La app mide los golpes en g (1 g es el peso del movil parado) y aprende el ruido y el " +
+                    "traqueteo de tu telefono. En Configuracion > Sensores estan el deslizador, PICO (el golpe mas " +
+                    "fuerte del viaje), EFECTIVO (el nivel que se aplica), SUGERIDO (lo que propone la app) y PRUEBA " +
+                    "DE GOLPE. En la pantalla principal queda el valor y cada cuanto se recalcula (ADAPT.: AUTO, 1, 2 " +
+                    "o 3 min). La app tambien ajusta sola cuantas veces por segundo mira el sensor. Con MODO MOTO, un " +
+                    "golpe suelto deja el aviso en espera; dos golpes seguidos (una sacudida) empiezan la cuenta atras " +
+                    "al instante. GPS y VELOCIDAD solo informan y nunca bloquean un golpe. PRUEBA DE GOLPE comprueba en " +
+                    "15 s que el movil nota una sacudida, sin avisar a nadie."
             )
         }
         item {
             UsageInstruction(
                 title = "4. Caida y orientacion",
-                text = "Con MODO MOTO, un golpe fuerte arma un candidato de 15 s y la pantalla se enciende para que puedas cancelar. El SOS salta solo si el movil queda inclinado 55 grados o mas durante 4 s seguidos. Se cancela si vuelve a vertical, si el GPS marca 30 km/h o mas (sigues rodando) o si expira la ventana. Desactivado, todo golpe inicia la cuenta atras directamente."
+                text = "Con MODO MOTO, un golpe fuerte deja el aviso en espera 15 s y la pantalla se enciende para que puedas cancelarlo. El SOS salta solo si el movil queda inclinado 55 grados o mas durante 4 s seguidos. Se cancela si vuelve a estar vertical, si el GPS marca 30 km/h o mas (sigues rodando) o si pasan esos 15 s. Si lo desactivas, cualquier golpe empieza la cuenta atras directamente."
             )
         }
         item {
@@ -2653,29 +2655,29 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "6. Avisos por WhatsApp y Telegram",
-                text = "SMS SOS sale aunque la pantalla este bloqueada. WhatsApp y el enlace t.me necesitan la Accesibilidad activada para pulsar Enviar; si el movil tiene PIN, la pantalla se enciende y pide desbloqueo. El bot de Telegram no necesita ni pantalla ni accesibilidad: guarda el token en la tarjeta TELEGRAM SOS, pon el chat id en cada contacto y el aviso sale solo con el movil bloqueado. Los pasos 7 y 8 explican como prepararlo."
+                text = "SMS SOS sale aunque la pantalla este bloqueada. WhatsApp y el enlace de Telegram necesitan el permiso de Accesibilidad para poder pulsar Enviar; si el movil tiene PIN, la pantalla se enciende y pide desbloqueo. El bot de Telegram no necesita pantalla ni Accesibilidad: guarda su clave en la tarjeta TELEGRAM SOS, pon el numero de chat en cada contacto y el aviso sale solo con el movil bloqueado. Los pasos 7 y 8 explican como prepararlo."
             )
         }
         item {
             UsageInstruction(
-                title = "7. Telegram: crear el bot y guardar el token",
+                title = "7. Telegram: crear el bot y guardar la clave",
                 text = "1) En Telegram abre @BotFather y envia /newbot. " +
                     "2) Elige un nombre visible y un usuario que termine en bot. " +
-                    "3) BotFather devuelve un token con forma 123456789:AAAA... Copialo entero. " +
-                    "4) En Segu-Luky pulsa el engranaje, baja hasta la tarjeta TELEGRAM SOS y pega el token en Token del bot. " +
-                    "5) Pulsa GUARDAR TOKEN: la tarjeta confirmara Token guardado. " +
-                    "6) En cuanto un contacto tenga chat id, pulsa ENVIAR PRUEBA para comprobar que el mensaje llega. " +
-                    "Si el token es incorrecto la tarjeta mostrara el motivo devuelto por Telegram."
+                    "3) BotFather te devuelve una clave larga (el token), con forma 123456789:AAAA... Copiala entera. " +
+                    "4) En Segu-Luky pulsa el engranaje, baja hasta la tarjeta TELEGRAM SOS y pegala en Clave del bot. " +
+                    "5) Pulsa GUARDAR CLAVE: la tarjeta confirmara Clave guardada. " +
+                    "6) En cuanto un contacto tenga su numero de chat, pulsa ENVIAR PRUEBA para comprobar que el mensaje llega. " +
+                    "Si la clave es incorrecta, la tarjeta mostrara el motivo que devuelve Telegram."
             )
         }
         item {
             UsageInstruction(
-                title = "8. Telegram: chat id de cada contacto",
+                title = "8. Telegram: numero de chat de cada contacto",
                 text = "Cada contacto debe abrir el bot y enviarle /start una vez; sin eso Telegram no deja escribirle. " +
-                    "Para obtener el numero abre en el navegador https://api.telegram.org/bot<TOKEN>/getUpdates y busca chat:{id:...}. " +
-                    "Pega ese numero en Chat id del bot del contacto (en grupos empieza por -). " +
-                    "Si prefieres no usar bot, deja el chat id vacio y escribe solo el usuario (@nombre): se usara el enlace t.me, que necesita Accesibilidad y el interruptor ENVIO AUTO MENSAJES. " +
-                    "El token se guarda en texto plano dentro de este movil: si prestas el telefono, pulsa BORRAR TOKEN y desactiva ENVIAR TELEGRAM en los contactos."
+                    "Para ver su numero, abre en el navegador https://api.telegram.org/bot<TOKEN>/getUpdates y busca chat:{id:...}. " +
+                    "Pega ese numero en Numero de chat del bot (en grupos empieza por -). " +
+                    "Si prefieres no usar bot, deja ese campo vacio y escribe solo el usuario (@nombre): se usara su enlace de Telegram, que necesita Accesibilidad y el interruptor ENVIO AUTO MENSAJES. " +
+                    "La clave se guarda sin cifrar dentro de este movil: si prestas el telefono, pulsa BORRAR CLAVE y desactiva ENVIAR TELEGRAM en los contactos."
             )
         }
         item {
@@ -3492,7 +3494,7 @@ private fun MonitorCard(
                 "efectivo ${String.format(Locale.US, "%.1f g", effectiveSensitivity)}",
             if (snapshot.sensorAvailable) IndicatorState.GOOD else IndicatorState.PENDING,
             buildString {
-                append("Lectura actual / umbral efectivo (tu ajuste: ")
+                append("Lectura actual / nivel aplicado (tu ajuste: ")
                 append(String.format(Locale.US, "%.1f", sensitivityG))
                 append(" g). ")
                 append(snapshot.sensorDetail)
@@ -3500,7 +3502,7 @@ private fun MonitorCard(
                     append(" · ruido ").append(String.format(Locale.US, "%.2f", it)).append(" g")
                 }
                 snapshot.deviceP99G?.let {
-                    append(" · marcha p99 ").append(String.format(Locale.US, "%.2f", it)).append(" g")
+                    append(" · traqueteo ").append(String.format(Locale.US, "%.2f", it)).append(" g")
                 }
                 snapshot.samplingHz?.let { append(" · ").append(it).append(" Hz") }
                 snapshot.ridePeakG?.takeIf { it > 0f }?.let {
