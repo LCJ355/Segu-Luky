@@ -1134,6 +1134,8 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.60s - Cuando AUTO cambia de ventana, el numero de T. PROMEDIO destella tres veces para " +
+        "que se note sin mirar fijo.")
     appendLine("1.59s - En T. PROMEDIO se quita el texto de minutos: con AUTO se marcan en verde AUTO y el " +
         "numero de minutos que se aplica; con ventana fija, solo ese numero.")
     appendLine("1.58s - La ventana de promedio (ADAPT.) se elige en Configuracion > Sensores; en la pantalla " +
@@ -3628,6 +3630,11 @@ private enum class PressEnd {
 private const val HOLD_DURATION_MS = 5_000L
 private const val SOS_BUTTON_SIZE = 210
 private const val HOLD_PROGRESS_STEPS = 100f
+
+/** Destellos del numero de T. PROMEDIO cuando AUTO cambia de ventana. */
+private const val BLINK_COUNT = 3
+private const val BLINK_ON_MS = 320L
+private const val BLINK_OFF_MS = 220L
 private val SENSITIVITY_TRACK_HEIGHT = 8.dp
 private val HOLD_COLUMN_WIDTH = 12.dp
 private val HOLD_COLUMN_GAP = 10.dp
@@ -3928,6 +3935,22 @@ private fun AdaptationWindowInfo(
     val storedMode = remember(windowAuto, activeWindowMinutes) {
         SafetyMonitorService.loadAdaptationWindowMode(context)
     }
+    // Cuando AUTO cambia de ventana (por ejemplo de 3 a 2 minutos por un camino
+    // distinto) el numero destella unos segundos para que se note sin mirar fijo.
+    // La primera composicion no destella: solo los cambios reales.
+    val lastMinutes = remember { mutableStateOf(activeWindowMinutes) }
+    var emphasised by remember { mutableStateOf(false) }
+    LaunchedEffect(activeWindowMinutes) {
+        if (activeWindowMinutes == lastMinutes.value) return@LaunchedEffect
+        lastMinutes.value = activeWindowMinutes
+        if (!windowAuto) return@LaunchedEffect
+        repeat(BLINK_COUNT) {
+            emphasised = true
+            delay(BLINK_ON_MS)
+            emphasised = false
+            delay(BLINK_OFF_MS)
+        }
+    }
     Spacer(Modifier.height(5.dp))
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -3941,15 +3964,17 @@ private fun AdaptationWindowInfo(
         )
         AdaptiveWindowInfoChip("AUTO", selected = windowAuto)
         AdaptationWindowMode.fixed.forEach { mode ->
+            val selected = if (windowAuto) {
+                mode.minutes == activeWindowMinutes
+            } else {
+                storedMode == mode
+            }
             AdaptiveWindowInfoChip(
                 label = "${mode.minutes}",
                 // En AUTO se marca tambien el numero que se esta aplicando; con una
                 // ventana fija solo se marca esa.
-                selected = if (windowAuto) {
-                    mode.minutes == activeWindowMinutes
-                } else {
-                    storedMode == mode
-                }
+                selected = selected,
+                emphasised = selected && emphasised
             )
         }
     }
@@ -3957,12 +3982,22 @@ private fun AdaptationWindowInfo(
 
 /** Chip de solo lectura: el elegido va en verde, el resto en gris. */
 @androidx.compose.runtime.Composable
-private fun AdaptiveWindowInfoChip(label: String, selected: Boolean) {
+private fun AdaptiveWindowInfoChip(
+    label: String,
+    selected: Boolean,
+    emphasised: Boolean = false
+) {
     Text(
         text = label,
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(if (selected) StrongGreen.copy(alpha = 0.16f) else Color.Transparent)
+            .background(
+                when {
+                    emphasised -> StrongGreen.copy(alpha = 0.45f)
+                    selected -> StrongGreen.copy(alpha = 0.16f)
+                    else -> Color.Transparent
+                }
+            )
             .padding(horizontal = 6.dp, vertical = 2.dp),
         style = MaterialTheme.typography.labelSmall,
         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,

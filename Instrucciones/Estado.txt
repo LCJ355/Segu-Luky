@@ -1772,6 +1772,37 @@ Pendientes: fijar 1 o 3 min desde Sensores y comprobar que solo se marca ese
 numero, y las pruebas de comportamiento que siguen abiertas.
 
 ======================================================================
+V-1.60s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.60s (versionCode 52)
+
+Cambio:
+- Cuando la ventana AUTO cambia (por ejemplo de 3 a 2 min por un camino mas
+  estable), el numero activo de T. PROMEDIO destella tres veces (320 ms
+  encendido / 220 ms apagado) subiendo el verde del fondo.
+- Solo con AUTO y solo en cambios reales: la primera composicion no parpadea,
+  asi que abrir la app o volver de Configuracion no produce destellos.
+- El chip informativo admite un tercer estado (selected + emphasised); el
+  selector de Configuracion > Sensores no cambia.
+- Constantes BLINK_COUNT / BLINK_ON_MS / BLINK_OFF_MS junto al resto de
+  constantes de interfaz.
+- Instrucciones, README, changelog, historial y Estado actualizados.
+
+Motivo: el usuario acepto la propuesta de que el numero verde destelle cuando
+AUTO cambie de ventana.
+
+Prueba realizada: testDebugUnitTest (145 pruebas, 0 fallos), lintDebug (0
+errores) y assembleRelease. El destello es una animacion de interfaz: se
+comprueba en marcha, cuando AUTO ajusta la ventana por si solo.
+Resultado: compila y verifica; pendiente ver el destello en circulacion.
+APK generado: APK´s/Segu-Luky-1.60s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.60s-mapping.txt.gz
+Pendientes: ver el destello en un viaje con AUTO y las pruebas de
+comportamiento que siguen abiertas.
+
+======================================================================
 
 Fecha: 12/11/2026
 Version: 1.53s (versionCode 45)

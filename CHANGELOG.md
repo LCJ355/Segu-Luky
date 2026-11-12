@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.60s (versionCode 52)
+
+### El número de T. PROMEDIO destella cuando AUTO cambia de ventana
+- Si la ventana automática cambia (por ejemplo de 3 a 2 minutos porque el camino es más estable),
+  el número activo de `T. PROMEDIO` **destella tres veces** (320 ms encendido, 220 ms apagado)
+  subiendo el verde del fondo, para que se note sin mirar fijo.
+- Solo destella con `AUTO`, y solo en cambios reales: la primera composición no parpadea, así que
+  abrir la app o volver desde Configuración no produce destellos.
+- El resaltado es un tercer estado del chip (`selected` + `emphasised`), sin tocar el selector de
+  Configuración → Sensores.
+
 ## 1.59s (versionCode 51)
 
 ### T. PROMEDIO más claro en la pantalla principal
