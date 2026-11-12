@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.56s (versionCode 48)
+
+### Dos botones de estado en la pantalla principal
+- El botón **INICIAR / DETENER MONITOR** se parte en dos botones que muestran **solo** el valor
+  actual, nunca los dos:
+  - **MONITOR ON/OFF**: `ON` en verde cuando el monitor vigila y `OFF` en naranja cuando está
+    parado; un toque alterna.
+  - **S O S ON/OFF**: `ON` en verde cuando los avisos están habilitados y `OFF` en rojo cuando no;
+    un toque alterna y, al activarlo con contactos de llamada, pide el permiso `CALL_PHONE` como
+    hacía el interruptor anterior.
+- **FUNCIONALIDAD SOS** sale de Configuración. En *Canales de salida SOS* queda una tarjeta
+  informativa que recuerda dónde está el interruptor y mantiene el aviso de "llamadas sin permiso".
+- El aviso de la pantalla principal ("avisos SOS desactivados") ahora señala el botón
+  `S O S OFF` en vez de mandar a Configuración.
+- La ayuda de la app (Como usar) y el protocolo usan la nueva nomenclatura.
+- El pico del viaje menor de 0,5 g ya no se guarda ni se muestra como `ULTIMO 0.0 g`.
+- Sin cambios en el comportamiento del SOS ni en el despacho: solo en dónde y cómo se encienden
+  el monitor y los avisos.
+
 ## 1.55s (versionCode 47)
 
 ### Configuración dividida en cuatro submenús

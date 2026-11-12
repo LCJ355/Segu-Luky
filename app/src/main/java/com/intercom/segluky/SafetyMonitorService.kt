@@ -2930,7 +2930,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
         private fun saveRidePeak(context: Context, g: Float) {
             val value = if (g.isFinite()) g.coerceAtLeast(0f) else 0f
-            if (value <= 0f) {
+            // Por debajo del minimo interesante no se guarda nada: un pico de 0,03 g
+            // por llevar el movil en la mano solo ensuciaba la pantalla con "0.0 g".
+            if (value < SensitivityAdvisor.MIN_PEAK_G) {
                 context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
                     .edit().remove(KEY_RIDE_PEAK_G).remove(KEY_RIDE_PEAK_AT).apply()
                 return

@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.55s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.56s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 47). Los valores entre parentesis son los del codigo.
+archivo (versionCode 48). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -20,6 +20,9 @@ los canales configurados para cada contacto.
 
 El monitor es un servicio en primer plano con notificacion permanente: sigue
 vigilando con la pantalla apagada y el movil bloqueado.
+
+La pantalla principal tiene dos interruptores de estado: MONITOR ON/OFF (vigilar) y
+S O S ON/OFF (permite o bloquea todos los avisos). Solo se ve el estado actual.
 
 Fases internas (SafetyPhase): STOPPED, MONITORING, VALIDATING, FALL_CANDIDATE y
 COUNTDOWN. El despacho posterior a la cuenta atras no es una fase: se publica en
@@ -254,4 +257,4 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.55s (versionCode 47) - 12/11/2026
+Version: V-1.56s (versionCode 48) - 12/11/2026

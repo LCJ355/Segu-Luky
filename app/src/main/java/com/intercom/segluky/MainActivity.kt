@@ -226,6 +226,21 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // El interruptor de avisos vive ahora en la pantalla principal (S O S ON/OFF);
+        // se comporta igual que el que estaba en Configuracion, permiso incluido.
+        val onSosActionsEnabledChange: (Boolean) -> Unit = { enabled ->
+            if (!SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
+                sosActionsEnabled = enabled
+                repository.setSosActionsEnabled(enabled)
+                if (enabled &&
+                    contacts.any(EmergencyContact::callEnabled) &&
+                    !hasCallPermission(context)
+                ) {
+                    callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
+                }
+            }
+        }
+
         fun permissionsNeededForConfiguredFeatures(): Array<String> = buildList {
             if (!SafetyMonitorService.hasPreciseLocationPermission(context)) {
                 add(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -340,6 +355,8 @@ class MainActivity : ComponentActivity() {
                                 snapshot.effectiveThresholdG ?: sensitivityG
                             )
                         },
+                        sosActionsEnabled = sosActionsEnabled,
+                        onSosActionsEnabledChange = onSosActionsEnabledChange,
                         intercomState = installation.state,
                         onStart = { startMonitoring() },
                         onStop = { SafetyMonitorService.stop(context) }
@@ -372,7 +389,7 @@ class MainActivity : ComponentActivity() {
                 }
                 if (sosActionsEnabled.not() && snapshot.phase != SafetyPhase.STOPPED) {
                     item {
-                        SosDisabledWarning(onOpenSettings = { screen = AppScreen.SETTINGS })
+                        SosDisabledWarning()
                     }
                 }
                 item { Spacer(Modifier.height(6.dp)) }
@@ -407,18 +424,6 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     sosActionsEnabled = sosActionsEnabled,
-                    onSosActionsEnabledChange = { enabled ->
-                        if (!SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
-                            sosActionsEnabled = enabled
-                            repository.setSosActionsEnabled(enabled)
-                            if (enabled &&
-                                contacts.any(EmergencyContact::callEnabled) &&
-                                !hasCallPermission(context)
-                            ) {
-                                callPermissionLauncher.launch(Manifest.permission.CALL_PHONE)
-                            }
-                        }
-                    },
                     voiceKeywordsGate = voiceKeywordsGate,
                     audioPermissionGranted = audioPermissionGranted,
                     onVoiceKeywordsGateChange = { enabled ->
@@ -1116,6 +1121,8 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.56s - La pantalla principal tiene dos botones de estado: MONITOR ON/OFF (verde/naranja) y " +
+        "S O S ON/OFF (verde/rojo). El interruptor de avisos SOS sale de Configuracion.")
     appendLine("1.55s - Configuracion se divide en cuatro submenus: Sensores, Contactos SOS, Canales de " +
         "salida SOS y Permisos sistema.")
     appendLine("1.54s - La sensibilidad se afina sola: aprende el ruido y el traqueteo de cada movil, " +
@@ -1304,7 +1311,6 @@ private fun EmergencySettingsScreen(
     fallOrientationGate: Boolean,
     onFallOrientationGateChange: (Boolean) -> Unit,
     sosActionsEnabled: Boolean,
-    onSosActionsEnabledChange: (Boolean) -> Unit,
     voiceKeywordsGate: Boolean,
     audioPermissionGranted: Boolean,
     onVoiceKeywordsGateChange: (Boolean) -> Unit,
@@ -1476,35 +1482,12 @@ private fun EmergencySettingsScreen(
             item {
                 val callsBlocked = callPermissionRequired && !callPermissionGranted
                 SeguCard(
-                    title = "FUNCIONALIDAD SOS",
-                    status = when {
-                        !sosActionsEnabled -> "DESACTIVADO"
-                        callsBlocked -> "LLAMADAS SIN PERMISO"
-                        else -> "ACTIVADO"
-                    },
-                    tone = when {
-                        callsBlocked -> Tone.BAD
-                        sosActionsEnabled -> Tone.OK
-                        else -> Tone.OFF
-                    },
-                    trailing = {
-                        Switch(
-                            checked = sosActionsEnabled,
-                            enabled = !criticalSettingsLocked,
-                            onCheckedChange = onSosActionsEnabledChange,
-                            colors = activeSwitchColors()
-                        )
-                    }
+                    title = "INTERRUPTOR S O S",
+                    status = if (sosActionsEnabled) "ACTIVADO" else "DESACTIVADO",
+                    tone = if (sosActionsEnabled) Tone.OK else Tone.BAD,
+                    description = "El interruptor S O S ON/OFF esta en la pantalla principal, junto al del " +
+                        "monitor. Desactivalo para probar los sensores sin avisar a nadie."
                 ) {
-                    Text(
-                        if (sosActionsEnabled) {
-                            "Las llamadas y los mensajes configurados quedan habilitados para un SOS."
-                        } else {
-                            "No se realizaran llamadas ni mensajes a ningun contacto."
-                        } + " Desactivalo para probar los sensores sin avisar a nadie.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                     if (callsBlocked) {
                         Text(
                             "Las llamadas no estan listas hasta conceder el permiso; los mensajes configurados no se bloquean.",
@@ -2213,7 +2196,7 @@ private fun EmergencySettingsScreen(
                 SeguCard(
                     title = "COMO SE ENVIA LA UBICACION",
                     description = "El marcador {MAPA} se sustituye por un enlace Google Maps con la ultima posicion GPS " +
-                        "precisa y reciente. FUNCIONALIDAD SOS debe estar activada: desactivala para probar los sensores " +
+                        "precisa y reciente. El interruptor S O S ON/OFF de la pantalla principal debe estar en ON: " +
                         "reales sin avisar a nadie."
                 )
             }
@@ -2577,7 +2560,7 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "1. Configura los contactos",
-                text = "Pulsa el engranaje y activa FUNCIONALIDAD SOS para habilitar todos los avisos. Para cada telefono elige llamada, WhatsApp, Telegram o una combinacion. El texto de WhatsApp puede personalizarse y {MAPA} insertara el enlace Google Maps; ese mismo texto se usa en Telegram."
+                text = "Activa S O S ON/OFF en la pantalla principal para habilitar todos los avisos. Para cada telefono elige llamada, WhatsApp, Telegram o una combinacion. El texto de WhatsApp puede personalizarse y {MAPA} insertara el enlace Google Maps; ese mismo texto se usa en Telegram."
             )
         }
         item {
@@ -2607,7 +2590,7 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "5. SOS manual y pruebas",
-                text = "Mantener pulsado el boton SOS durante 5 segundos inicia la cuenta atras real. Antes de probar, desactiva FUNCIONALIDAD SOS para que la cuenta atras no llame ni envie mensajes a los contactos."
+                text = "Mantener pulsado el boton SOS durante 5 segundos inicia la cuenta atras real. Antes de probar, deja S O S en OFF para que la cuenta atras no llame ni envie mensajes a los contactos."
             )
         }
         item {
@@ -2647,7 +2630,7 @@ private fun InstructionsScreen(
         item {
             UsageInstruction(
                 title = "Importante",
-                text = "Al completar la cuenta atras y con FUNCIONALIDAD SOS activada, Segu-Luky inicia llamadas a los contactos con llamada habilitada y abre WhatsApp o Telegram con su mensaje y el enlace Google Maps de la ultima posicion. Comprueba siempre contactos, GPS, bateria y permisos antes de circular."
+                text = "Al completar la cuenta atras y con S O S en ON, Segu-Luky inicia llamadas a los contactos con llamada habilitada y abre WhatsApp o Telegram con su mensaje y el enlace Google Maps de la ultima posicion. Comprueba siempre contactos, GPS, bateria y permisos antes de circular."
             )
         }
         item {
@@ -2911,6 +2894,53 @@ private fun PermissionRow(
  * Home header: the only place that shows the state, the countdown and the
  * start/stop control. Cancelling lives in the bottom bar.
  */
+/**
+ * Boton de estado ON/OFF: nunca se ven las dos palabras, solo la que toca.
+ * Verde = activo; naranja (monitor) o rojo (avisos SOS) = desactivado.
+ */
+@androidx.compose.runtime.Composable
+private fun StateToggleButton(
+    label: String,
+    stateLabel: String,
+    on: Boolean,
+    onColor: Color,
+    offColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val ink = if (on) onColor else offColor
+    Button(
+        onClick = onClick,
+        modifier = modifier
+            .height(52.dp)
+            .semantics {
+                contentDescription = "$label $stateLabel: ${if (on) "activado" else "desactivado"}"
+            },
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(2.dp, ink),
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = ink
+        ),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp)
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                label,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+            Text(
+                stateLabel,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+        }
+    }
+}
+
 @androidx.compose.runtime.Composable
 private fun PhaseHeroCard(
     snapshot: SafetySnapshot,
@@ -2919,6 +2949,8 @@ private fun PhaseHeroCard(
     onSensitivityChange: (Float) -> Unit,
     onWindowChange: (AdaptationWindowMode) -> Unit,
     onHitTest: () -> Unit,
+    sosActionsEnabled: Boolean,
+    onSosActionsEnabledChange: (Boolean) -> Unit,
     intercomState: IntercomState,
     onStart: () -> Unit,
     onStop: () -> Unit
@@ -3015,22 +3047,28 @@ private fun PhaseHeroCard(
                 }
             }
             if (!phase.locksCriticalSettings()) {
-                val starting = phase == SafetyPhase.STOPPED
-                val stateInk = if (starting) StateOffInk else StateOnInk
-                Button(
-                    onClick = if (starting) onStart else onStop,
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(2.dp, stateInk),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        contentColor = stateInk
-                    )
+                val monitorOn = phase != SafetyPhase.STOPPED
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        if (starting) "INICIAR MONITOR" else "DETENER MONITOR",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                    StateToggleButton(
+                        label = "MONITOR",
+                        stateLabel = if (monitorOn) "ON" else "OFF",
+                        on = monitorOn,
+                        onColor = StateOnInk,
+                        offColor = StateOffInk,
+                        modifier = Modifier.weight(1f),
+                        onClick = if (monitorOn) onStop else onStart
+                    )
+                    StateToggleButton(
+                        label = "S O S",
+                        stateLabel = if (sosActionsEnabled) "ON" else "OFF",
+                        on = sosActionsEnabled,
+                        onColor = StateOnInk,
+                        offColor = Tone.BAD.text,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onSosActionsEnabledChange(!sosActionsEnabled) }
                     )
                 }
             }
@@ -3436,7 +3474,7 @@ private data class PhaseVisual(
 )
 
 @androidx.compose.runtime.Composable
-private fun SosDisabledWarning(onOpenSettings: () -> Unit) {
+private fun SosDisabledWarning() {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -3444,20 +3482,12 @@ private fun SosDisabledWarning(onOpenSettings: () -> Unit) {
         contentColor = Tone.BAD.text,
         border = BorderStroke(1.dp, Tone.BAD.line)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "AVISOS SOS DESACTIVADOS",
-                modifier = Modifier.weight(1f),
-                color = Tone.BAD.text,
-                style = MaterialTheme.typography.titleSmall
-            )
-            TextButton(onClick = onOpenSettings) {
-                Text("REVISAR", style = MaterialTheme.typography.labelSmall)
-            }
-        }
+        Text(
+            "AVISOS SOS DESACTIVADOS: pulsa S O S OFF en la tarjeta del monitor para activarlos.",
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            color = Tone.BAD.text,
+            style = MaterialTheme.typography.titleSmall
+        )
     }
 }
 
@@ -3756,7 +3786,8 @@ private fun SensitivityControl(
     val storedPeak = remember(enabled, livePeakG) {
         if (livePeakG == null) SafetyMonitorService.loadRidePeak(context) else 0f
     }
-    val peak = livePeakG?.takeIf { it > 0f } ?: storedPeak.takeIf { it > 0f }
+    val peak = livePeakG?.takeIf { it >= SensitivityAdvisor.MIN_PEAK_G }
+        ?: storedPeak.takeIf { it >= SensitivityAdvisor.MIN_PEAK_G }
     val suggestion = peak?.let {
         SensitivityAdvisor.suggest(peakG = it, currentG = sensitivityG, rideMs = Long.MAX_VALUE)
     }

@@ -1,19 +1,19 @@
-SEGU-LUKY V-1.55s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.56s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
 (com.intercom.lukymoto) y puede lanzar su aviso de voz al grupo.
 
 ESTE APK HACE COSAS REALES: llama, envia mensajes y abre WhatsApp. Antes de
-activar FUNCIONALIDAD SOS revisa los contactos. Para probar sensores,
+poner S O S en ON revisa los contactos. Para probar sensores,
 desactivala: la cuenta atras se ejecuta sin avisar a nadie.
 
 --------------------------------------------------------------------------
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.55s.apk        <- version actual
-Las anteriores (1.44s a 1.54s) se conservan solo como historico.
+    Segu-Luky-1.56s.apk        <- version actual
+Las anteriores (1.44s a 1.55s) se conservan solo como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -58,7 +58,7 @@ docs/SEGURIDAD.md.
 3) PRIMERA PUESTA EN MARCHA (RECOMENDADO EN ESTE ORDEN)
 --------------------------------------------------------------------------
 1. Abre la app y pulsa el ENGRANAJE (arriba a la izquierda).
-2. FUNCIONALIDAD SOS: dejalo DESACTIVADO hasta haber probado todo.
+2. S O S ON/OFF (pantalla principal): dejalo en S O S OFF hasta haber probado todo.
 3. CONTACTOS SOS > ANADIR CONTACTO:
    - Nombre y numero.
    - Marca que avisos quieres para ese contacto: llamada, WhatsApp,
@@ -137,7 +137,7 @@ resumen de su estado (por ejemplo "4 ACTIVOS" o "FALTAN 2") antes de entrar.
     - COMO SE ENVIA LA UBICACION.
 
   CANALES DE SALIDA SOS
-    - FUNCIONALIDAD SOS (interruptor general de avisos).
+    El interruptor general S O S ON/OFF esta en la pantalla principal.
     - ENVIO AUTO MENSAJES (WhatsApp y t.me) con sus dos permisos.
     - TELEGRAM SOS (token del bot y prueba).
     - SMS SOS AUTOMATICO.
@@ -155,9 +155,13 @@ Configuracion; VOLVER otra vez vuelve a la pantalla principal.
 --------------------------------------------------------------------------
 4) USO DIARIO
 --------------------------------------------------------------------------
-- INICIAR MONITOR: arranca la vigilancia. Es un servicio en primer plano:
-  sigue funcionando con la pantalla apagada y el movil bloqueado. Aparece una
-  notificacion fija; no la cierres.
+- MONITOR ON/OFF (arriba): un toque lo enciende o lo apaga. Verde = ON
+  (vigilando), naranja = OFF (detenido). Solo se ve el estado actual.
+- S O S ON/OFF (a su lado): permite o bloquea TODOS los avisos. Verde = los
+  avisos saldran; rojo = no se llamara ni se enviara nada (util para probar).
+- Con el monitor en marcha es un servicio en primer plano: sigue funcionando
+  con la pantalla apagada y el movil bloqueado. Aparece una notificacion fija;
+  no la cierres.
 - Arriba veras la fila de estado: GOLPE, INCLIN., GPS, VELOC., INTERCOM.
 - Boton S O S: mantenlo pulsado 5 segundos. A los lados hay dos columnas que
   se van llenando de verde; al completarse arranca la cuenta atras.
@@ -175,19 +179,19 @@ QUE DISPARA UN SOS
 
 CUENTA ATRAS DE 30 s
 - Pita y se puede cancelar con CANCELAR SOS.
-- Al terminar, con FUNCIONALIDAD SOS activada: SMS, WhatsApp/Telegram y
+- Al terminar, con S O S en ON: SMS, WhatsApp/Telegram y
   llamadas en orden a los contactos, con enlace de Google Maps de la ultima
   posicion valida (menos de 5 minutos).
 
 --------------------------------------------------------------------------
 5) COMO PROBAR SIN AVISAR A NADIE
 --------------------------------------------------------------------------
-1. Configuracion > Canales de salida SOS > FUNCIONALIDAD SOS: DESACTIVADO.
+1. En la pantalla principal, pulsa S O S ON/OFF hasta que quede en S O S OFF (rojo).
 2. Vuelve a la pantalla principal e INICIAR MONITOR.
 3. Da golpes suaves al movil o manten el boton S O S 5 s.
 4. Veras el candidato, la cuenta atras y los pitidos, pero no se llamara ni
    se enviara nada.
-5. Cuando termines, vuelve a activar FUNCIONALIDAD SOS.
+5. Cuando termines, vuelve a poner S O S en ON.
 
 --------------------------------------------------------------------------
 6) INTERCOM-LUKY (AVISO DE VOZ AL GRUPO)
@@ -228,7 +232,7 @@ Botones de la tarjeta:
 --------------------------------------------------------------------------
 8) PROBLEMAS HABITUALES
 --------------------------------------------------------------------------
-- "No llega el aviso": revisa FUNCIONALIDAD SOS, que haya contactos con el
+- "No llega el aviso": revisa que S O S este en ON, que haya contactos con el
   aviso marcado y los permisos de llamadas/SMS.
 - "El mapa no sale": sin posicion valida en los ultimos 5 minutos el mensaje
   se envia sin enlace. Sal al exterior y espera el FIX.
@@ -252,4 +256,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.55s (versionCode 47) - paquete com.intercom.segluky.
+Version: V-1.56s (versionCode 48) - paquete com.intercom.segluky.

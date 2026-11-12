@@ -1636,6 +1636,43 @@ Pendientes: revisar en el OPPO los cuatro bloques y que el boton atras suba
 un nivel, y siguen abiertas las pruebas de comportamiento del informe.
 
 ======================================================================
+V-1.56s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.56s (versionCode 48)
+
+Cambio:
+- El boton INICIAR/DETENER MONITOR se divide en dos botones de estado que
+  muestran solo el valor actual:
+    MONITOR ON/OFF  -> ON verde cuando vigila, OFF naranja cuando esta parado.
+    S O S ON/OFF    -> ON verde con avisos habilitados, OFF rojo sin avisos.
+  Un toque alterna; el de SOS pide el permiso de llamadas al activarlo si hay
+  contactos con llamada, igual que hacia el interruptor anterior.
+- FUNCIONALIDAD SOS sale de Configuracion. En Canales de salida SOS queda una
+  tarjeta informativa con el recordatorio y el aviso de llamadas sin permiso.
+- El aviso "avisos SOS desactivados" de la pantalla principal apunta al boton
+  S O S OFF en vez de a Configuracion.
+- Ayuda de la app, instrucciones y protocolo con la nueva nomenclatura.
+- El pico de viaje por debajo de 0,5 g ya no se guarda ni se muestra como
+  "ULTIMO 0.0 g".
+- Boton reutilizable StateToggleButton con descripcion de accesibilidad
+  ("MONITOR ON: activado") y los mismos 52 dp de alto.
+
+Motivo: pedido del usuario ("el boton INICIAR MONITOR lo convertimos en dos:
+MONITOR ON/OFF y S O S ON/OFF, sacando FUNCIONALIDAD SOS de Configuracion").
+
+Prueba realizada: testDebugUnitTest (145 pruebas, 0 fallos), lintDebug (0
+errores) y assembleRelease. Revision en el OPPO: los dos botones se ven como
+se pidio (MONITOR OFF naranja y S O S OFF rojo).
+Resultado: compila, verifica y revisado en el movil.
+APK generado: APK´s/Segu-Luky-1.56s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.56s-mapping.txt.gz
+Pendientes: comprobar en el OPPO que MONITOR ON pasa a verde y que S O S ON
+pide permiso de llamadas si hay contactos, y las pruebas de comportamiento que
+siguen abiertas del informe.
+
+======================================================================
 
 Fecha: 12/11/2026
 Version: 1.53s (versionCode 45)
