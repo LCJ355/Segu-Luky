@@ -1315,6 +1315,46 @@ Verificacion:
 - Sin registros nuevos en logcat -b crash.
 - APK generado: app-release.apk (1.45s).
 
+V-1.46s (versionCode 38)
+Fecha: 2026-11-12
+LUZ INTERCOM DE TRES ESTADOS Y AVISO DE VOZ REAL ENTRE MOTORISTAS:
+- La luz INTERCOM pasa a tres estados, en el menu Informacion > Como usar y en
+  la fila INTERCOM del panel:
+    gris    = InterCOM-Luky no instalado (no hay aviso de voz).
+    naranja = instalado, pero el intercom esta apagado.
+    verde   = instalado y con el intercom encendido: el aviso sale por el grupo
+              (datos) o por el INTERCOM WiFi.
+- "Activo" ya no depende de tener un grupo abierto: solo de que el servicio de
+  InterCOM este encendido y pueda difundir, que es lo que el motorista ve en la
+  pantalla de InterCOM.
+- Boton PROBAR AVISO: lanza el aviso "Posible accidente de motorista" y escribe
+  el resultado debajo de la tarjeta (enviado / sin otros motoristas / InterCOM
+  apagado / no instalado).
+- Puente entre apps por ContentProvider
+  (content://com.intercom.lukymoto.bridge/status): Segu-Luky consulta
+  active/group/peers/version y pide la difusion con call("notice", texto). No se
+  comparten datos sensibles ni se necesita la misma firma.
+- Al terminar la cuenta atras del SOS, SafetyMonitorService pide a InterCOM el
+  aviso de voz, ademas de la llamada y los mensajes de siempre.
+- Corregido en InterCOM V-4.1: el proveedor corria en el hilo principal y el
+  envio UDP lanzaba NetworkOnMainThreadException, asi que el aviso no salia por
+  INTERCOM WiFi. Ahora la difusion va en su propio hilo y el registro muestra
+  lanTx=true cuando el paquete sale.
+- El aviso que vuelve por el broadcast local no se repite: se descarta el mismo
+  texto dentro de 2 s.
+Verificacion:
+- Pruebas unitarias: 81 pruebas, 0 fallos (5 nuevas de los tres estados y del
+  texto del aviso). lintDebug y assembleRelease correctos.
+- En el OPPO, con InterCOM V-4.1 instalado:
+    servicio apagado -> "INSTALADA, NO ACTIVA (naranja): InterCOM apagado".
+    servicio encendido -> "ACTIVA (verde): InterCOM encendido".
+- PROBAR AVISO con el intercom encendido: registro de InterCOM
+  "notice tx webrtc=0 lan=0 lanTx=true len=30" (el paquete sale por la red
+  local) y mensaje "Aviso lanzado; no habia otros motoristas conectados" al no
+  haber un segundo movil en el grupo.
+- Sin registros nuevos en logcat -b crash.
+- APK generado: app-release.apk (1.46s).
+
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

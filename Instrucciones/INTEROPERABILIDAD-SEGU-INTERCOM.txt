@@ -75,3 +75,51 @@ Riesgo a validar en OPPO:
 - Lanzar SOS real desde Segu y comprobar que suena por casco y altavoz.
 - Verificar que el intercom se pausa durante la llamada y reanuda al colgar.
 - Verificar que el fake-call propio no dispara la pausa.
+
+8) IMPLEMENTADO EN V-1.46s / INTERCOM V-4.1: AVISO DE VOZ ENTRE MOTORISTAS
+--------------------------------------------------------------------------
+Objetivo: cuando Segu-Luky termina la cuenta atras del SOS, los demas
+motoristas oyen por el casco "Posible accidente de motorista".
+
+Contrato (ContentProvider, sin firma compartida y sin permisos propios):
+  Autoridad: com.intercom.lukymoto.bridge   (android:exported="true")
+  - query content://com.intercom.lukymoto.bridge/status
+      Una fila con: active (1/0), group (codigo de sala o vacio),
+      peers (motoristas conectados) y version (versionName de InterCOM).
+      active=1 significa que el servicio de InterCOM esta encendido y puede
+      difundir; no exige tener grupo abierto.
+  - call("notice", texto)  con arg o extra "text"
+      Devuelve: sent (true si lo recibio algun motorista), peers y notice.
+      Difunde por WebRTC (grupo por datos) y por INTERCOM WiFi a la vez.
+
+Camino del aviso:
+  1. Segu-Luky: SafetyMonitorService.dispatchIntercomNotice() al cerrar el SOS.
+     IntercomInstallation.sendNotice() llama al proveedor.
+  2. InterCOM: IntercomBridgeProvider -> IntercomService.publishNotice().
+     WebRTC: canal de datos "notice" a cada peer conectado.
+     INTERCOM WiFi: paquete UDP tipo LAN_MSG_NOTICE=6 (magic FF 53 47 4E,
+     tipo, longitud big-endian de 2 bytes y texto UTF-8), enviado en broadcast
+     y en barrido de subred porque algunos moviles descartan el broadcast.
+  3. Cada movil que lo recibe lo habla (NoticeAnnouncer, TTS siempre activo en
+     emergencias) y descarta el mismo texto repetido dentro de 2 s, para no
+     decir dos veces el aviso que vuelve por la red local.
+
+Correccion importante en InterCOM: el ContentProvider se ejecuta en el hilo
+principal y el envio UDP lanzaba NetworkOnMainThreadException, con lo que el
+aviso no salia por INTERCOM WiFi. La difusion se hace ahora en un hilo propio
+("intercom-bridge-notice") y el registro muestra lanTx=true cuando el paquete
+sale.
+
+Estados de la luz INTERCOM en Segu-Luky (Informacion > Como usar):
+  gris    = InterCOM no instalado.
+  naranja = instalado, intercom apagado (el aviso solo suena en este movil).
+  verde   = instalado y encendido (el aviso llega a los demas motoristas).
+Botones: ACTUALIZAR (relee el estado), ABRIR (abre InterCOM) y PROBAR AVISO.
+
+Verificado en el OPPO con InterCOM V-4.1: naranja con el servicio apagado,
+verde tras encenderlo, y al probar el aviso el registro de InterCOM muestra
+"notice tx webrtc=0 lan=0 lanTx=true len=30".
+
+Pendiente (opcional): InterCOM solo publica "group" si se arranco el uso de
+ubicacion con sala; mientras tanto el codigo de grupo aparece vacio aunque el
+estado sea verde.

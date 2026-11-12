@@ -1149,6 +1149,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         }
 
         val contacts = contactsRepository.load()
+        // Aviso de voz InterCOM: a los demas motoristas del grupo (si InterCOM esta activo).
+        dispatchIntercomNotice()
         val mapLink = if (hasFreshQualifiedLocation()) {
             lastQualifiedLocation?.let { googleMapsLink(it.latitude, it.longitude) }
         } else {
@@ -1804,6 +1806,37 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         if (keyguard?.isKeyguardLocked != true && !screenOff) return target
         return Intent(this, WhatsAppUnlockActivity::class.java)
             .putExtra(WhatsAppUnlockActivity.EXTRA_TARGET, target)
+    }
+
+    /**
+     * Difunde el aviso de voz "Posible accidente de motorista" a traves de
+     * InterCOM-Luky. Es tolerante a fallos: si InterCOM no esta instalado, no
+     * trae el puente o no esta activo, el SOS sigue su curso.
+     */
+    private fun dispatchIntercomNotice() {
+        val info = try {
+            IntercomInstallation.inspect(this)
+        } catch (error: Exception) {
+            SafetyStateStore.log("AVISO DE VOZ INTERCOM: no se pudo consultar (${error.javaClass.simpleName})")
+            return
+        }
+        if (!info.installed) {
+            SafetyStateStore.log("AVISO DE VOZ INTERCOM: InterCOM-Luky no instalado")
+            return
+        }
+        val broadcast = try {
+            IntercomInstallation.sendNotice(this)
+        } catch (error: Exception) {
+            SafetyStateStore.log("AVISO DE VOZ INTERCOM fallido: ${error.javaClass.simpleName}")
+            return
+        }
+        val detail = when {
+            broadcast && info.peers > 0 -> " en el grupo (${info.peers + 1} motoristas)"
+            broadcast -> " al grupo"
+            info.active -> ", pero InterCOM no lo confirmo"
+            else -> " solo en este movil (InterCOM sin grupo)"
+        }
+        SafetyStateStore.log("AVISO DE VOZ INTERCOM: ${IntercomInstallation.SOS_NOTICE_TEXT}$detail")
     }
 
     private fun postManualWhatsAppActions(contacts: List<EmergencyContact>, mapLink: String?) {

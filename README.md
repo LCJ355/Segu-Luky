@@ -1,8 +1,9 @@
-# Segu-Luky V-1.45s
+# Segu-Luky V-1.46s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
-key; InterCOM is only inspected, never modified.
+key; InterCOM is a separate app reached only through its exported bridge (see
+[InterCOM bridge](#intercom-bridge)).
 
 ## Safety scope
 
@@ -110,6 +111,24 @@ shake sensor and the voice keyword.
 - The monitoring heartbeat is 5 s; the countdown heartbeat is 100 ms.
 - The gyroscope is only registered during candidate/validation.
 - Calibration flushes the CSV every 5 s.
+
+## InterCOM bridge
+
+InterCOM-Luky (`com.intercom.lukymoto`) exposes a read-only `ContentProvider`
+that Segu-Luky uses to reach the riders' group:
+
+- `content://com.intercom.lukymoto.bridge/status` → one row with `active`,
+  `group`, `peers` and `version`. `active=1` means the intercom service is
+  running and can broadcast; it does not require an open group.
+- `call("notice", text)` → broadcasts `Posible accidente de motorista` over both
+  WebRTC (data channel `notice`) and the INTERCOM WiFi (UDP type `6`). Returns
+  `sent`, `peers` and the echoed notice text.
+
+The three-state indicator in `Informacion > Como usar` reads that provider every
+5 s: grey = not installed, orange = installed but the intercom is off, green =
+installed and running. The SOS countdown triggers the same notice once it
+completes. Contract details live in
+`Instrucciones/INTEROPERABILIDAD-SEGU-INTERCOM.txt`.
 
 See `INFORME-ANALISIS.md` for the earlier review and `CHANGELOG.md` for this
 version's changes. The package is `com.intercom.segluky`.

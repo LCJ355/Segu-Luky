@@ -135,6 +135,7 @@ class MainActivity : ComponentActivity() {
         val repository = remember { ContactsRepository(context) }
         var contacts by remember { mutableStateOf(repository.load()) }
         var installation by remember { mutableStateOf(IntercomInstallation.inspect(context)) }
+        var intercomNoticeFeedback by remember { mutableStateOf<String?>(null) }
         var screen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(AppScreen.HOME) }
         var sensitivityG by remember { mutableStateOf(SafetyMonitorService.loadSensitivity(context)) }
         var voiceKeywordsGate by remember { mutableStateOf(SafetyMonitorService.loadVoiceKeywordsGate(context)) }
@@ -154,10 +155,18 @@ class MainActivity : ComponentActivity() {
                     audioPermissionGranted = hasAudioPermission(context)
                     callPermissionGranted = hasCallPermission(context)
                     notificationPermissionGranted = hasNotificationPermission(context)
+                    installation = IntercomInstallation.inspect(context)
                 }
             }
             lifecycleOwner.lifecycle.addObserver(observer)
             onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
+        // Sondeo ligero del estado de InterCOM para que la luz pase de naranja a verde al empezar el grupo.
+        LaunchedEffect(Unit) {
+            while (true) {
+                installation = IntercomInstallation.inspect(context)
+                delay(5_000)
+            }
         }
         val permissionLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
@@ -309,7 +318,7 @@ class MainActivity : ComponentActivity() {
                                 SafetyMonitorService.saveSensitivity(context, g)
                             }
                         },
-                        intercomInstalled = installation.installed,
+                        intercomState = installation.state,
                         onStart = { startMonitoring() },
                         onStop = { SafetyMonitorService.stop(context) }
                     )
@@ -350,7 +359,7 @@ class MainActivity : ComponentActivity() {
                 AppScreen.SENSORS -> SensorsScreen(
                     modifier = Modifier.fillMaxSize().padding(padding),
                     snapshot = snapshot,
-                    intercomInstalled = installation.installed,
+                    intercomState = installation.state,
                     sensitivityG = sensitivityG
                 )
                 AppScreen.SETTINGS -> EmergencySettingsScreen(
@@ -422,8 +431,25 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize().padding(padding),
                     snapshot = snapshot,
                     installation = installation,
-                    onRefreshIntercom = { installation = IntercomInstallation.inspect(context) },
-                    onOpenIntercom = { IntercomInstallation.open(context) }
+                    noticeFeedback = intercomNoticeFeedback,
+                    onRefreshIntercom = {
+                        installation = IntercomInstallation.inspect(context)
+                        intercomNoticeFeedback = null
+                    },
+                    onOpenIntercom = { IntercomInstallation.open(context) },
+                    onTestIntercomNotice = {
+                        val sent = IntercomInstallation.sendNotice(context)
+                        intercomNoticeFeedback = when {
+                            !installation.installed ->
+                                "InterCOM no instalado: el aviso solo sono en este movil."
+                            !installation.active ->
+                                "InterCOM apagado: el aviso solo sono en este movil. " +
+                                    "Enciende INTERCOM WiFi/Datos en InterCOM-Luky."
+                            sent -> "Aviso enviado a los motoristas conectados."
+                            else -> "Aviso lanzado; no habia otros motoristas conectados."
+                        }
+                        installation = IntercomInstallation.inspect(context)
+                    }
                 )
             }
         }
@@ -2064,8 +2090,10 @@ private fun InstructionsScreen(
     modifier: Modifier,
     snapshot: SafetySnapshot,
     installation: IntercomInstallationInfo,
+    noticeFeedback: String?,
     onRefreshIntercom: () -> Unit,
-    onOpenIntercom: () -> Unit
+    onOpenIntercom: () -> Unit,
+    onTestIntercomNotice: () -> Unit
 ) {
     LazyColumn(
         modifier = modifier.padding(horizontal = 16.dp),
@@ -2153,15 +2181,59 @@ private fun InstructionsScreen(
         item {
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("INTERCOM-LUKY", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when (installation.state) {
+                                        IntercomState.ACTIVE -> StrongGreen
+                                        IntercomState.INACTIVE -> Color(0xFFFF9800)
+                                        IntercomState.MISSING -> Color(0xFF9AA0A6)
+                                    }
+                                )
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        Text(
+                            "INTERCOM-LUKY",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                     Text(
-                        if (installation.installed) {
-                            "Instalada: ${installation.versionName ?: "version desconocida"} (${installation.versionCode ?: 0})"
-                        } else {
-                            "No instalada"
+                        when {
+                            !installation.installed -> "NO INSTALADA (gris): sin aviso de voz"
+                            installation.active -> buildString {
+                                append("ACTIVA (verde): InterCOM encendido")
+                                if (installation.group.isNotBlank()) append(" - grupo ${installation.group}")
+                                if (installation.peers > 0) append(" - ${installation.peers} motoristas")
+                            }
+                            else -> "INSTALADA, NO ACTIVA (naranja): InterCOM apagado"
                         },
                         style = MaterialTheme.typography.bodyMedium
                     )
+                    if (installation.installed) {
+                        Text(
+                            "Version ${installation.versionName ?: "desconocida"} (${installation.versionCode ?: 0})",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    Text(
+                        "Al terminar la cuenta atras del SOS, Segu-Luky pide a InterCOM-Luky que avise por " +
+                            "voz: \"${IntercomInstallation.SOS_NOTICE_TEXT}\". El aviso suena en el casco de " +
+                            "todos los motoristas del grupo (datos) o del INTERCOM WiFi, y siempre en este movil. " +
+                            "En verde llega a los demas; en naranja o gris solo suena aqui.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    noticeFeedback?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = StrongGreen
+                        )
+                    }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
                             onClick = onRefreshIntercom,
@@ -2174,6 +2246,11 @@ private fun InstructionsScreen(
                                 modifier = Modifier.weight(1f),
                                 contentPadding = CompactButtonPadding
                             ) { TightButtonLabel("ABRIR") }
+                            OutlinedButton(
+                                onClick = onTestIntercomNotice,
+                                modifier = Modifier.weight(1f),
+                                contentPadding = CompactButtonPadding
+                            ) { TightButtonLabel("PROBAR AVISO") }
                         }
                     }
                 }
@@ -2231,6 +2308,7 @@ private enum class Tone(val text: Color, val soft: Color, val line: Color) {
 private fun toneOf(state: IndicatorState): Tone = when (state) {
     IndicatorState.GOOD -> Tone.OK
     IndicatorState.PENDING -> Tone.WARN
+    IndicatorState.STANDBY -> Tone.WARN
     IndicatorState.ERROR -> Tone.BAD
     IndicatorState.OFF -> Tone.OFF
 }
@@ -2359,7 +2437,7 @@ private fun PhaseHeroCard(
     audioLevel: AudioLevelReading,
     sensitivityG: Float,
     onSensitivityChange: (Float) -> Unit,
-    intercomInstalled: Boolean,
+    intercomState: IntercomState,
     onStart: () -> Unit,
     onStop: () -> Unit
 ) {
@@ -2476,7 +2554,7 @@ private fun PhaseHeroCard(
             }
             SensorStatusLine(
                 snapshot = snapshot,
-                intercomInstalled = intercomInstalled
+                intercomState = intercomState
             )
             AudioLevelLine(audioLevel)
             MovementLevelLine(snapshot.movementLevel)
@@ -2494,7 +2572,7 @@ private fun PhaseHeroCard(
  * verde = funcional. Se muestran siempre bajo el boton del monitor.
  */
 @androidx.compose.runtime.Composable
-private fun SensorStatusLine(snapshot: SafetySnapshot, intercomInstalled: Boolean) {
+private fun SensorStatusLine(snapshot: SafetySnapshot, intercomState: IntercomState) {
     val running = snapshot.phase != SafetyPhase.STOPPED
     val orientationDisabled = snapshot.orientationDetail.startsWith("Desactivada") ||
         snapshot.orientationDetail.startsWith("No necesaria")
@@ -2520,17 +2598,26 @@ private fun SensorStatusLine(snapshot: SafetySnapshot, intercomInstalled: Boolea
             snapshot.speedKmh != null -> IndicatorState.GOOD
             else -> IndicatorState.PENDING
         },
-        "INTERCOM" to if (intercomInstalled) IndicatorState.GOOD else IndicatorState.PENDING
+        "INTERCOM" to when (intercomState) {
+            IntercomState.ACTIVE -> IndicatorState.GOOD
+            IntercomState.INACTIVE -> IndicatorState.STANDBY
+            IntercomState.MISSING -> IndicatorState.OFF
+        }
     )
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         lights.forEach { (label, state) ->
+            val description = if (label == "INTERCOM") {
+                "INTERCOM ${intercomStateLabel(intercomState)}"
+            } else {
+                "$label ${sensorStateLabel(state)}"
+            }
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .semantics { contentDescription = "$label ${sensorStateLabel(state)}" },
+                    .semantics { contentDescription = description },
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(3.dp)
             ) {
@@ -2556,7 +2643,15 @@ private fun sensorStateLabel(state: IndicatorState): String = when (state) {
     IndicatorState.GOOD -> "funcional"
     IndicatorState.PENDING -> "no funcional"
     IndicatorState.ERROR -> "no funcional"
+    IndicatorState.STANDBY -> "no activo"
     IndicatorState.OFF -> "apagado"
+}
+
+/** Etiqueta de los tres estados de la luz INTERCOM. */
+private fun intercomStateLabel(state: IntercomState): String = when (state) {
+    IntercomState.ACTIVE -> "activo"
+    IntercomState.INACTIVE -> "instalado, no activo"
+    IntercomState.MISSING -> "no instalado"
 }
 
 /** Linea de nivel de audio; va justo debajo de las luces de los sensores. */
@@ -2711,7 +2806,7 @@ private fun formatFixAge(seconds: Long?): String? {
 private fun SensorsScreen(
     modifier: Modifier,
     snapshot: SafetySnapshot,
-    intercomInstalled: Boolean,
+    intercomState: IntercomState,
     sensitivityG: Float
 ) {
     LazyColumn(
@@ -2722,7 +2817,7 @@ private fun SensorsScreen(
         item {
             MonitorCard(
                 snapshot = snapshot,
-                intercomInstalled = intercomInstalled,
+                intercomState = intercomState,
                 sensitivityG = sensitivityG
             )
         }
@@ -2733,7 +2828,7 @@ private fun SensorsScreen(
 @androidx.compose.runtime.Composable
 private fun MonitorCard(
     snapshot: SafetySnapshot,
-    intercomInstalled: Boolean,
+    intercomState: IntercomState,
     sensitivityG: Float
 ) {
     val running = snapshot.phase != SafetyPhase.STOPPED
@@ -2802,8 +2897,24 @@ private fun MonitorCard(
         )
         ServiceRow(
             "INTERCOM",
-            if (intercomInstalled) "OK" else "--",
-            if (intercomInstalled) IndicatorState.GOOD else IndicatorState.PENDING
+            when (intercomState) {
+                IntercomState.ACTIVE -> "ACTIVO"
+                IntercomState.INACTIVE -> "INSTALADO"
+                IntercomState.MISSING -> "--"
+            },
+            when (intercomState) {
+                IntercomState.ACTIVE -> IndicatorState.GOOD
+                IntercomState.INACTIVE -> IndicatorState.STANDBY
+                IntercomState.MISSING -> IndicatorState.OFF
+            },
+            when (intercomState) {
+                IntercomState.ACTIVE ->
+                    "InterCOM encendido: el aviso de voz llega a los motoristas del grupo o del INTERCOM WiFi."
+                IntercomState.INACTIVE ->
+                    "InterCOM instalado pero apagado: sin encenderlo el aviso solo suena en este movil."
+                IntercomState.MISSING ->
+                    "Instala InterCOM-Luky para avisar por voz a los demas motoristas."
+            }
         )
     }
 }
@@ -2872,6 +2983,7 @@ private fun GpsOffWarning(onOpenGpsSettings: () -> Unit) {
 private enum class IndicatorState(val color: Color) {
     GOOD(StrongGreen),
     PENDING(Color(0xFFF9A825)),
+    STANDBY(Color(0xFFFF9800)),
     ERROR(Color(0xFFE53935)),
     OFF(Color(0xFF9AA0A6))
 }
