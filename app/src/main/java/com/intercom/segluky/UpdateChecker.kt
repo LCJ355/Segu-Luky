@@ -7,11 +7,12 @@ import java.net.URL
  * Comprobacion de la ultima version publicada en GitHub.
  *
  * Solo la usa el menu de informacion y siempre desde un hilo de trabajo: hace una
- * peticion HTTP que puede tardar. Lee el listado de releases y se queda con la
- * version mas alta; si el proyecto todavia no tiene releases mira las etiquetas,
- * asi una version recien etiquetada tambien cuenta. Cuando de verdad no hay nada
- * publicado se informa como tal, sin inventar una version nueva ni bloquear la
- * pantalla.
+ * peticion HTTP que puede tardar. Lee releases **y** etiquetas y se queda con la
+ * version mas alta de las dos listas. No basta con mirar las etiquetas solo cuando
+ * no hay releases: si una version se etiqueta y se olvida crear su release (paso
+ * con la 1.48s), con releases antiguas ya publicadas esa version quedaba invisible
+ * y la app decia "estas al dia". Cuando de verdad no hay nada publicado se informa
+ * como tal, sin inventar una version nueva ni bloquear la pantalla.
  */
 object UpdateChecker {
 
@@ -43,34 +44,43 @@ object UpdateChecker {
             .getOrElse { Status.Failed(it.message?.take(80) ?: "sin conexion") }
 
     private fun request(currentVersion: String): Status {
-        // Se lee el listado completo y se elige la version mas alta: /releases/latest
-        // depende del orden de creacion de las releases, no del numero de version.
+        // Se leen las dos listas completas y se elige la version mas alta:
+        // /releases/latest depende del orden de creacion, no del numero de version.
         val releases = get(RELEASES_API)
         if (releases.code !in 200..299) return Status.Failed("HTTP ${releases.code}")
-        val published = jsonObjects(releases.body)
+        val fromReleases = jsonObjects(releases.body)
             .mapNotNull { body ->
                 val tag = jsonString(body, "tag_name") ?: return@mapNotNull null
                 tag to (apkUrl(body) ?: jsonString(body, "html_url") ?: RELEASES_PAGE)
             }
-        val newest = newestOf(published) { it.first }
-        return if (newest != null) {
-            evaluate(currentVersion, newest.first, newest.second)
-        } else {
-            publishedFromTags(currentVersion)
-        }
-    }
-
-    /** Sin releases: una etiqueta publicada tambien cuenta como version disponible. */
-    private fun publishedFromTags(currentVersion: String): Status {
         val tags = get(TAGS_API)
         if (tags.code !in 200..299) return Status.Failed("HTTP ${tags.code}")
-        val newestTag = highestTag(
-            Regex("\"name\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").findAll(tags.body)
-                .map { it.groupValues[1] }
-                .toList()
-        ) ?: return Status.NoReleases
-        return evaluate(currentVersion, newestTag, APK_FOLDER)
+        val newest = newestOf(fromReleases, tagNames(tags.body)) ?: return Status.NoReleases
+        return evaluate(currentVersion, newest.first, newest.second)
     }
+
+    /**
+     * La version mas alta entre las releases y las etiquetas. La release manda para
+     * su enlace de descarga; una etiqueta sin release apunta a la carpeta de APKs.
+     */
+    internal fun newestOf(
+        releases: List<Pair<String, String>>,
+        tags: List<String>
+    ): Pair<String, String>? {
+        val byTag = LinkedHashMap<String, String>()
+        releases.forEach { (tag, url) -> byTag[tag] = url }
+        tags.forEach { tag -> byTag.putIfAbsent(tag, APK_FOLDER) }
+        return byTag.entries
+            .filter { versionNumbers(it.key).isNotEmpty() }
+            .maxWithOrNull { first, second -> compareVersions(first.key, second.key) }
+            ?.let { it.key to it.value }
+    }
+
+    /** Nombres de etiqueta del JSON de GitHub. */
+    internal fun tagNames(body: String): List<String> =
+        Regex("\"name\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").findAll(body)
+            .map { it.groupValues[1] }
+            .toList()
 
     private fun evaluate(currentVersion: String, tag: String, url: String): Status =
         if (isNewer(currentVersion, tag)) Status.Available(tag, url) else Status.UpToDate
@@ -82,13 +92,7 @@ object UpdateChecker {
     }
 
     /** La etiqueta mas alta de una lista, o null si ninguna tiene numeros. */
-    internal fun highestTag(tags: List<String>): String? =
-        tags.filter { versionNumbers(it).isNotEmpty() }
-            .maxWithOrNull { first, second -> compareVersions(first, second) }
-
-    private fun <T> newestOf(items: List<T>, tagOf: (T) -> String): T? =
-        items.filter { versionNumbers(tagOf(it)).isNotEmpty() }
-            .maxWithOrNull { first, second -> compareVersions(tagOf(first), tagOf(second)) }
+    internal fun highestTag(tags: List<String>): String? = newestOf(emptyList(), tags)?.first
 
     private fun compareVersions(first: String, second: String): Int {
         val left = versionNumbers(first)

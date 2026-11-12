@@ -99,4 +99,43 @@ class UpdateCheckerTest {
         assertNull(UpdateChecker.highestTag(listOf("ultima", "principal")))
         assertNull(UpdateChecker.highestTag(emptyList()))
     }
+
+    @Test
+    fun unaEtiquetaSinReleaseCuentaAunqueHayaReleasesAntiguas() {
+        // Este fue el fallo real: la 1.48s se etiqueto sin crear su release y la
+        // app solo miraba las etiquetas cuando no habia ninguna release.
+        val newest = UpdateChecker.newestOf(
+            releases = listOf("V-1.47s" to "https://github.com/x/releases/download/V-1.47s/a.apk"),
+            tags = listOf("V-1.48s", "V-1.47s")
+        )
+        assertEquals("V-1.48s", newest?.first)
+        assertEquals(UpdateChecker.APK_FOLDER, newest?.second)
+    }
+
+    @Test
+    fun laReleaseMandaParaSuEnlaceDeDescarga() {
+        val apk = "https://github.com/x/releases/download/V-1.48s/Segu-Luky-1.48s.apk"
+        val newest = UpdateChecker.newestOf(
+            releases = listOf("V-1.48s" to apk),
+            tags = listOf("V-1.48s", "V-1.49s-beta")
+        )
+        assertEquals("V-1.49s-beta", newest?.first)
+        assertEquals(
+            apk,
+            UpdateChecker.newestOf(releases = listOf("V-1.48s" to apk), tags = listOf("V-1.48s"))?.second
+        )
+    }
+
+    @Test
+    fun sinNadaPublicadoNoHayVersion() {
+        assertNull(UpdateChecker.newestOf(emptyList(), emptyList()))
+        assertNull(UpdateChecker.newestOf(emptyList(), listOf("ultima", "principal")))
+    }
+
+    @Test
+    fun leeLosNombresDeEtiquetaDelJson() {
+        val body = """[{"name":"V-1.48s","zipball_url":"z"},{"name":"V-1.47s","zipball_url":"z"}]"""
+        assertEquals(listOf("V-1.48s", "V-1.47s"), UpdateChecker.tagNames(body))
+        assertTrue(UpdateChecker.tagNames("[]").isEmpty())
+    }
 }
