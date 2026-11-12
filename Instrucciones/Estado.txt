@@ -1745,6 +1745,33 @@ Pendientes: cambiar la ventana desde Sensores en el movil y las pruebas de
 comportamiento que siguen abiertas.
 
 ======================================================================
+V-1.59s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.59s (versionCode 51)
+
+Cambio:
+- En la pantalla principal se elimina el texto de minutos de la derecha de
+  T. PROMEDIO; la fila queda T. PROMEDIO con AUTO 1 2 3.
+- Con AUTO activo se marcan en verde AUTO y el numero de minutos que se esta
+  aplicando (por ejemplo AUTO y 2). Con ventana fija, solo ese numero.
+- Sigue siendo informacion: el selector real esta en Configuracion > Sensores.
+- Instrucciones, protocolo, README, historial y Estado actualizados.
+
+Motivo: pedido del usuario ("en T. PROMEDIO pones en verde lo seleccionado
+(elimina 2 min); al estar en AUTO pones en verde solo el numero y AUTO").
+
+Prueba realizada: testDebugUnitTest (145 pruebas, 0 fallos), lintDebug (0
+errores) y assembleRelease. Revisado en el OPPO: T. PROMEDIO muestra AUTO y 2
+en verde sin el texto de minutos.
+Resultado: compila, verifica y revisado en el movil.
+APK generado: APK´s/Segu-Luky-1.59s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.59s-mapping.txt.gz
+Pendientes: fijar 1 o 3 min desde Sensores y comprobar que solo se marca ese
+numero, y las pruebas de comportamiento que siguen abiertas.
+
+======================================================================
 
 Fecha: 12/11/2026
 Version: 1.53s (versionCode 45)

@@ -1134,6 +1134,8 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.59s - En T. PROMEDIO se quita el texto de minutos: con AUTO se marcan en verde AUTO y el " +
+        "numero de minutos que se aplica; con ventana fija, solo ese numero.")
     appendLine("1.58s - La ventana de promedio (ADAPT.) se elige en Configuracion > Sensores; en la pantalla " +
         "principal solo se ve T. PROMEDIO con la opcion activa en verde.")
     appendLine("1.57s - La pantalla principal se queda con la etiqueta de sensibilidad y la ventana ADAPT.; el " +
@@ -3941,16 +3943,15 @@ private fun AdaptationWindowInfo(
         AdaptationWindowMode.fixed.forEach { mode ->
             AdaptiveWindowInfoChip(
                 label = "${mode.minutes}",
-                selected = !windowAuto && storedMode == mode
+                // En AUTO se marca tambien el numero que se esta aplicando; con una
+                // ventana fija solo se marca esa.
+                selected = if (windowAuto) {
+                    mode.minutes == activeWindowMinutes
+                } else {
+                    storedMode == mode
+                }
             )
         }
-        Spacer(Modifier.weight(1f))
-        Text(
-            "${activeWindowMinutes} min",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1
-        )
     }
 }
 

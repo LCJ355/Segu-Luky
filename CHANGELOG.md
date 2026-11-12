@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.59s (versionCode 51)
+
+### T. PROMEDIO más claro en la pantalla principal
+- Se elimina el texto de minutos que había a la derecha (`2 min`): la fila queda `T. PROMEDIO` con
+  `AUTO` `1` `2` `3` y nada más.
+- Con **AUTO** activo se marcan en verde **AUTO y el número de minutos que se está aplicando**
+  (por ejemplo `AUTO` y `2`), porque la ventana cambia sola según el camino.
+- Con una ventana fija (`1`, `2` o `3`) solo se marca ese número.
+- Sigue siendo solo información: el selector real está en Configuración → Sensores.
+
 ## 1.58s (versionCode 50)
 
 ### La ventana de promedio se elige en Sensores
