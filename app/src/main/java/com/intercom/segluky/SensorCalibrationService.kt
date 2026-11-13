@@ -64,6 +64,12 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
     @Volatile private var lastKnownSpeedAt = 0L
     @Volatile private var lastKnownSpeedKmh: Float? = null
 
+    private var lastMotionDynamicG = 0f
+    private var lastMotionAt = 0L
+    private val calibrationGravity = FloatArray(3)
+    private var calibrationGravityReady = false
+    private var calibrationGravityAt = 0L
+
     // Prueba de golpe: 15 s sin fichero, para validar el movil sin grabar nada.
     private var testing = false
     private var testThresholdG = 3.5f
@@ -115,6 +121,10 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         currentAppliedHz = initialHz
         rateController.reset(now, initialHz)
         speedMedian.reset()
+        lastMotionDynamicG = 0f
+        lastMotionAt = 0L
+        calibrationGravityReady = false
+        calibrationGravityAt = 0L
         lastKnownSpeedKmh = initialSpeed
         lastKnownSpeedAt = if (initialSpeed != null) now else 0L
         writeHeader()
@@ -176,8 +186,8 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         w.write("# sensor_acelerometro=${sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.name ?: "no"}\n")
         w.write("# sensor_gravedad=${sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)?.name ?: "no"}\n")
         w.write("# sensor_giroscopio=${sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.name ?: "no"}\n")
-        w.write("# columnas: tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz\n")
-        w.write("tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz\n")
+        w.write("# columnas: tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz,jerk_g_s\n")
+        w.write("tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz,jerk_g_s\n")
     }
 
     private fun registerSensors(rateHz: Int) {
@@ -263,11 +273,67 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         }
         val values = event.values
         val magnitude = magnitude(values[0], values[1], values[2])
+        val isMotion = event.sensor.type == Sensor.TYPE_LINEAR_ACCELERATION ||
+            event.sensor.type == Sensor.TYPE_ACCELEROMETER
+        val jerkText = if (isMotion) {
+            val dynamicG = when (event.sensor.type) {
+                Sensor.TYPE_LINEAR_ACCELERATION -> magnitude / AccidentDetector.STANDARD_GRAVITY
+                else -> calibrationAccelerometerDynamicG(values, tMs)
+            }
+            val jerk = if (lastMotionAt > 0L && tMs >= lastMotionAt) {
+                JerkAssist.jerkGPerSecond(lastMotionDynamicG, dynamicG, tMs - lastMotionAt)
+            } else {
+                0f
+            }
+            lastMotionAt = tMs
+            lastMotionDynamicG = dynamicG
+            if (jerk.isFinite()) jerk.toString() else ""
+        } else {
+            ""
+        }
         appendLine(
             "$kind,$tMs,${values[0]},${values[1]},${values[2]},," +
                 "${System.currentTimeMillis()},$magnitude,${mountProfile.id},," +
-                "${speedColumn()},$currentTargetHz\n"
+                "${speedColumn()},$currentTargetHz,$jerkText\n"
         )
+    }
+
+    /**
+     * Aproximacion al detector para el acelerometro de respaldo: quita una
+     * gravedad lenta y calcula la aceleracion dinamica. La columna jerk es una
+     * estimacion cuando el movil no tiene aceleracion lineal.
+     */
+    private fun calibrationAccelerometerDynamicG(values: FloatArray, timestampMs: Long): Float {
+        val currentMagnitude = magnitude(values[0], values[1], values[2])
+        if (!calibrationGravityReady) {
+            calibrationGravity[0] = values[0]
+            calibrationGravity[1] = values[1]
+            calibrationGravity[2] = values[2]
+            calibrationGravityReady = true
+            calibrationGravityAt = timestampMs
+            return 0f
+        }
+        val dynamicG = magnitude(
+            values[0] - calibrationGravity[0],
+            values[1] - calibrationGravity[1],
+            values[2] - calibrationGravity[2]
+        ) / AccidentDetector.STANDARD_GRAVITY
+        val elapsed = if (timestampMs > calibrationGravityAt) timestampMs - calibrationGravityAt else 0L
+        val alpha = if (elapsed <= 0L) 0f else kotlin.math.exp(-elapsed / 190.0).toFloat()
+        val gravityMagnitude = magnitude(
+            calibrationGravity[0],
+            calibrationGravity[1],
+            calibrationGravity[2]
+        )
+        val stable = kotlin.math.abs(currentMagnitude - gravityMagnitude) /
+            AccidentDetector.STANDARD_GRAVITY <= 0.20f
+        if (alpha > 0f && (stable || dynamicG <= 0.25f)) {
+            calibrationGravity[0] = alpha * calibrationGravity[0] + (1f - alpha) * values[0]
+            calibrationGravity[1] = alpha * calibrationGravity[1] + (1f - alpha) * values[1]
+            calibrationGravity[2] = alpha * calibrationGravity[2] + (1f - alpha) * values[2]
+            calibrationGravityAt = timestampMs
+        }
+        return dynamicG
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
@@ -292,7 +358,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         appendLine(
             "gps,$tMs,${location.latitude},${location.longitude},$speed,$acc," +
                 "${System.currentTimeMillis()},0,${mountProfile.id},gps," +
-                "${speedKmh ?: ""},$currentTargetHz\n"
+                "${speedKmh ?: ""},$currentTargetHz,\n"
         )
     }
 
@@ -344,7 +410,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         appendLine(
             "rate,$now,$rateHz,${CalibrationRatePolicy.targetHz(speedKmh)},$speedText,," +
                 "${System.currentTimeMillis()},0,${mountProfile.id},RATE_CHANGE," +
-                "$speedText,$rateHz\n"
+                "$speedText,$rateHz,\n"
         )
     }
 

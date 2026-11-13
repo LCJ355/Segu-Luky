@@ -81,42 +81,45 @@ def parse_stream(text):
         try:
             t = float(parts[1]); a = float(parts[2]); b = float(parts[3]); c = float(parts[4])
             speed = None
+            jerk = None
             if len(parts) > 10 and parts[10].strip():
                 speed = float(parts[10])
+            if len(parts) > 12 and parts[12].strip():
+                jerk = float(parts[12])
         except ValueError:
             continue
-        rows[parts[0]].append((t, a, b, c, speed))
+        rows[parts[0]].append((t, a, b, c, speed, jerk))
     return meta, rows
 
 
 def dynamic_g_samples(rows):
-    """Pares (aceleracion dinamica en g, velocidad km/h o None)."""
+    """Tripletas (aceleracion dinamica en g, velocidad km/h, jerk g/s)."""
     lin = rows.get("lin", [])
-    lin_meaningful = lin and any(abs(a) + abs(b) + abs(c) > 0.05 for (_, a, b, c, _) in lin)
+    lin_meaningful = lin and any(abs(a) + abs(b) + abs(c) > 0.05 for (_, a, b, c, _, _) in lin)
     if lin_meaningful:
         return [
-            (math.sqrt(a * a + b * b + c * c) / G, speed)
-            for (_, a, b, c, speed) in lin
+            (math.sqrt(a * a + b * b + c * c) / G, speed, jerk)
+            for (_, a, b, c, speed, jerk) in lin
         ]
     accel = rows.get("accel", [])
     grav = rows.get("grav", [])
     if accel and grav:
-        grav_map = [(t, a, b, c) for (t, a, b, c, _) in grav]
+        grav_map = [(t, a, b, c) for (t, a, b, c, _, _) in grav]
         out = []
-        for (t, a, b, c, speed) in accel:
+        for (t, a, b, c, speed, jerk) in accel:
             ga, gb, gc = nearest_gravity(grav_map, t)
-            out.append((math.sqrt((a - ga) ** 2 + (b - gb) ** 2 + (c - gc) ** 2) / G, speed))
+            out.append((math.sqrt((a - ga) ** 2 + (b - gb) ** 2 + (c - gc) ** 2) / G, speed, jerk))
         return out
     if accel:
         return [
-            (abs(math.sqrt(a * a + b * b + c * c) / G - 1.0), speed)
-            for (_, a, b, c, speed) in accel
+            (abs(math.sqrt(a * a + b * b + c * c) / G - 1.0), speed, jerk)
+            for (_, a, b, c, speed, jerk) in accel
         ]
     return []
 
 
 def dynamic_g(rows):
-    return [value for value, _ in dynamic_g_samples(rows)]
+    return [value for value, _, _ in dynamic_g_samples(rows)]
 
 
 def nearest_gravity(grav, t):
@@ -194,16 +197,16 @@ def main():
                 continue
             seen.add(key)
             samples = dynamic_g_samples(rows)
-            dyn = [value for value, _ in samples]
-            gyro = [math.sqrt(a * a + b * b + c * c) for (_, a, b, c, _) in rows.get("gyro", [])]
-            speed = [c * 3.6 for (_, _, _, c, _) in rows.get("gps", [])]
+            dyn = [value for value, _, _ in samples]
+            gyro = [math.sqrt(a * a + b * b + c * c) for (_, a, b, c, _, _) in rows.get("gyro", [])]
+            speed = [c * 3.6 for (_, _, _, c, _, _) in rows.get("gps", [])]
             entry = data[device][support][activity]
             entry["dyn"].extend(dyn)
             entry["samples"].extend(samples)
             entry["gyro"].extend(gyro)
             entry["speed"].extend(speed)
-            times = [t for (t, _, _, _, _) in rows.get("lin", [])] or \
-                    [t for (t, _, _, _, _) in rows.get("accel", [])]
+            times = [t for (t, _, _, _, _, _) in rows.get("lin", [])] or \
+                    [t for (t, _, _, _, _, _) in rows.get("accel", [])]
             if len(times) > 1 and times[-1] > times[0]:
                 entry["hz"].append((len(times) - 1) * 1000.0 / (times[-1] - times[0]))
             entry["files"].add(name)
@@ -253,13 +256,24 @@ def main():
                 if hz:
                     out("      muestreo real: media=%.0f minimo=%.0f maximo=%.0f medidas/s"
                         % (hz["mean"], min(e["hz"]), hz["max"]))
+                jerks = [jerk for _, _, jerk in e["samples"] if jerk is not None]
+                js = stats(jerks)
+                if js:
+                    out("      jerk: media=%.0f p99=%.0f max=%.0f g/s"
+                        % (js["mean"], js["p99"], js["max"]))
                 for label, low, high in bands:
-                    values = [g for g, speed in e["samples"]
+                    values = [g for g, speed, _ in e["samples"]
                               if speed is not None and low <= speed < high]
                     bs = stats(values)
+                    band_jerks = [jerk for _, speed, jerk in e["samples"]
+                                  if speed is not None and low <= speed < high and jerk is not None]
+                    bj = stats(band_jerks)
                     if bs and bs["n"] >= 50:
-                        out("      %-8s km/h n=%-7d p99=%.2fg p99.9=%.2fg max=%.2fg"
-                            % (label, bs["n"], bs["p99"], bs["p999"], bs["max"]))
+                        line = ("      %-8s km/h n=%-7d p99=%.2fg p99.9=%.2fg max=%.2fg"
+                                % (label, bs["n"], bs["p99"], bs["p999"], bs["max"]))
+                        if bj:
+                            line += "  jerk p99=%.0f max=%.0f g/s" % (bj["p99"], bj["max"])
+                        out(line)
             reco = round_half(max(device_max * 1.20, 1.5))
             global_reco = max(global_reco, reco)
             out("  -> SENSIBILIDAD RECOMENDADA para este soporte: %.1f g" % reco)

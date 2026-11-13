@@ -41,7 +41,7 @@ Cada archivo: segu_calib_<MODELO>_<actividad>_<AAAAMMDD_HHMMSS>.csv
 Cabecera con lineas '#': actividad, soporte, fecha, fabricante, modelo,
 dispositivo, producto, hardware, sensores y columnas.
 Columnas:
-  tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz
+  tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz,jerk_g_s
   - tipo: lin | accel | grav | gyro | gps | rate
   - t_ms: marca de tiempo monotona (ms)
   - a,b,c: ejes; en gps a=latitud, b=longitud, c=velocidad m/s
@@ -52,16 +52,20 @@ Columnas:
   - event: gps, RATE_CHANGE o vacio
   - speed_kmh: ultima velocidad valida
   - target_hz: tasa objetivo del sensor de movimiento
+  - jerk_g_s: cambio de aceleracion dinamica entre muestras (solo movimiento)
 Sensores: movimiento (lineal o acelerometro), gravedad, giroscopio y GPS (1 Hz).
+Con acelerometro de respaldo el jerk es una estimacion con filtro de gravedad
+lento; con aceleracion lineal coincide con la senal del monitor.
 
 4) COMO SE ANALIZA
 ------------------
 Script: Instrucciones\analizar_calibracion.py
   python analizar_calibracion.py <carpeta | archivos .csv | archivos .zip>
 Agrupa por dispositivo + soporte + actividad. Calcula media, desviacion, p99,
-p99.9 y maximo de la aceleracion dinamica, giroscopio, velocidad GPS y muestreo
-real. Muestra bandas de velocidad (0-12,5, 12,5-25, 25-37,5, 37,5-50 y 50+) y
-recomienda una sensibilidad por soporte y una global para el peor caso.
+p99.9 y maximo de la aceleracion dinamica, giroscopio, velocidad GPS, muestreo
+real y jerk (g/s). Muestra bandas de velocidad (0-12,5, 12,5-25, 25-37,5,
+37,5-50 y 50+) y recomienda una sensibilidad por soporte y una global para el
+peor caso.
 Genera "recomendaciones.txt" junto a los datos.
 
 5) DONDE ESTAN LOS ARCHIVOS

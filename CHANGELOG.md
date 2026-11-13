@@ -34,6 +34,8 @@
   100 % a 50 km/h o mas. Un jerk de 120 g/s satura el aporte.
 - El pico real y el umbral siguen siendo la referencia; el jerk solo puede hacer
   que un golpe justo por debajo del umbral cuente.
+- El CSV de calibracion guarda `jerk_g_s` en las muestras de movimiento; el
+  analizador muestra p99/max global y por banda de velocidad.
 - Tests: `JerkAssistTest` y `AccidentDetectorJerkTest`.
 
 ## 1.64s (versionCode 56)
