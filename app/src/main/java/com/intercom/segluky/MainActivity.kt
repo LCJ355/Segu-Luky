@@ -1686,20 +1686,44 @@ private fun EmergencySettingsScreen(
                     description = "El aprendizaje de ruido y traqueteo se guarda por separado para cada soporte. " +
                         "Elige donde viaja el telefono antes de iniciar el monitor."
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        MountProfile.entries.chunked(3).forEach { rowItems ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        MountProfile.entries.chunked(2).forEach { rowItems ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 rowItems.forEach { profile ->
-                                    AdaptationWindowChip(
-                                        label = profile.shortLabel,
-                                        selected = mountProfile == profile,
-                                        enabled = monitorStopped && !calibrationAnyRecording.recording
+                                    val selected = mountProfile == profile
+                                    OutlinedButton(
+                                        onClick = {
+                                            if (SafetyMonitorService.setMountProfile(context, profile)) {
+                                                mountProfile = profile
+                                            } else {
+                                                SafetyStateStore.log("Deten el monitor antes de cambiar el soporte")
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        enabled = monitorStopped && !calibrationAnyRecording.recording,
+                                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                            containerColor = if (selected) {
+                                                StrongGreen.copy(alpha = 0.16f)
+                                            } else {
+                                                Color.Transparent
+                                            },
+                                            contentColor = if (selected) {
+                                                StrongGreen
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            }
+                                        ),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                            horizontal = 6.dp,
+                                            vertical = 4.dp
+                                        )
                                     ) {
-                                        if (SafetyMonitorService.setMountProfile(context, profile)) {
-                                            mountProfile = profile
-                                        } else {
-                                            SafetyStateStore.log("Deten el monitor antes de cambiar el soporte")
-                                        }
+                                        Text(
+                                            profile.label,
+                                            maxLines = 1,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                        )
                                     }
                                 }
                             }

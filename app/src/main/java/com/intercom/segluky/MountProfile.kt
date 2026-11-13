@@ -6,15 +6,14 @@ package com.intercom.segluky
  */
 enum class MountProfile(
     val id: String,
-    val label: String,
-    val shortLabel: String
+    val label: String
 ) {
-    UNDEFINED("sin_definir", "Sin definir", "S/D"),
-    POCKET("bolsillo", "Bolsillo", "BOLS"),
-    HANDLEBAR("manillar", "Manillar", "MAN"),
-    TANK("deposito", "Deposito", "DEP"),
-    BACKPACK("mochila", "Mochila", "MOCH"),
-    CUSTOM("personalizado", "Personalizado", "PERS");
+    UNDEFINED("sin_definir", "Sin definir"),
+    POCKET("bolsillo", "Bolsillo"),
+    HANDLEBAR("manillar", "Manillar"),
+    TANK("deposito", "Deposito"),
+    BACKPACK("mochila", "Mochila"),
+    CUSTOM("personalizado", "Personalizado");
 
     val isDefined: Boolean get() = this != UNDEFINED
 
