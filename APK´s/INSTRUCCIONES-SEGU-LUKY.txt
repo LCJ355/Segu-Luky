@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.64s - INSTRUCCIONES DE INSTALACION Y USO
+﻿SEGU-LUKY V-1.70s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -9,11 +9,22 @@ poner S O S en ON revisa los contactos. Para probar sensores,
 desactivala: la cuenta atras se ejecuta sin avisar a nadie.
 
 --------------------------------------------------------------------------
+NOVEDADES 1.70s
+--------------------------------------------------------------------------
+- SOPORTE DEL MOVIL en Configuracion > Sensores: el aprendizaje se guarda por
+  soporte. Elige bolsillo, manillar, deposito, mochila o personalizado antes de
+  iniciar el monitor.
+- Calibracion mas util: graba a 20-100 Hz segun la velocidad y guarda soporte,
+  velocidad, magnitud y jerk en el CSV.
+- Jerk incremental: solo refuerza un golpe cerca del umbral desde 20 km/h; por
+  debajo no se considera y nunca dispara por si solo.
+
+--------------------------------------------------------------------------
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.64s.apk        <- version actual
-Las anteriores (1.44s a 1.60s) se conservan solo como historico.
+    Segu-Luky-1.70s.apk        <- version actual
+Las anteriores (1.44s a 1.64s) se conservan solo como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -31,7 +42,7 @@ Nota: si tenias una version anterior, basta con instalar encima; contactos y
 ajustes se conservan. No hace falta desinstalar.
 
 --------------------------------------------------------------------------
-2b) SI PLAY PROTECT DICE QUE "PUEDE SER DAÃ‘INA"
+2b) SI PLAY PROTECT DICE QUE "PUEDE SER DAÃƒâ€˜INA"
 --------------------------------------------------------------------------
 Es normal y no significa que se haya encontrado un virus. Play Protect avisa
 de cualquier APK que no venga de Google Play y que combine permisos de riesgo
@@ -48,7 +59,7 @@ Como comprobar que es la app oficial y no una copia modificada:
    debe coincidir con la de docs/SEGURIDAD.md del repositorio.
 2. En el PC, con la APK descargada:
      certutil -hashfile "Segu-Luky-<version>.apk" SHA256
-   y compara con APKÂ´s/SHA256SUMS.txt.
+   y compara con APKÃ‚Â´s/SHA256SUMS.txt.
 La huella de firma (E0:E5:A8:FD:...:E2:10:9E) es la misma desde la primera
 version publicada: si cambia, no instales ese archivo.
 El detalle de permisos, destinos de red y datos guardados esta en
@@ -123,8 +134,9 @@ esta activa. Opciones:
   alarga a 3 si lleva rato estable.
 - 1 / 2 / 3 MIN: valor fijo elegido por ti.
 - Cuanto mas uses la app, mas afinado queda el perfil del movil (a partir de 5
-  minutos de uso). En Configuracion > Sensores > DIAGNOSTICO puedes ver lo aprendido y
-  reiniciarlo si cambias de soporte o de moto.
+  minutos de uso). En Configuracion > Sensores > DIAGNOSTICO puedes ver lo aprendido.
+  Para cambiar de soporte usa SOPORTE DEL MOVIL: cada montaje conserva su propio
+  aprendizaje. REINICIAR APRENDIZAJE borra solo el soporte actual.
 
 --------------------------------------------------------------------------
 3c) DONDE ESTA CADA AJUSTE (CONFIGURACION)
@@ -274,4 +286,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.64s (versionCode 56) - paquete com.intercom.segluky.
+Version: V-1.70s (versionCode 57) - paquete com.intercom.segluky.

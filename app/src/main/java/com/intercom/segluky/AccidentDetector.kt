@@ -1,4 +1,4 @@
-package com.intercom.segluky
+﻿package com.intercom.segluky
 
 import kotlin.math.abs
 import kotlin.math.exp
@@ -49,6 +49,10 @@ class AccidentDetector(
     private var lastDynamicAccelerationAt = UNSET_TIME
     private var lastAccelerometerAt = UNSET_TIME
     private var lastGyroscopeAt = UNSET_TIME
+    private var lastJerkAt = UNSET_TIME
+    private var lastJerkDynamicG = 0f
+    private var lastJerkGPerSValue = 0f
+    private var lastJerkBonusGValue = 0f
 
     // Umbral: lo que elige el usuario y lo que aprende la adaptacion por movil.
     private var userSensitivityG = DEFAULT_USER_SENSITIVITY_G
@@ -84,6 +88,12 @@ class AccidentDetector(
 
     /** Pico de aceleracion desde que arranco el monitor. */
     val ridePeakG: Float get() = ridePeakValue
+
+    /** Ultimo jerk medido, en g/s. Cero si no hay muestra valida o velocidad. */
+    val lastJerkGPerSecond: Float get() = lastJerkGPerSValue
+
+    /** Margen que el jerk ha sumado al ultimo golpe evaluado. */
+    val lastJerkBonusG: Float get() = lastJerkBonusGValue
 
     /** Sets all user-facing movement thresholds in dynamic g (gravity removed). */
     fun setGolpeSensitivity(g: Float) {
@@ -255,7 +265,21 @@ class AccidentDetector(
         // segunda sacudida y disparaba el SOS sin confirmar nada.
         if (dynamicG <= threshold * REARM_RATIO) hitArmed = true
 
-        val thresholdHit = dynamicG >= threshold
+        // El jerk solo suma un margen pequeno y nunca dispara por si mismo. Se
+        // ignora por debajo de 20 km/h o cuando no hay velocidad reciente.
+        val jerk = if (lastJerkAt == UNSET_TIME) {
+            0f
+        } else {
+            JerkAssist.jerkGPerSecond(lastJerkDynamicG, dynamicG, timestamp - lastJerkAt)
+        }
+        lastJerkAt = timestamp
+        lastJerkDynamicG = dynamicG
+        lastJerkGPerSValue = jerk
+        val speed = recentJerkSpeed(timestamp)
+        lastJerkBonusGValue = JerkAssist.bonusG(speed, jerk)
+        val assistedG = dynamicG + lastJerkBonusG
+
+        val thresholdHit = assistedG >= threshold
         val countedHit = thresholdHit && hitArmed && hitsAreSeparated(timestamp)
         if (countedHit && (phase == SafetyPhase.MONITORING ||
                 phase == SafetyPhase.VALIDATING ||
@@ -381,6 +405,9 @@ class AccidentDetector(
         immobileSince = null
         candidateDeadlineAt = null
         lastStrongHitAt = UNSET_TIME
+        lastJerkAt = UNSET_TIME
+        lastJerkGPerSValue = 0f
+        lastJerkBonusGValue = 0f
         hitArmed = true
         candidateHitSpeedKmh = null
         motionSinceHit = false
@@ -409,6 +436,9 @@ class AccidentDetector(
         }
         candidateDeadlineAt = null
         lastStrongHitAt = UNSET_TIME
+        lastJerkAt = UNSET_TIME
+        lastJerkGPerSValue = 0f
+        lastJerkBonusGValue = 0f
         hitArmed = true
         candidateHitSpeedKmh = null
         motionSinceHit = false
@@ -497,6 +527,15 @@ class AccidentDetector(
         return speed
     }
 
+    /** Para el jerk la velocidad tiene que ser actual, no un fix de hace un minuto. */
+    private fun recentJerkSpeed(timestamp: Long): Float? {
+        val speed = lastQualifiedSpeedKmh ?: return null
+        val at = lastQualifiedSpeedAt
+        if (at == UNSET_TIME || timestamp < at) return null
+        if (timestamp - at > JerkAssist.SPEED_MAX_AGE_MS) return null
+        return speed
+    }
+
     private fun recomputeEffectiveThreshold() {
         effectiveThresholdG = maxOf(userSensitivityG, adaptiveFloorG.coerceAtMost(MAX_SENSITIVITY_G))
     }
@@ -576,3 +615,4 @@ class AccidentDetector(
         private const val UNSET_TIME = Long.MIN_VALUE
     }
 }
+

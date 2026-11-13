@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.70s (versionCode 57)
+
+### Perfil por soporte
+- Nuevo ajuste **SOPORTE DEL MOVIL**: sin definir, bolsillo, manillar, deposito,
+  mochila y personalizado.
+- El perfil aprendido (ruido, traqueteo, muestreo y uso acumulado) se guarda por
+  soporte. Mientras no se elige, se mantiene el perfil global anterior.
+- Al elegir el primer soporte se hereda el aprendizaje existente; los demas
+  empiezan de cero.
+- El soporte aparece en la ficha de aprendizaje, en `ajustes.txt` y en el CSV.
+
+### Calibracion por velocidad
+- La grabacion de sensores usa 20 Hz de 0 a 12,5 km/h y sube en escalones de
+  20 Hz hasta 100 Hz a partir de 50 km/h.
+- Mediana de 3 fixes, 10 s de estabilidad y 15 s minimos entre cambios para
+  evitar rebindings y consumo.
+- Sin velocidad valida se mantiene 20 Hz; se usa la ultima posicion GPS conocida
+  si tiene menos de 30 s.
+- Solo el sensor de movimiento cambia de tasa; giroscopio a 25 Hz y gravedad a
+  tasa normal.
+- El CSV anade `wall_ms`, `magnitude`, `mount`, `event`, `speed_kmh` y
+  `target_hz`, y registra cada cambio de tasa.
+- El analizador agrupa por dispositivo + soporte + actividad y muestra bandas de
+  velocidad y muestreo real.
+
+### Jerk incremental
+- Nueva senal de jerk (cambio de aceleracion en g/s) como refuerzo, nunca como
+  disparador independiente.
+- Solo se considera con velocidad reciente (<= 10 s) y a partir de **20 km/h**;
+  por debajo vale cero.
+- Aporta como maximo **+0,35 g** al valor dinamico: 20 % del maximo a 20 km/h y
+  100 % a 50 km/h o mas. Un jerk de 120 g/s satura el aporte.
+- El pico real y el umbral siguen siendo la referencia; el jerk solo puede hacer
+  que un golpe justo por debajo del umbral cuente.
+- El CSV de calibracion guarda `jerk_g_s` en las muestras de movimiento; el
+  analizador muestra p99/max global y por banda de velocidad.
+- Tests: `JerkAssistTest` y `AccidentDetectorJerkTest`.
+
 ## 1.64s (versionCode 56)
 
 ### Textos de la app en lenguaje llano

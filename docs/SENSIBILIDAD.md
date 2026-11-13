@@ -1,4 +1,4 @@
-# Sensibilidad adaptativa
+﻿# Sensibilidad adaptativa
 
 Documento de la deteccion por golpe a partir de la **1.54s**: como se decide el
 umbral, por que se adapta a cada movil y como comprobarlo sin grabar nada.
@@ -24,7 +24,21 @@ umbral efectivo = max(tu ajuste, piso del movil) x compensacion por frecuencia
 
 El ajuste sigue siendo tuyo; el piso y la compensacion los aprende la app.
 
-## 2. La cadena de deteccion
+## 2. Jerk incremental
+
+Desde la 1.70s se calcula el **jerk** (cambio de aceleracion por tiempo, en g/s)
+y se usa como refuerzo, nunca como disparador:
+
+- solo cuenta si la ultima velocidad valida tiene **10 s o menos** y es
+  **>= 20 km/h**; por debajo vale cero;
+- aporta como maximo **+0,35 g**: 20 % a 20 km/h y 100 % a 50 km/h o mas;
+- un jerk de **120 g/s** satura el aporte;
+- el pico real sigue siendo el que se registra; el jerk solo puede hacer que un
+  golpe justo por debajo del umbral cuente;
+- no cambia el umbral del usuario ni el piso aprendido: se suma al valor dinamico
+  antes de compararlo.
+
+## 3. La cadena de deteccion
 
 ```
 sensor de movimiento
@@ -47,7 +61,7 @@ AdaptiveSensitivity ---------------------+
    aprende: ruido, nivel de marcha y frecuencia real
 ```
 
-## 3. Los dos perfiles
+## 4. Los dos perfiles
 
 | Perfil | Que mide | Cuando manda |
 |---|---|---|
@@ -55,13 +69,19 @@ AdaptiveSensitivity ---------------------+
 | **Aprendido** (largo) | lo mismo pero fundido entre viajes, con el uso acumulado | a partir de 5 minutos acumulados |
 
 El perfil aprendido se fusiona con `alpha = min(0,35, ventana / (uso + ventana))`:
-las primeras horas pesan mas y luego se estabiliza, pero sigue corrigiendo si
-cambias de soporte o de moto.
+las primeras horas pesan mas y luego se estabiliza.
+
+**Desde la 1.70s el perfil aprendido se guarda por soporte** (sin definir,
+bolsillo, manillar, deposito, mochila o personalizado). Al cambiar de soporte se
+carga su propio perfil, de modo que el traqueteo del manillar no contamina el
+aprendizaje del bolsillo. Mientras el soporte esta sin definir se usa el perfil
+global anterior. El primer soporte elegido hereda ese perfil; los siguientes
+empiezan de cero.
 
 **Un golpe no entra en el promedio.** Solo se promedian las muestras por debajo
 del umbral vigente; si entrara el propio golpe, subiria el umbral que lo detecta.
 
-## 4. Formulas y constantes
+## 5. Formulas y constantes
 
 `SensitivityMath` (en `AdaptiveSensitivity.kt`):
 
@@ -80,12 +100,12 @@ del umbral vigente; si entrara el propio golpe, subiria el umbral que lo detecta
 
 Ejemplos:
 
-- Movil limpio (0,02 g de ruido, 100 Hz) con ajuste 3,5 g → efectivo **3,5 g**.
-- Movil ruidoso (0,45 g de ruido) con ajuste 1,5 g → suelo 2,25 g → efectivo **2,25 g**.
-- Movil que entrega 50 Hz con ajuste 3,5 g → factor 0,71 → efectivo **2,5 g**
+- Movil limpio (0,02 g de ruido, 100 Hz) con ajuste 3,5 g â†’ efectivo **3,5 g**.
+- Movil ruidoso (0,45 g de ruido) con ajuste 1,5 g â†’ suelo 2,25 g â†’ efectivo **2,25 g**.
+- Movil que entrega 50 Hz con ajuste 3,5 g â†’ factor 0,71 â†’ efectivo **2,5 g**
   (mas sensible, para compensar que mide picos mas bajos).
 
-## 5. Ventana ADAPT. (automatica o fija)
+## 6. Ventana ADAPT. (automatica o fija)
 
 - **AUTO** (por defecto): empieza en 2 min y compara el p99 de las dos ultimas
   mitades. Si cambia un 30 % o mas, acorta a 1 min; si lleva dos ventanas
@@ -95,7 +115,7 @@ Ejemplos:
 Solo afecta al perfil corto: el aprendido es independiente, asi que como mucho
 cambia la velocidad de reaccion, no el ajuste de fondo.
 
-## 6. Muestreo
+## 7. Muestreo
 
 | Nivel | Frecuencia | Cuando |
 |---|---|---|
@@ -107,7 +127,7 @@ La frecuencia se mide de verdad (muestras por segundo) y es lo que se aplica a l
 compensacion. Cambiar de nivel re-registra **solo** el sensor de movimiento: la
 actitud de inclinacion aprendida no se pierde.
 
-## 7. PRUEBA DE GOLPE
+## 8. PRUEBA DE GOLPE
 
 En la tarjeta del monitor, bajo el deslizador: 15 s para sacudir el movil como
 pedirias ayuda. Al terminar dice:
@@ -116,9 +136,9 @@ pedirias ayuda. Al terminar dice:
 - `no llegaria (pico 2,1 g / umbral 3,9 g) - baja el ajuste a 2,5 g`.
 
 No graba CSV, no dispara la cuenta atras, no avisa a nadie. Se bloquea con el
-monitor en marcha (el monitor es dueño de los sensores).
+monitor en marcha (el monitor es dueÃ±o de los sensores).
 
-## 8. La grabacion ahora es diagnostico
+## 9. La grabacion ahora es diagnostico
 
 La grabacion de sensores (CSV + ZIP) sigue existiendo en **Configuracion ->
 DIAGNOSTICO**, pero ya no hace falta para ajustar: sirve para adjuntar datos a
@@ -129,7 +149,7 @@ valores por defecto de futuras versiones.
 El resumen del ZIP incluye ahora: sensibilidad, umbral efectivo, ventana,
 ruido, p99 de marcha, frecuencia medida, uso acumulado y pico del ultimo viaje.
 
-## 9. Como comprobarlo
+## 10. Como comprobarlo
 
 1. Con el monitor detenido, pulsa **PROBAR GOLPE** y sacude el movil: debe decir
    "habria disparado". Si no, baja el ajuste y repite.
@@ -140,9 +160,11 @@ ruido, p99 de marcha, frecuencia medida, uso acumulado y pico del ultimo viaje.
 4. Tras un viaje de mas de un minuto, la linea bajo el deslizador muestra
    `PICO ... SUG ...` y `USAR` aplica el valor recomendado.
 5. En Configuracion -> DIAGNOSTICO se ve el aprendizaje acumulado; el boton
-   **REINICIAR APRENDIZAJE** lo borra (util al cambiar de soporte o de moto).
+   **REINICIAR APRENDIZAJE** borra solo el perfil del soporte actual. Para cambiar
+de soporte usa el selector **SOPORTE DEL MOVIL**, que conserva el aprendizaje de
+cada uno.
 
-## 10. Limites
+## 11. Limites
 
 - La normalizacion corrige **escala** (ruido, nivel de marcha y densidad de
   muestreo), no la fisica del soporte ni la calidad del sensor.
@@ -152,3 +174,4 @@ ruido, p99 de marcha, frecuencia medida, uso acumulado y pico del ultimo viaje.
   porque el vehiculo acelera durante decenas de milisegundos.
 - Una caida real es una senal de 6-8 g: muy por encima de los topes de subida
   (+2 g), asi que el aprendizaje no puede taparla.
+

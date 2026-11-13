@@ -1145,6 +1145,9 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.70s - Linea nueva: perfil aprendido por soporte (bolsillo, manillar, deposito, mochila, " +
+        "personalizado) y calibracion con tasa proporcional a la velocidad (20-100 Hz). El CSV incluye " +
+        "soporte, velocidad, magnitud, hora de pared y cambios de tasa.")
     appendLine("1.64s - Textos de toda la app en lenguaje llano: se quitan t.me, chat id, token, umbral, " +
         "API, analitica y otras palabras tecnicas. Ahora se lee nivel de golpe, clave del bot, numero de " +
         "chat y enlace de Telegram.")
@@ -1388,6 +1391,8 @@ private fun EmergencySettingsScreen(
     var addingContact by remember { mutableStateOf(false) }
     var editingContact by remember { mutableStateOf<EmergencyContact?>(null) }
     var smsAuto by remember { mutableStateOf(SafetyMonitorService.loadSmsAuto(context)) }
+    var mountProfile by remember { mutableStateOf(SafetyMonitorService.loadMountProfile(context)) }
+    val calibrationAnyRecording by CalibrationStateStore.state.collectAsStateWithLifecycle()
     val editorVisible = addingContact || editingContact != null
     val smsPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -1671,6 +1676,68 @@ private fun EmergencySettingsScreen(
         if (section == SettingsSection.SENSORS) {
             item {
                 SectionHeader("SENSORES")
+            }
+            item {
+                val monitorStopped = snapshot.phase == SafetyPhase.STOPPED
+                SeguCard(
+                    title = "SOPORTE DEL MOVIL",
+                    status = mountProfile.label,
+                    tone = if (mountProfile.isDefined) Tone.OK else Tone.WARN,
+                    description = "El aprendizaje de ruido y traqueteo se guarda por separado para cada soporte. " +
+                        "Elige donde viaja el telefono antes de iniciar el monitor."
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        MountProfile.entries.chunked(2).forEach { rowItems ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                rowItems.forEach { profile ->
+                                    val selected = mountProfile == profile
+                                    OutlinedButton(
+                                        onClick = {
+                                            if (SafetyMonitorService.setMountProfile(context, profile)) {
+                                                mountProfile = profile
+                                            } else {
+                                                SafetyStateStore.log("Deten el monitor antes de cambiar el soporte")
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        enabled = monitorStopped && !calibrationAnyRecording.recording,
+                                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                            containerColor = if (selected) {
+                                                StrongGreen.copy(alpha = 0.16f)
+                                            } else {
+                                                Color.Transparent
+                                            },
+                                            contentColor = if (selected) {
+                                                StrongGreen
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            }
+                                        ),
+                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                            horizontal = 6.dp,
+                                            vertical = 4.dp
+                                        )
+                                    ) {
+                                        Text(
+                                            profile.label,
+                                            maxLines = 1,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (!monitorStopped || calibrationAnyRecording.recording) {
+                        Text(
+                            if (!monitorStopped) "Deten el monitor para cambiar el soporte."
+                            else "Deten la grabacion de sensores para cambiar el soporte.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
             item {
                 val monitorStopped = snapshot.phase == SafetyPhase.STOPPED
@@ -2015,11 +2082,11 @@ private fun EmergencySettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold
                         )
-                        val deviceProfile = remember {
+                        val deviceProfile = remember(mountProfile) {
                             SafetyMonitorService.loadDeviceProfile(context)
                         }
                         Text(
-                            "Aprendizaje: ${deviceProfile.usageMs / 60_000L} min · ruido " +
+                            "Aprendizaje (${mountProfile.label}): ${deviceProfile.usageMs / 60_000L} min · ruido " +
                                 "${String.format(Locale.US, "%.2f", deviceProfile.noiseG)} g · traqueteo " +
                                 "${String.format(Locale.US, "%.2f", deviceProfile.p99G)} g · " +
                                 "${String.format(Locale.US, "%.0f", deviceProfile.deliveredHz)} medidas/s",
@@ -2028,7 +2095,7 @@ private fun EmergencySettingsScreen(
                         TextButton(
                             onClick = {
                                 SafetyMonitorService.resetDeviceProfile(context)
-                                SafetyStateStore.log("Aprendizaje del movil reiniciado")
+                                SafetyStateStore.log("Aprendizaje de ${mountProfile.label} reiniciado")
                             },
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                         ) {
@@ -2074,8 +2141,9 @@ private fun EmergencySettingsScreen(
                                 Text("DETENER REGISTRO", fontWeight = FontWeight.Bold)
                             }
                             Text(
-                                "Grabando ${calibration.activity.label}: ${calibration.samples} lecturas, " +
-                                    "${calibration.elapsedMs / 1000}s\nArchivo: ${calibration.fileName}",
+                                "Grabando ${calibration.activity.label} (${calibration.mount.label}): " +
+                                    "${calibration.samples} lecturas, ${calibration.elapsedMs / 1000}s, " +
+                                    "${calibration.rateHz} Hz\nArchivo: ${calibration.fileName}",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold
                             )

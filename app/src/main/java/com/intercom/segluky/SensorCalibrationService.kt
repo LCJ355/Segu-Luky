@@ -19,6 +19,7 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
@@ -41,15 +42,33 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
     private lateinit var sensorManager: SensorManager
     private lateinit var locationManager: LocationManager
     private val handler = Handler(Looper.getMainLooper())
+    private var sensorThread: HandlerThread? = null
+    private var sensorHandler: Handler? = null
 
+    private val writerLock = Any()
     private var writer: BufferedWriter? = null
     private var file: File? = null
     private var activity = CalibrationActivity.WALKING
-    private var sampleCount = 0L
+    private var mountProfile = MountProfile.UNDEFINED
+    @Volatile private var sampleCount = 0L
     private var startedAtElapsed = 0L
     private var running = false
     private var locationRegistered = false
     private var lastFlushAt = 0L
+
+    private var motionSensors: List<Sensor> = emptyList()
+    private val rateController = CalibrationRateController()
+    private val speedMedian = MedianSpeed()
+    @Volatile private var currentTargetHz = CalibrationRatePolicy.MIN_HZ
+    @Volatile private var currentAppliedHz = CalibrationRatePolicy.MIN_HZ
+    @Volatile private var lastKnownSpeedAt = 0L
+    @Volatile private var lastKnownSpeedKmh: Float? = null
+
+    private var lastMotionDynamicG = 0f
+    private var lastMotionAt = 0L
+    private val calibrationGravity = FloatArray(3)
+    private var calibrationGravityReady = false
+    private var calibrationGravityAt = 0L
 
     // Prueba de golpe: 15 s sin fichero, para validar el movil sin grabar nada.
     private var testing = false
@@ -86,6 +105,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
     private fun startRecording(selected: CalibrationActivity) {
         if (running) return
         activity = selected
+        mountProfile = SafetyMonitorService.loadMountProfile(this)
         CalibrationRepository.saveLastActivity(this, selected)
         file = CalibrationRepository.newFile(this, selected)
         writer = runCatching { BufferedWriter(FileWriter(file!!, false)) }.getOrNull()
@@ -94,11 +114,25 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
             stopSelf()
             return
         }
+        val now = SystemClock.elapsedRealtime()
+        val initialSpeed = freshLastKnownSpeedKmh()
+        val initialHz = CalibrationRatePolicy.targetHz(initialSpeed)
+        currentTargetHz = initialHz
+        currentAppliedHz = initialHz
+        rateController.reset(now, initialHz)
+        speedMedian.reset()
+        lastMotionDynamicG = 0f
+        lastMotionAt = 0L
+        calibrationGravityReady = false
+        calibrationGravityAt = 0L
+        lastKnownSpeedKmh = initialSpeed
+        lastKnownSpeedAt = if (initialSpeed != null) now else 0L
         writeHeader()
-        registerSensors()
+        startSensorThread()
+        registerSensors(initialHz)
         registerLocation()
-        startedAtElapsed = SystemClock.elapsedRealtime()
-        lastFlushAt = startedAtElapsed
+        startedAtElapsed = now
+        lastFlushAt = now
         sampleCount = 0L
         running = true
         startForegroundSafely()
@@ -107,12 +141,29 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
             it.copy(
                 recording = true,
                 activity = selected,
+                mount = mountProfile,
+                rateHz = initialHz,
                 elapsedMs = 0L,
                 samples = 0L,
                 fileName = file?.name
             )
         }
-        SafetyStateStore.log("Calibracion iniciada: ${selected.label}")
+        SafetyStateStore.log(
+            "Calibracion iniciada: ${selected.label}, soporte ${mountProfile.label}, ${initialHz} Hz"
+        )
+    }
+
+    private fun startSensorThread() {
+        if (sensorThread != null) return
+        val thread = HandlerThread("Segu-Calibracion").apply { start() }
+        sensorThread = thread
+        sensorHandler = Handler(thread.looper)
+    }
+
+    private fun stopSensorThread() {
+        sensorThread?.quitSafely()
+        sensorThread = null
+        sensorHandler = null
     }
 
     private fun writeHeader() {
@@ -123,6 +174,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         }.getOrNull() ?: "?"
         w.write("# Segu-Luky calibracion v$version\n")
         w.write("# actividad=${activity.id} (${activity.label})\n")
+        w.write("# soporte=${mountProfile.id} (${mountProfile.label})\n")
         w.write("# fecha=$date\n")
         w.write("# fabricante=${Build.MANUFACTURER}\n")
         w.write("# modelo=${Build.MODEL}\n")
@@ -134,19 +186,64 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         w.write("# sensor_acelerometro=${sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.name ?: "no"}\n")
         w.write("# sensor_gravedad=${sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)?.name ?: "no"}\n")
         w.write("# sensor_giroscopio=${sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.name ?: "no"}\n")
-        w.write("# columnas: tipo,t_ms,a,b,c,extra\n")
-        w.write("tipo,t_ms,a,b,c,extra\n")
+        w.write("# columnas: tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz,jerk_g_s\n")
+        w.write("tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz,jerk_g_s\n")
     }
 
-    private fun registerSensors() {
-        val linear = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
-        val accel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    private fun registerSensors(rateHz: Int) {
+        motionSensors = listOfNotNull(
+            sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
+                ?: sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        )
+        registerMotionSensors(rateHz)
         val gravity = sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)
         val gyro = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
-        if (linear != null) sensorManager.registerListener(this, linear, SensorManager.SENSOR_DELAY_GAME)
-        if (accel != null) sensorManager.registerListener(this, accel, SensorManager.SENSOR_DELAY_GAME)
-        if (gravity != null) sensorManager.registerListener(this, gravity, SensorManager.SENSOR_DELAY_NORMAL)
-        if (gyro != null) sensorManager.registerListener(this, gyro, SensorManager.SENSOR_DELAY_NORMAL)
+        val callback = sensorHandler ?: return
+        if (gravity != null) {
+            sensorManager.registerListener(this, gravity, SensorManager.SENSOR_DELAY_NORMAL, 0, callback)
+        }
+        if (gyro != null) {
+            sensorManager.registerListener(
+                this,
+                gyro,
+                GYRO_PERIOD_US,
+                0,
+                callback
+            )
+        }
+    }
+
+    private fun registerMotionSensors(rateHz: Int) {
+        val callback = sensorHandler ?: return
+        val periodUs = (1_000_000 / rateHz.coerceIn(
+            CalibrationRatePolicy.MIN_HZ,
+            CalibrationRatePolicy.MAX_HZ
+        ))
+        motionSensors.forEach { sensor ->
+            sensorManager.registerListener(this, sensor, periodUs, 0, callback)
+        }
+        currentAppliedHz = rateHz
+    }
+
+    private fun rebindMotionSensors(rateHz: Int) {
+        val callback = sensorHandler ?: return
+        motionSensors.forEach { sensor -> sensorManager.unregisterListener(this, sensor) }
+        val periodUs = 1_000_000 / rateHz.coerceIn(
+            CalibrationRatePolicy.MIN_HZ,
+            CalibrationRatePolicy.MAX_HZ
+        )
+        var registered = false
+        motionSensors.forEach { sensor ->
+            registered = sensorManager.registerListener(this, sensor, periodUs, 0, callback) || registered
+        }
+        if (!registered) {
+            motionSensors.forEach { sensor ->
+                sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_GAME, callback)
+            }
+            SafetyStateStore.log("Calibracion: no se pudo aplicar ${rateHz} Hz; se mantiene 50 Hz")
+            return
+        }
+        currentAppliedHz = rateHz
     }
 
     private fun registerLocation() {
@@ -166,7 +263,6 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
             trackHitTestSample(event)
             return
         }
-        val w = writer ?: return
         val tMs = event.timestamp / 1_000_000L
         val kind = when (event.sensor.type) {
             Sensor.TYPE_LINEAR_ACCELERATION -> "lin"
@@ -175,25 +271,180 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
             Sensor.TYPE_GYROSCOPE -> "gyro"
             else -> return
         }
-        runCatching {
-            w.write(
-                "$kind,$tMs,${event.values[0]},${event.values[1]},${event.values[2]},\n"
-            )
-            sampleCount++
+        val values = event.values
+        val magnitude = magnitude(values[0], values[1], values[2])
+        val isMotion = event.sensor.type == Sensor.TYPE_LINEAR_ACCELERATION ||
+            event.sensor.type == Sensor.TYPE_ACCELEROMETER
+        val jerkText = if (isMotion) {
+            val dynamicG = when (event.sensor.type) {
+                Sensor.TYPE_LINEAR_ACCELERATION -> magnitude / AccidentDetector.STANDARD_GRAVITY
+                else -> calibrationAccelerometerDynamicG(values, tMs)
+            }
+            val jerk = if (lastMotionAt > 0L && tMs >= lastMotionAt) {
+                JerkAssist.jerkGPerSecond(lastMotionDynamicG, dynamicG, tMs - lastMotionAt)
+            } else {
+                0f
+            }
+            lastMotionAt = tMs
+            lastMotionDynamicG = dynamicG
+            if (jerk.isFinite()) jerk.toString() else ""
+        } else {
+            ""
         }
+        appendLine(
+            "$kind,$tMs,${values[0]},${values[1]},${values[2]},," +
+                "${System.currentTimeMillis()},$magnitude,${mountProfile.id},," +
+                "${speedColumn()},$currentTargetHz,$jerkText\n"
+        )
+    }
+
+    /**
+     * Aproximacion al detector para el acelerometro de respaldo: quita una
+     * gravedad lenta y calcula la aceleracion dinamica. La columna jerk es una
+     * estimacion cuando el movil no tiene aceleracion lineal.
+     */
+    private fun calibrationAccelerometerDynamicG(values: FloatArray, timestampMs: Long): Float {
+        val currentMagnitude = magnitude(values[0], values[1], values[2])
+        if (!calibrationGravityReady) {
+            calibrationGravity[0] = values[0]
+            calibrationGravity[1] = values[1]
+            calibrationGravity[2] = values[2]
+            calibrationGravityReady = true
+            calibrationGravityAt = timestampMs
+            return 0f
+        }
+        val dynamicG = magnitude(
+            values[0] - calibrationGravity[0],
+            values[1] - calibrationGravity[1],
+            values[2] - calibrationGravity[2]
+        ) / AccidentDetector.STANDARD_GRAVITY
+        val elapsed = if (timestampMs > calibrationGravityAt) timestampMs - calibrationGravityAt else 0L
+        val alpha = if (elapsed <= 0L) 0f else kotlin.math.exp(-elapsed / 190.0).toFloat()
+        val gravityMagnitude = magnitude(
+            calibrationGravity[0],
+            calibrationGravity[1],
+            calibrationGravity[2]
+        )
+        val stable = kotlin.math.abs(currentMagnitude - gravityMagnitude) /
+            AccidentDetector.STANDARD_GRAVITY <= 0.20f
+        if (alpha > 0f && (stable || dynamicG <= 0.25f)) {
+            calibrationGravity[0] = alpha * calibrationGravity[0] + (1f - alpha) * values[0]
+            calibrationGravity[1] = alpha * calibrationGravity[1] + (1f - alpha) * values[1]
+            calibrationGravity[2] = alpha * calibrationGravity[2] + (1f - alpha) * values[2]
+            calibrationGravityAt = timestampMs
+        }
+        return dynamicG
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
     override fun onLocationChanged(location: Location) {
-        val w = writer ?: return
         val tMs = location.elapsedRealtimeNanos / 1_000_000L
         val speed = if (location.hasSpeed()) location.speed else 0f
         val acc = if (location.hasAccuracy()) location.accuracy else 0f
-        runCatching {
-            w.write("gps,$tMs,${location.latitude},${location.longitude},$speed,$acc\n")
-            sampleCount++
+        val speedKmh = qualifiedSpeedKmh(location)
+        if (speedKmh != null) {
+            val now = SystemClock.elapsedRealtime()
+            lastKnownSpeedKmh = speedKmh
+            lastKnownSpeedAt = now
+            val median = speedMedian.add(speedKmh)
+            updateRate(median, now)
+        } else if (lastKnownSpeedKmh != null &&
+            SystemClock.elapsedRealtime() - lastKnownSpeedAt > CalibrationRatePolicy.SPEED_MAX_AGE_MS
+        ) {
+            lastKnownSpeedKmh = null
+            updateRateForSpeed(null, SystemClock.elapsedRealtime())
         }
+        appendLine(
+            "gps,$tMs,${location.latitude},${location.longitude},$speed,$acc," +
+                "${System.currentTimeMillis()},0,${mountProfile.id},gps," +
+                "${speedKmh ?: ""},$currentTargetHz,\n"
+        )
+    }
+
+    private fun appendLine(line: String) {
+        synchronized(writerLock) {
+            runCatching {
+                writer?.write(line)
+                sampleCount++
+            }
+        }
+    }
+
+    private fun flushWriter() {
+        synchronized(writerLock) { runCatching { writer?.flush() } }
+    }
+
+    private fun closeWriter() {
+        synchronized(writerLock) {
+            runCatching { writer?.flush() }
+            runCatching { writer?.close() }
+            writer = null
+        }
+    }
+
+    private fun speedColumn(): String =
+        lastKnownSpeedKmh
+            ?.takeIf {
+                SystemClock.elapsedRealtime() - lastKnownSpeedAt <= CalibrationRatePolicy.SPEED_MAX_AGE_MS
+            }
+            ?.toString()
+            .orEmpty()
+
+    private fun updateRate(medianSpeedKmh: Float, now: Long) {
+        updateRateForSpeed(medianSpeedKmh, now)
+    }
+
+    private fun updateRateForSpeed(speedKmh: Float?, now: Long) {
+        currentTargetHz = CalibrationRatePolicy.targetHz(speedKmh)
+        val nextHz = rateController.update(speedKmh, now) ?: return
+        val handler = sensorHandler ?: return
+        handler.post {
+            rebindMotionSensors(nextHz)
+            appendRateRow(now, nextHz, speedKmh)
+        }
+    }
+
+    private fun appendRateRow(now: Long, rateHz: Int, speedKmh: Float?) {
+        val speedText = speedKmh?.toString().orEmpty()
+        appendLine(
+            "rate,$now,$rateHz,${CalibrationRatePolicy.targetHz(speedKmh)},$speedText,," +
+                "${System.currentTimeMillis()},0,${mountProfile.id},RATE_CHANGE," +
+                "$speedText,$rateHz,\n"
+        )
+    }
+
+    private fun qualifiedSpeedKmh(location: Location): Float? {
+        if (!location.hasSpeed() || !location.speed.isFinite() || location.speed < 0f) return null
+        if (location.hasSpeedAccuracy() &&
+            (!location.speedAccuracyMetersPerSecond.isFinite() ||
+                location.speedAccuracyMetersPerSecond > MAX_SPEED_ACCURACY_MS)
+        ) {
+            return null
+        }
+        return location.speed * 3.6f
+    }
+
+    private fun freshLastKnownSpeedKmh(): Float? {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return null
+        }
+        val candidates = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+        var newest: Location? = null
+        candidates.forEach { provider ->
+            val location = runCatching { locationManager.getLastKnownLocation(provider) }.getOrNull()
+            if (location != null && (newest == null ||
+                    location.elapsedRealtimeNanos > newest!!.elapsedRealtimeNanos)
+            ) {
+                newest = location
+            }
+        }
+        val location = newest ?: return null
+        val ageMs = (SystemClock.elapsedRealtime() - location.elapsedRealtimeNanos / 1_000_000L)
+        if (ageMs !in 0..LAST_KNOWN_SPEED_MAX_AGE_MS) return null
+        return qualifiedSpeedKmh(location)
     }
 
     override fun onProviderDisabled(provider: String) = Unit
@@ -213,21 +464,28 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
                 handler.postDelayed(this, UI_TICK_INTERVAL_MS)
                 return
             }
+            val now = SystemClock.elapsedRealtime()
+            if (lastKnownSpeedKmh != null && now - lastKnownSpeedAt > CalibrationRatePolicy.SPEED_MAX_AGE_MS) {
+                lastKnownSpeedKmh = null
+                updateRateForSpeed(null, now)
+            }
             CalibrationStateStore.update {
                 it.copy(
                     recording = true,
                     activity = activity,
-                    elapsedMs = SystemClock.elapsedRealtime() - startedAtElapsed,
+                    mount = mountProfile,
+                    rateHz = currentAppliedHz,
+                    elapsedMs = now - startedAtElapsed,
                     samples = sampleCount,
                     fileName = file?.name
                 )
             }
-            // Sensors stream at 50 Hz for the whole session, so flushing on every
-            // tick would rewrite the flash several times per second. Five seconds
-            // only ever risks losing the last few samples of a crash.
+            // Flushing every second would rewrite the flash continuously. Five
+            // seconds only risks the last few samples of a crash.
             if (SystemClock.elapsedRealtime() - lastFlushAt >= FLUSH_INTERVAL_MS) {
-                runCatching { writer?.flush() }
                 lastFlushAt = SystemClock.elapsedRealtime()
+                val callback = sensorHandler
+                if (callback != null) callback.post { flushWriter() } else flushWriter()
             }
             handler.postDelayed(this, UI_TICK_INTERVAL_MS)
         }
@@ -258,7 +516,8 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         testing = true
         running = true
         startedAtElapsed = SystemClock.elapsedRealtime()
-        registerSensors()
+        startSensorThread()
+        registerSensors(CalibrationRatePolicy.MAX_HZ)
         startForegroundSafely()
         handler.post(tick)
         SafetyStateStore.update { it.copy(hitTestRunning = true, hitTestVerdict = null) }
@@ -309,6 +568,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         running = false
         handler.removeCallbacks(tick)
         runCatching { sensorManager.unregisterListener(this) }
+        stopSensorThread()
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         val verdict = hitTestVerdict(testPeakG, testThresholdG)
         SafetyStateStore.update { it.copy(hitTestRunning = false, hitTestVerdict = verdict) }
@@ -345,9 +605,8 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         runCatching { sensorManager.unregisterListener(this) }
         if (locationRegistered) runCatching { locationManager.removeUpdates(this) }
         locationRegistered = false
-        runCatching { writer?.flush() }
-        runCatching { writer?.close() }
-        writer = null
+        stopSensorThread()
+        closeWriter()
         val finished = file
         file = null
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
@@ -370,9 +629,8 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
             handler.removeCallbacks(tick)
             runCatching { sensorManager.unregisterListener(this) }
             if (locationRegistered) runCatching { locationManager.removeUpdates(this) }
-            runCatching { writer?.flush() }
-            runCatching { writer?.close() }
-            writer = null
+            stopSensorThread()
+            closeWriter()
         }
         if (testing) {
             testing = false
@@ -427,6 +685,9 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         private const val EXTRA_TEST_THRESHOLD_G = "test_threshold_g"
         private const val TEST_DURATION_MS = 15_000L
         private const val TEST_GRAVITY_ALPHA = 0.05f
+        private const val GYRO_PERIOD_US = 40_000
+        private const val MAX_SPEED_ACCURACY_MS = 5f
+        private const val LAST_KNOWN_SPEED_MAX_AGE_MS = 30_000L
 
         fun start(context: Context, activity: CalibrationActivity) {
             val intent = Intent(context, SensorCalibrationService::class.java)

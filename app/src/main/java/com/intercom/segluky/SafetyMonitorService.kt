@@ -2819,6 +2819,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         private const val KEY_SENSITIVITY_G = "sensitivity_g"
         private const val DEFAULT_SENSITIVITY_G = 3.5f
         private const val KEY_ADAPTATION_WINDOW_MODE = "adaptation_window_mode"
+        private const val KEY_MOUNT_PROFILE = "mount_profile"
         private const val KEY_DEVICE_NOISE_G = "device_noise_g"
         private const val KEY_DEVICE_P99_G = "device_p99_g"
         private const val KEY_DEVICE_HZ = "device_hz"
@@ -2890,27 +2891,41 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 .edit().putString(KEY_ADAPTATION_WINDOW_MODE, mode.id).apply()
         }
 
-        internal fun loadDeviceProfile(context: Context): DeviceProfile {
-            val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-            return DeviceProfile(
-                noiseG = preferences.getFloat(KEY_DEVICE_NOISE_G, 0f),
-                p99G = preferences.getFloat(KEY_DEVICE_P99_G, 0f),
-                deliveredHz = preferences.getFloat(KEY_DEVICE_HZ, 0f),
-                usageMs = preferences.getLong(KEY_DEVICE_USAGE_MS, 0L)
+        internal fun loadMountProfile(context: Context): MountProfile =
+            MountProfile.fromId(
+                context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                    .getString(KEY_MOUNT_PROFILE, MountProfile.UNDEFINED.id)
             )
+
+        /**
+         * Cambia el soporte mientras el monitor esta detenido. El primer soporte
+         * definido hereda el perfil global existente; los siguientes empiezan de
+         * cero para no mezclar ruido de montajes distintos.
+         */
+        internal fun setMountProfile(context: Context, mount: MountProfile): Boolean {
+            if (SafetyStateStore.snapshot.value.phase != SafetyPhase.STOPPED) return false
+            val previous = loadMountProfile(context)
+            if (previous == mount) return true
+            if (mount.isDefined &&
+                previous == MountProfile.UNDEFINED &&
+                !hasDeviceProfile(context, mount)
+            ) {
+                saveDeviceProfileFor(context, mount, loadDeviceProfileFor(context, MountProfile.UNDEFINED))
+            }
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .edit().putString(KEY_MOUNT_PROFILE, mount.id).apply()
+            SafetyStateStore.log("Soporte del movil: ${mount.label}")
+            return true
         }
+
+        internal fun loadDeviceProfile(context: Context): DeviceProfile =
+            loadDeviceProfileFor(context, loadMountProfile(context))
 
         internal fun saveDeviceProfile(context: Context, profile: DeviceProfile) {
-            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-                .edit()
-                .putFloat(KEY_DEVICE_NOISE_G, profile.noiseG)
-                .putFloat(KEY_DEVICE_P99_G, profile.p99G)
-                .putFloat(KEY_DEVICE_HZ, profile.deliveredHz)
-                .putLong(KEY_DEVICE_USAGE_MS, profile.usageMs)
-                .apply()
+            saveDeviceProfileFor(context, loadMountProfile(context), profile)
         }
 
-        /** Olvida el perfil aprendido: el movil vuelve a empezar de cero. */
+        /** Olvida el perfil aprendido del soporte actual; el movil vuelve a empezar. */
         internal fun resetDeviceProfile(context: Context) {
             saveDeviceProfile(context, DeviceProfile())
             context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -2919,6 +2934,33 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 .remove(KEY_RIDE_PEAK_AT)
                 .apply()
         }
+
+        private fun loadDeviceProfileFor(context: Context, mount: MountProfile): DeviceProfile {
+            val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+            return DeviceProfile(
+                noiseG = preferences.getFloat(deviceKey(KEY_DEVICE_NOISE_G, mount), 0f),
+                p99G = preferences.getFloat(deviceKey(KEY_DEVICE_P99_G, mount), 0f),
+                deliveredHz = preferences.getFloat(deviceKey(KEY_DEVICE_HZ, mount), 0f),
+                usageMs = preferences.getLong(deviceKey(KEY_DEVICE_USAGE_MS, mount), 0L)
+            )
+        }
+
+        private fun saveDeviceProfileFor(context: Context, mount: MountProfile, profile: DeviceProfile) {
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .edit()
+                .putFloat(deviceKey(KEY_DEVICE_NOISE_G, mount), profile.noiseG)
+                .putFloat(deviceKey(KEY_DEVICE_P99_G, mount), profile.p99G)
+                .putFloat(deviceKey(KEY_DEVICE_HZ, mount), profile.deliveredHz)
+                .putLong(deviceKey(KEY_DEVICE_USAGE_MS, mount), profile.usageMs)
+                .apply()
+        }
+
+        private fun hasDeviceProfile(context: Context, mount: MountProfile): Boolean =
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .contains(deviceKey(KEY_DEVICE_USAGE_MS, mount))
+
+        private fun deviceKey(base: String, mount: MountProfile): String =
+            if (mount.isDefined) "${base}_${mount.id}" else base
 
         internal fun loadRidePeak(context: Context): Float =
             context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
