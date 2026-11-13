@@ -26,6 +26,9 @@ key; InterCOM is a separate app reached only through its exported bridge (see
   refines itself with usage. See [docs/SENSIBILIDAD.md](docs/SENSIBILIDAD.md).
 - A peak only counts after re-arming (0.6x the threshold) and at least 250 ms
   apart, so the rebound of a single hit is no longer read as a deliberate shake.
+- **Jerk incremental:** from 20 km/h (with a speed fix of 10 s or less) a sharp
+  change in acceleration can add up to 0.35 g to a near-threshold hit. Below
+  20 km/h it is ignored, and it can never trigger an SOS by itself.
 - `PROBAR GOLPE` runs a 15 s shake test that says whether the phone would have
   fired, without recording files and without notifying anyone.
 - The screen only wakes for a fall candidate, a countdown or an SOS; a simple

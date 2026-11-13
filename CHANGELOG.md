@@ -25,6 +25,17 @@
 - El analizador agrupa por dispositivo + soporte + actividad y muestra bandas de
   velocidad y muestreo real.
 
+### Jerk incremental
+- Nueva senal de jerk (cambio de aceleracion en g/s) como refuerzo, nunca como
+  disparador independiente.
+- Solo se considera con velocidad reciente (<= 10 s) y a partir de **20 km/h**;
+  por debajo vale cero.
+- Aporta como maximo **+0,35 g** al valor dinamico: 20 % del maximo a 20 km/h y
+  100 % a 50 km/h o mas. Un jerk de 120 g/s satura el aporte.
+- El pico real y el umbral siguen siendo la referencia; el jerk solo puede hacer
+  que un golpe justo por debajo del umbral cuente.
+- Tests: `JerkAssistTest` y `AccidentDetectorJerkTest`.
+
 ## 1.64s (versionCode 56)
 
 ### Textos de la app en lenguaje llano
