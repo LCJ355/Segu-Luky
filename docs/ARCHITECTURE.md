@@ -56,6 +56,16 @@ the normalized message matches exactly.
 - Every background start that can be denied by Android degrades to a safer
   foreground type instead of aborting the safety function.
 
+## Perfil por soporte y calibracion (1.70s)
+
+- `MountProfile` guarda un `DeviceProfile` distinto por soporte; `UNDEFINED` usa
+  el perfil global heredado.
+- `CalibrationRateController` y `CalibrationRatePolicy` calculan la tasa de
+  calibracion (20-100 Hz) segun la velocidad, con mediana, estabilidad y un
+  intervalo minimo entre rebindings.
+- `SensorCalibrationService` escribe el CSV desde un hilo de sensores dedicado y
+  protege el writer con un lock; el formato es aditivo para no romper CSV viejos.
+
 ## Testing
 
 - Pure detector, policy, contact and WhatsApp-contract tests run on the JVM.

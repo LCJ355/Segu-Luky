@@ -55,8 +55,14 @@ AdaptiveSensitivity ---------------------+
 | **Aprendido** (largo) | lo mismo pero fundido entre viajes, con el uso acumulado | a partir de 5 minutos acumulados |
 
 El perfil aprendido se fusiona con `alpha = min(0,35, ventana / (uso + ventana))`:
-las primeras horas pesan mas y luego se estabiliza, pero sigue corrigiendo si
-cambias de soporte o de moto.
+las primeras horas pesan mas y luego se estabiliza.
+
+**Desde la 1.70s el perfil aprendido se guarda por soporte** (sin definir,
+bolsillo, manillar, deposito, mochila o personalizado). Al cambiar de soporte se
+carga su propio perfil, de modo que el traqueteo del manillar no contamina el
+aprendizaje del bolsillo. Mientras el soporte esta sin definir se usa el perfil
+global anterior. El primer soporte elegido hereda ese perfil; los siguientes
+empiezan de cero.
 
 **Un golpe no entra en el promedio.** Solo se promedian las muestras por debajo
 del umbral vigente; si entrara el propio golpe, subiria el umbral que lo detecta.
@@ -140,7 +146,9 @@ ruido, p99 de marcha, frecuencia medida, uso acumulado y pico del ultimo viaje.
 4. Tras un viaje de mas de un minuto, la linea bajo el deslizador muestra
    `PICO ... SUG ...` y `USAR` aplica el valor recomendado.
 5. En Configuracion -> DIAGNOSTICO se ve el aprendizaje acumulado; el boton
-   **REINICIAR APRENDIZAJE** lo borra (util al cambiar de soporte o de moto).
+   **REINICIAR APRENDIZAJE** borra solo el perfil del soporte actual. Para cambiar
+de soporte usa el selector **SOPORTE DEL MOVIL**, que conserva el aprendizaje de
+cada uno.
 
 ## 10. Limites
 

@@ -1,51 +1,70 @@
-CALIBRACION DE SENSORES - SEGU-LUKY V-1.11s
+CALIBRACION DE SENSORES - SEGU-LUKY V-1.70s
 ==========================================
-Objetivo: grabar datos reales de sensores etiquetados por actividad para
-ajustar la sensibilidad y los umbrales de deteccion de golpe/caida.
+Objetivo: grabar datos reales de sensores etiquetados por actividad y soporte
+para ajustar la sensibilidad y los umbrales de deteccion de golpe/caida.
 
 1) COMO GRABAR DESDE LA APP
 ---------------------------
-Configuracion (engranaje) > tarjeta "CALIBRACION DE SENSORES":
-  1. Elige la actividad que vas a realizar:
-     Andando / Corriendo / Moto autovia / Moto camino / Coche autovia / Coche camino.
-  2. Pulsa "INICIAR REGISTRO" (aparece una notificacion "Segu-Luky: calibracion").
-  3. Realiza la actividad con el movil en la posicion habitual (soporte, bolsillo...).
-  4. Pulsa "DETENER REGISTRO".
-  5. Dos opciones para reunir los datos:
-     - "EXPORTAR": crea un ZIP (todos los CSV + ajustes.txt) en la carpeta
-       publica Descargas/Segu-Luky, listo para copiar al PC por USB.
-     - "WHATSAPP": abre WhatsApp con el ZIP ya adjunto para enviarlo a un
-       contacto o grupo (el amigo tambien puede usar este boton).
-     En un archivo concreto de la lista tambien hay "WHATSAPP" y "COMPARTIR".
+Configuracion (engranaje) > Sensores:
+  0. Elige el SOPORTE DEL MOVIL: sin definir, bolsillo, manillar, deposito,
+     mochila o personalizado. El aprendizaje se guarda por soporte.
+  1. Elige la actividad: Andando / Corriendo / Moto autovia / Moto camino /
+     Coche autovia / Coche camino.
+  2. Pulsa INICIAR REGISTRO (aparece una notificacion "Segu-Luky: calibracion").
+  3. Realiza la actividad con el movil en la posicion habitual.
+  4. Pulsa DETENER REGISTRO.
+  5. EXPORTAR crea un ZIP (CSV + ajustes.txt) en Descargas/Segu-Luky.
+     WHATSAPP abre WhatsApp con el ZIP adjunto.
 
-La grabacion es independiente del monitor: puedes grabar con o sin monitor activo.
+La grabacion es independiente del monitor. No cambies el soporte ni la
+actividad mientras grabas.
 
-2) QUE SE GRABA (FORMATO CSV)
+2) TASA DE MUESTREO
+-------------------
+La tasa del sensor de movimiento depende de la velocidad GPS:
+
+  0-12,5 km/h       20 Hz
+  12,5-25 km/h      40 Hz
+  25-37,5 km/h      60 Hz
+  37,5-50 km/h      80 Hz
+  50 km/h o mas    100 Hz
+
+Se usa la mediana de 3 fixes, 10 s de estabilidad y 15 s minimos entre cambios.
+Sin velocidad valida se mantiene 20 Hz; si hay una posicion GPS de menos de
+30 s se usa al empezar. El giroscopio va fijo a 25 Hz y la gravedad a tasa
+normal. Solo cambia la tasa del acelerometro lineal (o acelerometro si no hay
+lineal).
+
+3) QUE SE GRABA (FORMATO CSV)
 -----------------------------
 Cada archivo: segu_calib_<MODELO>_<actividad>_<AAAAMMDD_HHMMSS>.csv
-Cabecera con lineas '#': actividad, fecha, fabricante, modelo, dispositivo,
-producto, hardware, sensores y columnas.
-Datos con columnas: tipo,t_ms,a,b,c,extra
-  - tipo: lin | accel | grav | gyro | gps
-  - t_ms: marca de tiempo (ms)
-  - a,b,c: ejes (m/s^2 en aceleracion/gravedad; rad/s en giroscopio;
-           en gps: a=latitud, b=longitud, c=velocidad m/s; extra=precision m)
-Sensores registrados: aceleracion lineal, acelerometro, gravedad, giroscopio y GPS (1 Hz).
+Cabecera con lineas '#': actividad, soporte, fecha, fabricante, modelo,
+dispositivo, producto, hardware, sensores y columnas.
+Columnas:
+  tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz
+  - tipo: lin | accel | grav | gyro | gps | rate
+  - t_ms: marca de tiempo monotona (ms)
+  - a,b,c: ejes; en gps a=latitud, b=longitud, c=velocidad m/s
+  - extra: precision GPS en metros (solo gps)
+  - wall_ms: hora de pared
+  - magnitude: modulo de los ejes
+  - mount: soporte elegido
+  - event: gps, RATE_CHANGE o vacio
+  - speed_kmh: ultima velocidad valida
+  - target_hz: tasa objetivo del sensor de movimiento
+Sensores: movimiento (lineal o acelerometro), gravedad, giroscopio y GPS (1 Hz).
 
-3) COMO SE ANALIZA
+4) COMO SE ANALIZA
 ------------------
 Script: Instrucciones\analizar_calibracion.py
   python analizar_calibracion.py <carpeta | archivos .csv | archivos .zip>
-Acepta los ZIP exportados por la app (o CSV sueltos) y agrupa por movil y
-actividad. Calcula media, desviacion, p99, p99.9 y maximo de la aceleracion
-dinamica (en g), giroscopio y velocidad GPS, y recomienda:
-  - una sensibilidad por movil (maximo normal x1.2, minimo 1.5 g),
-  - una recomendacion global segura para el peor caso.
-Genera ademas "recomendaciones.txt" junto a los datos. Se configura el valor
-en la app: SENSIBILIDAD A LOS GOLPES (mas alto = menos falsos SOS).
+Agrupa por dispositivo + soporte + actividad. Calcula media, desviacion, p99,
+p99.9 y maximo de la aceleracion dinamica, giroscopio, velocidad GPS y muestreo
+real. Muestra bandas de velocidad (0-12,5, 12,5-25, 25-37,5, 37,5-50 y 50+) y
+recomienda una sensibilidad por soporte y una global para el peor caso.
+Genera "recomendaciones.txt" junto a los datos.
 
-4) DONDE ESTAN LOS ARCHIVOS
+5) DONDE ESTAN LOS ARCHIVOS
 ---------------------------
-- En el movil (internos de la app): Android/data/com.intercom.segluky/files/calibracion/
-- Exportados: Descargas/Segu-Luky/*.zip (ZIP con todos los CSV + ajustes.txt).
-  Copia ese ZIP al PC por USB y descomprimelo en la carpeta de analisis.
+- En el movil: Android/data/com.intercom.segluky/files/calibracion/
+- Exportados: Descargas/Segu-Luky/*.zip (CSV + ajustes.txt).

@@ -1,4 +1,4 @@
-# Segu-Luky V-1.64s
+# Segu-Luky V-1.70s (en desarrollo)
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -101,18 +101,18 @@ gradlew.bat assembleDebug
 
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
-The shareable build of every version is published in `APK´s/` as
-`Segu-Luky-<version>.apk` (currently `Segu-Luky-1.64s.apk`), ready to download
-and install on the phone without Android Studio.
+The shareable build of every released version is published in `APK´s/` as
+`Segu-Luky-<version>.apk`. The last stable release is `Segu-Luky-1.64s.apk`;
+the `1.70s` line is still in development and is not published.
 
-Only the newest version stays published as a GitHub release: `V-1.64s` with
-`Segu-Luky-1.64s.apk` attached. Older releases are deleted so the download page
+Only the newest version stays published as a GitHub release: currently `V-1.64s`
+with `Segu-Luky-1.64s.apk` attached. Older releases are deleted so the download page
 always shows a single APK (the git tags stay, so the source of every version is
 still reachable). **Buscar actualizacion** reads the GitHub API and compares
 against that one release:
 
 ```text
-gh release create V-1.64s "APK´s/Segu-Luky-1.64s.apk" --title "Segu-Luky V-1.64s" --notes "..."
+gh release create V-1.70s "APK´s/Segu-Luky-1.70s.apk" --title "Segu-Luky V-1.70s" --notes "..."
 ```
 
 The published APK carries **no personal data**: contacts, phone numbers, the bot
@@ -120,7 +120,7 @@ key and the position live only in the phone's `SharedPreferences` (the app
 declares `allowBackup="false"`). Before uploading, check the file itself:
 
 ```text
-powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-1.64s.apk"
+powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-1.70s.apk"
 ```
 
 It fails if the package contains anything that is not code, resources or

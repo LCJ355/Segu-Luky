@@ -43,6 +43,8 @@ data class CalibrationFile(
 data class CalibrationState(
     val recording: Boolean = false,
     val activity: CalibrationActivity = CalibrationActivity.WALKING,
+    val mount: MountProfile = MountProfile.UNDEFINED,
+    val rateHz: Int = 0,
     val elapsedMs: Long = 0L,
     val samples: Long = 0L,
     val fileName: String? = null,
@@ -194,6 +196,8 @@ object CalibrationRepository {
         }
         appendLine("Segu-Luky - resumen de ajustes")
         appendLine("dispositivo=${deviceModel()}")
+        appendLine("soporte=${SafetyMonitorService.loadMountProfile(context).id}")
+        appendLine("soporte_nombre=${SafetyMonitorService.loadMountProfile(context).label}")
         appendLine("sensibilidad_g=$sensitivity")
         appendLine("umbral_efectivo_g=$effective")
         appendLine("ventana_adaptacion=${SafetyMonitorService.adaptationWindowLabel(SafetyMonitorService.loadAdaptationWindowMode(context))}")

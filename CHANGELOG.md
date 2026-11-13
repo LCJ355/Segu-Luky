@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.70s (versionCode 57) — en desarrollo
+
+### Perfil por soporte
+- Nuevo ajuste **SOPORTE DEL MOVIL**: sin definir, bolsillo, manillar, deposito,
+  mochila y personalizado.
+- El perfil aprendido (ruido, traqueteo, muestreo y uso acumulado) se guarda por
+  soporte. Mientras no se elige, se mantiene el perfil global anterior.
+- Al elegir el primer soporte se hereda el aprendizaje existente; los demas
+  empiezan de cero.
+- El soporte aparece en la ficha de aprendizaje, en `ajustes.txt` y en el CSV.
+
+### Calibracion por velocidad
+- La grabacion de sensores usa 20 Hz de 0 a 12,5 km/h y sube en escalones de
+  20 Hz hasta 100 Hz a partir de 50 km/h.
+- Mediana de 3 fixes, 10 s de estabilidad y 15 s minimos entre cambios para
+  evitar rebindings y consumo.
+- Sin velocidad valida se mantiene 20 Hz; se usa la ultima posicion GPS conocida
+  si tiene menos de 30 s.
+- Solo el sensor de movimiento cambia de tasa; giroscopio a 25 Hz y gravedad a
+  tasa normal.
+- El CSV anade `wall_ms`, `magnitude`, `mount`, `event`, `speed_kmh` y
+  `target_hz`, y registra cada cambio de tasa.
+- El analizador agrupa por dispositivo + soporte + actividad y muestra bandas de
+  velocidad y muestreo real.
+
 ## 1.64s (versionCode 56)
 
 ### Textos de la app en lenguaje llano

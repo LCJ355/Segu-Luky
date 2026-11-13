@@ -80,30 +80,43 @@ def parse_stream(text):
             continue
         try:
             t = float(parts[1]); a = float(parts[2]); b = float(parts[3]); c = float(parts[4])
+            speed = None
+            if len(parts) > 10 and parts[10].strip():
+                speed = float(parts[10])
         except ValueError:
             continue
-        rows[parts[0]].append((t, a, b, c))
+        rows[parts[0]].append((t, a, b, c, speed))
     return meta, rows
 
 
-def dynamic_g(rows):
-    """Aceleracion dinamica en g usando la misma fuente que el detector."""
+def dynamic_g_samples(rows):
+    """Pares (aceleracion dinamica en g, velocidad km/h o None)."""
     lin = rows.get("lin", [])
-    lin_meaningful = lin and any(abs(a) + abs(b) + abs(c) > 0.05 for (_, a, b, c) in lin)
+    lin_meaningful = lin and any(abs(a) + abs(b) + abs(c) > 0.05 for (_, a, b, c, _) in lin)
     if lin_meaningful:
-        return [math.sqrt(a * a + b * b + c * c) / G for (_, a, b, c) in lin]
+        return [
+            (math.sqrt(a * a + b * b + c * c) / G, speed)
+            for (_, a, b, c, speed) in lin
+        ]
     accel = rows.get("accel", [])
     grav = rows.get("grav", [])
     if accel and grav:
-        grav_map = [(t, a, b, c) for (t, a, b, c) in grav]
+        grav_map = [(t, a, b, c) for (t, a, b, c, _) in grav]
         out = []
-        for (t, a, b, c) in accel:
+        for (t, a, b, c, speed) in accel:
             ga, gb, gc = nearest_gravity(grav_map, t)
-            out.append(math.sqrt((a - ga) ** 2 + (b - gb) ** 2 + (c - gc) ** 2) / G)
+            out.append((math.sqrt((a - ga) ** 2 + (b - gb) ** 2 + (c - gc) ** 2) / G, speed))
         return out
     if accel:
-        return [abs(math.sqrt(a * a + b * b + c * c) / G - 1.0) for (_, a, b, c) in accel]
+        return [
+            (abs(math.sqrt(a * a + b * b + c * c) / G - 1.0), speed)
+            for (_, a, b, c, speed) in accel
+        ]
     return []
+
+
+def dynamic_g(rows):
+    return [value for value, _ in dynamic_g_samples(rows)]
 
 
 def nearest_gravity(grav, t):
@@ -164,26 +177,35 @@ def main():
         print("No se encontraron CSV ni ZIP en:", args)
         return
 
-    # device -> activity -> dict(dyn=[], gyro=[], speed=[], files=set)
-    data = defaultdict(lambda: defaultdict(lambda: {"dyn": [], "gyro": [], "speed": [], "files": set()}))
+    # device -> support -> activity -> datos
+    data = defaultdict(lambda: defaultdict(lambda: defaultdict(
+        lambda: {"dyn": [], "samples": [], "gyro": [], "speed": [], "hz": [], "files": set()}
+    )))
     seen = set()
 
     for path in files:
         for name, text in iter_csv_from(path):
             meta, rows = parse_stream(text)
             device = meta.get("dispositivo", "desconocido")
+            support = (meta.get("soporte", "sin_definir").split(" ")[0] or "sin_definir")
             activity = meta.get("actividad", name).split(" ")[0] or name
-            key = (device, name)
+            key = (device, support, name)
             if key in seen:
                 continue
             seen.add(key)
-            dyn = dynamic_g(rows)
-            gyro = [math.sqrt(a * a + b * b + c * c) for (_, a, b, c) in rows.get("gyro", [])]
-            speed = [c * 3.6 for (_, _, _, c) in rows.get("gps", [])]
-            entry = data[device][activity]
+            samples = dynamic_g_samples(rows)
+            dyn = [value for value, _ in samples]
+            gyro = [math.sqrt(a * a + b * b + c * c) for (_, a, b, c, _) in rows.get("gyro", [])]
+            speed = [c * 3.6 for (_, _, _, c, _) in rows.get("gps", [])]
+            entry = data[device][support][activity]
             entry["dyn"].extend(dyn)
+            entry["samples"].extend(samples)
             entry["gyro"].extend(gyro)
             entry["speed"].extend(speed)
+            times = [t for (t, _, _, _, _) in rows.get("lin", [])] or \
+                    [t for (t, _, _, _, _) in rows.get("accel", [])]
+            if len(times) > 1 and times[-1] > times[0]:
+                entry["hz"].append((len(times) - 1) * 1000.0 / (times[-1] - times[0]))
             entry["files"].add(name)
 
     report = io.StringIO()
@@ -196,36 +218,53 @@ def main():
     out("INFORME DE CALIBRACION SEGU-LUKY")
     out("=" * 78)
     out("Archivos analizados: %d" % len(files))
-    out("Dispositivos: %d" % len(data))
+    out("Combinaciones dispositivo/soporte: %d" % sum(len(v) for v in data.values()))
 
+    bands = [
+        ("0-12.5", 0.0, 12.5),
+        ("12.5-25", 12.5, 25.0),
+        ("25-37.5", 25.0, 37.5),
+        ("37.5-50", 37.5, 50.0),
+        ("50+", 50.0, float("inf")),
+    ]
     global_reco = 0.0
-    per_device_reco = {}
     for device in sorted(data):
-        out("")
-        out("DISPOSITIVO: %s" % device)
-        out("-" * 78)
-        device_max = 0.0
-        for activity in sorted(data[device]):
-            e = data[device][activity]
-            s = stats(e["dyn"])
-            if not s:
-                continue
-            device_max = max(device_max, s["max"])
-            line = ("  %-14s n=%-7d media=%.2fg std=%.2f p99=%.2fg p99.9=%.2fg max=%.2fg  (archivos=%d)"
-                    % (activity, s["n"], s["mean"], s["std"], s["p99"], s["p999"], s["max"], len(e["files"])))
-            out(line)
-            gy = stats(e["gyro"])
-            if gy:
-                out("      giro: media=%.2f p99=%.2f max=%.2f rad/s" % (gy["mean"], gy["p99"], gy["max"]))
-            sp = stats(e["speed"])
-            if sp and sp["max"] > 1:
-                out("      velocidad: media=%.0f p95=%.0f max=%.0f km/h" % (sp["mean"], sp["p95"], sp["max"]))
-        reco = round_half(max(device_max * 1.20, 1.5))
-        per_device_reco[device] = reco
-        global_reco = max(global_reco, reco)
-        out("  -> SENSIBILIDAD RECOMENDADA para este movil: %.1f g" % reco)
-        if device_max > 5.0:
-            out("     AVISO: se observaron %.1fg en uso normal; revisa el soporte del movil (vibracion)." % device_max)
+        for support in sorted(data[device]):
+            out("")
+            out("DISPOSITIVO: %s · SOPORTE: %s" % (device, support))
+            out("-" * 78)
+            device_max = 0.0
+            for activity in sorted(data[device][support]):
+                e = data[device][support][activity]
+                s = stats(e["dyn"])
+                if not s:
+                    continue
+                device_max = max(device_max, s["max"])
+                line = ("  %-14s n=%-7d media=%.2fg std=%.2f p99=%.2fg p99.9=%.2fg max=%.2fg  (archivos=%d)"
+                        % (activity, s["n"], s["mean"], s["std"], s["p99"], s["p999"], s["max"], len(e["files"])))
+                out(line)
+                gy = stats(e["gyro"])
+                if gy:
+                    out("      giro: media=%.2f p99=%.2f max=%.2f rad/s" % (gy["mean"], gy["p99"], gy["max"]))
+                sp = stats(e["speed"])
+                if sp and sp["max"] > 1:
+                    out("      velocidad: media=%.0f p95=%.0f max=%.0f km/h" % (sp["mean"], sp["p95"], sp["max"]))
+                hz = stats(e["hz"])
+                if hz:
+                    out("      muestreo real: media=%.0f minimo=%.0f maximo=%.0f medidas/s"
+                        % (hz["mean"], min(e["hz"]), hz["max"]))
+                for label, low, high in bands:
+                    values = [g for g, speed in e["samples"]
+                              if speed is not None and low <= speed < high]
+                    bs = stats(values)
+                    if bs and bs["n"] >= 50:
+                        out("      %-8s km/h n=%-7d p99=%.2fg p99.9=%.2fg max=%.2fg"
+                            % (label, bs["n"], bs["p99"], bs["p999"], bs["max"]))
+            reco = round_half(max(device_max * 1.20, 1.5))
+            global_reco = max(global_reco, reco)
+            out("  -> SENSIBILIDAD RECOMENDADA para este soporte: %.1f g" % reco)
+            if device_max > 5.0:
+                out("     AVISO: se observaron %.1fg en uso normal; revisa el soporte del movil (vibracion)." % device_max)
 
     out("")
     out("=" * 78)
