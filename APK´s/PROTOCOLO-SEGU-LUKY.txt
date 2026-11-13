@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.64s - PROTOCOLO Y ALGORITMO
+﻿SEGU-LUKY V-1.70s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 56). Los valores entre parentesis son los del codigo.
+archivo (versionCode 57). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -57,6 +57,13 @@ suaviza los picos mide el golpe mas bajo.
      cambia mucho, o se alarga a 3 min si lleva rato estable) o fija a 1/2/3.
    - Muestreo: 25 Hz con el movil quieto, 50 Hz normal, 100 Hz en demanda o tras
      golpe/candidato/cuenta atras. Se mide lo que entrega el sensor y se muestra.
+   - (1.70s) Perfil por soporte: SOPORTE DEL MOVIL (sin definir, bolsillo,
+     manillar, deposito, mochila, personalizado) guarda un perfil aprendido
+     distinto para cada montaje. El primer soporte elegido hereda el perfil
+     anterior; los demas empiezan de cero.
+   - (1.70s) Jerk incremental: cambio de aceleracion en g/s. Solo cuenta con
+     velocidad reciente (<=10 s) y desde 20 km/h; por debajo vale cero. Suma como
+     maximo +0,35 g (20 % a 20 km/h, 100 % a 50+ km/h) y nunca dispara solo.
 
 No hay umbral fijo de 7 g ni filtros de GPS/velocidad que bloqueen un golpe.
 
@@ -183,7 +190,10 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
 - Estado persistido solo ante cambios relevantes (fase, evento, temporizadores,
   movimiento > ~1 m); la hora del fix se agrupa en tramos de 15 s.
 - Buffer de sensores de 250 ms cuando el sensor lo soporta.
-- Calibracion: el CSV se vuelca cada 5 s.
+- Calibracion: el CSV se vuelca cada 5 s. Desde 1.70s la tasa del sensor de
+  movimiento sube de 20 a 100 Hz segun la velocidad (bandas de 20 Hz, mediana de
+  velocidad y 10 s de estabilidad); sin velocidad valida se queda en 20 Hz. El
+  CSV incluye soporte, velocidad, magnitud, cambios de tasa y jerk_g_s.
 
 8) LIMITACIONES CONOCIDAS (documentadas en INFORME-BUGS-1.47s.md)
 ------------------------------------------------------------------
@@ -196,7 +206,7 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
 - (corregido en 1.50s) El bot de Telegram tiene cola durable y reintentos con
   espera creciente; antes era un unico POST y un fallo de datos en el punto del
   accidente perdia el aviso para siempre.
-- (corregido en 1.49s) «Buscar actualizacion» lee releases y etiquetas y elige la
+- (corregido en 1.49s) Â«Buscar actualizacionÂ» lee releases y etiquetas y elige la
   mas alta, asi una version etiquetada sin release tambien se ofrece.
 - (corregido en 1.51s) Si el telefono esta bloqueado y el usuario cancela el
   desbloqueo, la app ya no abre WhatsApp encima del bloqueo: cierra ese aviso en
@@ -258,4 +268,5 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.64s (versionCode 56) - 12/11/2026
+Version: V-1.70s (versionCode 57) - 13/11/2026
+

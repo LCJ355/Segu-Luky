@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.70s (versionCode 57) — en desarrollo
+## 1.70s (versionCode 57)
 
 ### Perfil por soporte
 - Nuevo ajuste **SOPORTE DEL MOVIL**: sin definir, bolsillo, manillar, deposito,
