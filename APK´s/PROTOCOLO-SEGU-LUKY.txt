@@ -1,8 +1,8 @@
-﻿SEGU-LUKY V-1.76s - PROTOCOLO Y ALGORITMO
+﻿SEGU-LUKY V-1.77s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 63). Los valores entre parentesis son los del codigo.
+archivo (versionCode 64). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -268,5 +268,5 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.76s (versionCode 63) - 13/11/2026
+Version: V-1.77s (versionCode 64) - 13/11/2026
 

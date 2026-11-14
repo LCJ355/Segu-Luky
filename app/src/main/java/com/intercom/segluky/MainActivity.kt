@@ -1414,6 +1414,10 @@ private fun EmergencySettingsScreen(
     var smsAuto by remember { mutableStateOf(SafetyMonitorService.loadSmsAuto(context)) }
     var mountProfile by remember { mutableStateOf(SafetyMonitorService.loadMountProfile(context)) }
     var vehicleProfile by remember { mutableStateOf(SafetyMonitorService.loadVehicleProfile(context)) }
+    // Al cambiar de vehiculo el soporte puede corregirse solo: se relee.
+    LaunchedEffect(vehicleProfile) {
+        mountProfile = SafetyMonitorService.loadMountProfile(context)
+    }
     val calibrationAnyRecording by CalibrationStateStore.state.collectAsStateWithLifecycle()
     val editorVisible = addingContact || editingContact != null
     val smsPermissionLauncher = rememberLauncherForActivityResult(

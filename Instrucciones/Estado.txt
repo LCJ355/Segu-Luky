@@ -2079,6 +2079,25 @@ s/mapping/Segu-Luky-1.76s-mapping.txt.gz
 Pendientes: evidencia de choque (DTC, motor calado, buscador de senal) y conectar
 el clasificador bache/accidente al disparo con datos reales.
 
+======================================================================
+V-1.77s
+======================================================================
+
+Fecha: 14/11/2026
+Version: 1.77s (versionCode 64)
+
+Cambio:
+- Al cambiar de vehiculo la tarjeta SOPORTE DEL MOVIL muestra el soporte aplicado.
+- Version de correccion sobre 1.76s (filtrado de soportes por vehiculo).
+
+Motivo: en COCHE el filtro ya era correcto pero la etiqueta seguia en Bolsillo.
+APK generado: APK
+´
+s/Segu-Luky-1.77s.apk
+Mapping archivado: APK´
+s/mapping/Segu-Luky-1.77s-mapping.txt.gz
+
+
 
 
 

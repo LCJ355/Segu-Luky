@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.77s (versionCode 64)
+
+### El soporte entra en el vehiculo corregido
+- Al cambiar a COCHE/MOTO, la tarjeta SOPORTE DEL MOVIL estaba filtrando bien las opciones pero segia
+  mostrando el soporte anterior (por ejemplo "Bolsillo" en coche) hasta volver al indice. Ahora se
+  relee al cambiar de vehiculo y se ve el que se ha aplicado.
+
 ## 1.76s (versionCode 63)
 
 ### El soporte del movil depende del vehiculo
