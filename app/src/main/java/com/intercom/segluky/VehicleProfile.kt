@@ -45,8 +45,8 @@ enum class VehicleProfile(
         usesVehicleLink = true,
         description = "El telefono va en el coche. La velocidad del coche y el enlace OBDII " +
             "mandan sobre el GPS, y el golpe se confirma con la caida de velocidad.",
-        allowedMounts = listOf(MountProfile.UNDEFINED, MountProfile.CAR, MountProfile.CUSTOM),
-        defaultMount = MountProfile.CAR
+        allowedMounts = listOf(MountProfile.UNDEFINED, MountProfile.POCKET, MountProfile.GLOVEBOX, MountProfile.CUSTOM),
+        defaultMount = MountProfile.GLOVEBOX
     ),
     MOTO(
         id = "moto",

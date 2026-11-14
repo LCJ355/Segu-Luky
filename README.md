@@ -1,4 +1,4 @@
-# Segu-Luky V-1.77s
+# Segu-Luky V-1.78s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -111,16 +111,16 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every released version is published in `APK´s/` as
-`Segu-Luky-<version>.apk`. The current release is `Segu-Luky-1.77s.apk`.
+`Segu-Luky-<version>.apk`. The current release is `Segu-Luky-1.78s.apk`.
 
 Only the newest version stays published as a GitHub release: currently `V-1.70s`
-with `Segu-Luky-1.77s.apk` attached. Older releases are deleted so the download page
+with `Segu-Luky-1.78s.apk` attached. Older releases are deleted so the download page
 always shows a single APK (the git tags stay, so the source of every version is
 still reachable). **Buscar actualizacion** reads the GitHub API and compares
 against that one release:
 
 ```text
-gh release create V-1.77s "APK´s/Segu-Luky-1.77s.apk" --title "Segu-Luky V-1.77s" --notes "..."
+gh release create V-1.78s "APK´s/Segu-Luky-1.78s.apk" --title "Segu-Luky V-1.78s" --notes "..."
 ```
 
 The published APK carries **no personal data**: contacts, phone numbers, the bot

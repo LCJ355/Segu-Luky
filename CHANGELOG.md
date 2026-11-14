@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.78s (versionCode 65)
+
+### Soportes del coche: guantera
+- En COCHE el soporte es ahora **Sin definir / Bolsillo / Guantera / Personalizado**. El soporte
+  generico "Coche" pasa a llamarse **Guantera**, que es donde de verdad se deja el telefono en un
+  coche. Al entrar en COCHE desde otro soporte se aplica Guantera.
+- 200 pruebas siguen en verde (las de soportes se adaptan a Guantera).
+
 ## 1.77s (versionCode 64)
 
 ### El soporte entra en el vehiculo corregido
