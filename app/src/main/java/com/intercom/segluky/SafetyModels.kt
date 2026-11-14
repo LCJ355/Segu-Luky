@@ -19,6 +19,8 @@ data class SafetySnapshot(
     /** Vehiculo elegido en Configuracion > Sensores. */
     val vehicleProfile: VehicleProfile = VehicleProfile.PHONE,
     val speedKmh: Float? = null,
+    /** Estado del enlace OBDII del coche. */
+    val obd: ObdState = ObdState(),
     val movementLevel: Float = 0f,
     val movementG: Float? = null,
     val gpsAccuracyMeters: Float? = null,

@@ -1904,16 +1904,7 @@ private fun EmergencySettingsScreen(
                 }
             }
             if (vehicleProfile == VehicleProfile.CAR) {
-                item {
-                    SeguCard(
-                        title = "ENLACE CON EL COCHE",
-                        status = "PENDIENTE",
-                        tone = Tone.WARN,
-                        description = "En la siguiente version: adaptador ELM327 por Bluetooth para leer la " +
-                            "velocidad real del coche, las revoluciones y los avisos de averia. Mientras " +
-                            "tanto la velocidad sale del GPS."
-                    )
-                }
+                item { ObdLinkCard() }
             }
             if (vehicleProfile == VehicleProfile.MOTO) {
                 item {
@@ -3067,6 +3058,144 @@ private fun CardHeader(
             if (status != null) StatusPill(status, tone)
         }
         trailing?.invoke()
+    }
+}
+
+/**
+ * Tarjeta del perfil COCHE: elegir el adaptador emparejado, conectar y ver los
+ * datos en vivo. Nada de aqui participa en el SOS: si el adaptador falla, la app
+ * sigue detectando golpes con el movil y el GPS.
+ */
+@androidx.compose.runtime.Composable
+private fun ObdLinkCard() {
+    val context = LocalContext.current
+    val obd by ObdLinkController.state.collectAsStateWithLifecycle()
+    var devices by remember { mutableStateOf<List<ObdDevice>>(emptyList()) }
+    var showList by remember { mutableStateOf(false) }
+    var saved by remember { mutableStateOf(ObdLinkController.savedDevice(context)) }
+    val bluetoothPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            devices = ObdLinkController.bondedDevices(context)
+            showList = true
+        } else {
+            SafetyStateStore.log("Sin permiso de Bluetooth no se puede enlazar con el coche")
+        }
+    }
+    fun listDevices() {
+        if (ObdLinkController.hasPermission(context)) {
+            devices = ObdLinkController.bondedDevices(context)
+            showList = true
+        } else {
+            bluetoothPermission.launch(Manifest.permission.BLUETOOTH_CONNECT)
+        }
+    }
+
+    SeguCard(
+        title = "ENLACE CON EL COCHE",
+        status = when (obd.status) {
+            ObdStatus.OFF -> "APAGADO"
+            ObdStatus.NO_PERMISSION -> "SIN PERMISO"
+            ObdStatus.NO_DEVICE -> "SIN ADAPTADOR"
+            ObdStatus.CONNECTING -> "CONECTANDO"
+            ObdStatus.READY -> "EN MARCHA"
+            ObdStatus.NO_DATA -> "SIN DATOS"
+            ObdStatus.ERROR -> "ERROR"
+        },
+        tone = when (obd.status) {
+            ObdStatus.OFF -> Tone.OFF
+            ObdStatus.NO_PERMISSION, ObdStatus.NO_DEVICE, ObdStatus.ERROR -> Tone.BAD
+            ObdStatus.CONNECTING, ObdStatus.NO_DATA -> Tone.WARN
+            ObdStatus.READY -> Tone.OK
+        },
+        description = obd.detail.ifBlank {
+            "Adaptador ELM327 por Bluetooth. La velocidad y las revoluciones salen del coche; si no " +
+                "hay adaptador se usa el GPS."
+        }
+    ) {
+        Text(
+            if (saved.address.isBlank()) "Ningun adaptador elegido" else saved.label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = { listDevices() },
+                modifier = Modifier.weight(1f),
+                contentPadding = CompactButtonPadding
+            ) { TightButtonLabel("BUSCAR") }
+            Button(
+                onClick = { ObdLinkController.connect(context, saved) },
+                modifier = Modifier.weight(1f),
+                contentPadding = CompactButtonPadding
+            ) { TightButtonLabel("CONECTAR") }
+            OutlinedButton(
+                onClick = { ObdLinkController.disconnect() },
+                modifier = Modifier.weight(1f),
+                contentPadding = CompactButtonPadding
+            ) { TightButtonLabel("CORTAR") }
+        }
+        if (showList) {
+            if (devices.isEmpty()) {
+                Text(
+                    "No hay adaptadores emparejados. Empareja el ELM327 en los ajustes de Bluetooth " +
+                        "del movil y vuelve a pulsar BUSCAR.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                devices.forEach { device ->
+                    OutlinedButton(
+                        onClick = {
+                            saved = device
+                            ObdLinkController.saveDevice(context, device)
+                            showList = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = CompactButtonPadding
+                    ) { TightButtonLabel(device.label) }
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ObdReading("VELOCIDAD", obd.speedKmh?.let { String.format(Locale.US, "%.0f", it) }, "km/h", Modifier.weight(1f))
+            ObdReading("RPM", obd.rpm?.toString(), "rpm", Modifier.weight(1f))
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ObdReading("ACELERADOR", obd.throttlePercent?.toString(), "%", Modifier.weight(1f))
+            ObdReading("REFRIGERANTE", obd.coolantC?.toString(), "C", Modifier.weight(1f))
+        }
+        val extra = buildList {
+            if (obd.protocol.isNotBlank()) add(obd.protocol)
+            if (obd.readingsPerSecond > 0) add("${obd.readingsPerSecond} lecturas/s")
+            obd.voltage?.let { add(String.format(Locale.US, "%.1f V", it)) }
+            obd.dtcCount?.let { add(if (it == 0) "sin codigos" else "$it codigos") }
+        }
+        if (extra.isNotEmpty()) {
+            Text(
+                extra.joinToString(" · "),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** Un valor del coche con su unidad; "—" cuando el adaptador no lo da. */
+@androidx.compose.runtime.Composable
+private fun ObdReading(label: String, value: String?, unit: String, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            if (value == null) "—" else "$value $unit",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 

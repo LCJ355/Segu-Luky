@@ -1974,6 +1974,50 @@ ajustes; 1.74s evidencia de airbag/choque (DTC, parada de motor, buscador de
 senal). Moto CAN cuando haya cable. Siguen abiertas las pruebas de comportamiento
 (§5, §6, §8) y el destello de T. PROMEDIO en ruta.
 
+======================================================================
+V-1.72s
+======================================================================
+
+Fecha: 14/11/2026
+Version: 1.72s (versionCode 59)
+
+Cambio:
+- Perfil COCHE con enlace real al adaptador ELM327 por Bluetooth clasico (SPP,
+  UUID 00001101-0000-1000-8000-00805F9B34FB).
+- Tarjeta ENLACE CON EL COCHE: elegir adaptador emparejado, CONECTAR, CORTAR y
+  BUSCAR, con velocidad, RPM, acelerador y refrigerante en vivo, mas protocolo,
+  lecturas/s, tension y numero de codigos de averia.
+- Arranque ATZ/ATE0/ATL0/ATS0/ATH1/ATSP0; velocidad cada 200 ms y el resto cada
+  segundo; reconexion (3 intentos) y estados SIN PERMISO, SIN ADAPTADOR,
+  CONECTANDO, SIN DATOS, EN MARCHA y ERROR.
+- Android 12+: pide BLUETOOTH_CONNECT al buscar; permisos Bluetooth opcionales
+  en el manifest.
+- En perfil COCHE y monitor en marcha, la velocidad del adaptador (menos de 2 s)
+  manda sobre el GPS. El enlace no toca el camino del SOS: si falla se sigue con
+  el movil y el GPS.
+- Solo lectura: nunca se borran codigos ni se escribe en la centralita.
+- Datos de conexion sacados del APK de referencia de Torque (analisis del DEX):
+  UUID, familia de comandos AT, protocolos y PIDs. Documento: docs/OBDII.md.
+
+Motivo: pedido del usuario ("usando las apk de referencia como fuente de los
+datos de conexion podemos implementarlo para coche").
+
+Prueba realizada: testDebugUnitTest (183 pruebas, 0 fallos; 10 nuevas de
+ObdParserTest con respuestas reales del ELM327), lintDebug (0 errores) y
+assembleRelease. En el OPPO la tarjeta pide el permiso de Bluetooth, lista los
+adaptadores emparejados (ninguno todavia) y avisa de que hay que emparejar el
+ELM327; los cuatro valores quedan en raya hasta que haya coche.
+Resultado: compila, verifica y revisado en el movil; falta probarlo con el
+adaptador y el coche reales.
+APK generado: APK´
+s/Segu-Luky-1.72s.apk
+Mapping archivado: APK´
+s/mapping/Segu-Luky-1.72s-mapping.txt.gz
+Pendientes: 1.73s regla de choque del coche (golpe + caida de velocidad) con
+esta velocidad; 1.74s evidencia de airbag (codigos tras el golpe, parada de motor
+y buscador de senal). Probar el enlace con el ELM327 en el coche.
+
+
 
 ======================================================================
 

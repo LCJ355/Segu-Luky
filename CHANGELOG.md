@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.72s (versionCode 59)
+
+### Enlace OBDII del perfil COCHE (ELM327 por Bluetooth)
+- Nueva tarjeta **ENLACE CON EL COCHE**, solo en el perfil COCHE: elige el adaptador ya emparejado,
+  `CONECTAR` / `CORTAR` / `BUSCAR`, y datos en vivo de **velocidad, RPM, acelerador y refrigerante**,
+  con protocolo negociado, lecturas por segundo, tension de bateria y numero de codigos de averia.
+- Transporte **Bluetooth clasico (SPP, UUID `00001101-...`)** e inicializacion `ATZ`, `ATE0`, `ATL0`,
+  `ATS0`, `ATH1`, `ATSP0`; ronda de velocidad cada 200 ms y el resto cada segundo, con reconexion y
+  estados claros (`SIN PERMISO`, `SIN ADAPTADOR`, `CONECTANDO`, `SIN DATOS`, `EN MARCHA`, `ERROR`).
+- Android 12+: pide `BLUETOOTH_CONNECT` al pulsar `BUSCAR` y explica que hacer si se deniega. Los
+  permisos Bluetooth son opcionales (`uses-feature` no obligatorio).
+- En perfil COCHE, con el monitor en marcha, la velocidad del adaptador (menos de 2 s) manda sobre la
+  del GPS; sin adaptador todo sigue como antes. El enlace **nunca** toca el camino del SOS.
+- Solo lectura: no se borran codigos ni se escribe en la centralita.
+- Los datos de conexion salen del APK de referencia (`docs/referencia/OBDII/`): UUID del puerto serie,
+  familia de comandos `AT`, protocolos (ISO 15765-4 CAN 11/500, J1850, ISO 9141, KWP) y PIDs
+  (`0100`, `0101`, `0105`, `010C`, `010D`, `0111`...). Documentado en `docs/OBDII.md`.
+- 10 pruebas nuevas (`ObdParserTest`) con respuestas reales del ELM327: con espacios, sin ellos, con
+  eco del comando, `NO DATA`, `SEARCHING...`, `?` y `UNABLE TO CONNECT`.
+
 ## 1.71s (versionCode 58)
 
 ### Perfiles MOVIL, COCHE y MOTO en Sensores

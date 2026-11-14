@@ -436,6 +436,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         }
         stopTicker()
         window.removeCallbacksAndMessages(null)
+        ObdLinkController.disconnect()
         unregisterSensors()
         removeLocationUpdates()
         releaseCountdownWakeLock()
@@ -793,6 +794,15 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
         monitoringEnabled = true
         runtimeRepository.setMonitoringRequested(true)
+        // En coche se intenta enlazar con el adaptador al arrancar el monitor; si no
+        // hay adaptador o falla, la app sigue con el movil y el GPS (el fallo queda
+        // en la tarjeta del coche, nunca en el camino del SOS).
+        if (vehicleProfile == VehicleProfile.CAR) {
+            val saved = ObdLinkController.savedDevice(this)
+            if (saved.address.isNotBlank() && ObdLinkController.hasPermission(this)) {
+                ObdLinkController.connect(this, saved)
+            }
+        }
         val dispatchPending = EmergencyDispatchRepository(this).load() != null
         if (!preserveDetectorState ||
             (detector.runtimeState().phase == SafetyPhase.MONITORING && !dispatchPending)
@@ -2390,13 +2400,16 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             } ?: orientationDescription
         }
 
+        val obdState = ObdLinkController.state.value
+        val obdSpeed = obdState.freshSpeed(System.currentTimeMillis())
         SafetyStateStore.update {
             it.copy(
                 vehicleProfile = vehicleProfile,
+                obd = obdState,
                 gpsAvailable = gpsFresh,
                 gpsAccuracyMeters = lastAccuracy,
                 gpsFixAgeSeconds = locationAge?.takeIf { age -> age != Long.MAX_VALUE }?.div(1_000L),
-                speedKmh = lastSpeed.takeIf { speedFresh },
+                speedKmh = obdSpeed ?: lastSpeed.takeIf { speedFresh },
                 sensorAvailable = sensorFresh,
                 sensorDetail = if (sensorFresh) sensorDescription else "$sensorDescription: sin datos recientes",
                 orientationAvailable = orientationAvailable,
