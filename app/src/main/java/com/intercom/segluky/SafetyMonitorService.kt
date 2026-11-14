@@ -86,6 +86,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private var lastImpact: ImpactAssessment? = null
     /** Ancho del ultimo golpe contado, en ms; 0 si no se midio. */
     private var lastHitWidthMs = 0L
+    /** Ritmo de los ultimos golpes, para no confundir un tramo de badenes con un choque. */
+    private val impactPeriodicity = ImpactPeriodicity()
     private var orientationGateActive = false
     private var orientationDescription = "Orientacion desactivada"
     private var orientationCalibrated = false
@@ -2450,6 +2452,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         // Una sola foto del buffer: ancho y secuencia tienen que mirar lo mismo.
         val windowSamples = ImpactSampleRecorder.snapshot()
         val hitAtMs = ImpactSampleRecorder.lastAtMs()
+        // B4: cada golpe contado entra en la memoria de ritmo.
+        impactPeriodicity.record(hitAtMs)
         val measuredWidth = ImpactSequence.widthMs(
             samples = windowSamples,
             thresholdG = detector.effectiveSensitivityG,
@@ -2518,6 +2522,20 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 "Secuencia a los 2 s: ${segunda.level.label} " +
                     "(${segunda.score}, ${segunda.phase})"
             )
+            // B4: si el ritmo es de badenes, el veredicto baja de sospecha; un
+            // choque ya declarado se mantiene y solo se anota el patron.
+            if (impactPeriodicity.isRepetitivePattern()) {
+                val ajustada = impactPeriodicity.adjust(segunda)
+                val cambio = if (ajustada.level == segunda.level) {
+                    "se mantiene ${ajustada.level.label}"
+                } else {
+                    "${segunda.level.label} -> ${ajustada.level.label}"
+                }
+                SafetyStateStore.log(
+                    "Patron repetitivo (${impactPeriodicity.description()}): " +
+                        "$cambio (${ajustada.score})"
+                )
+            }
             val withDrop = ImpactClassifier.assess(
                 signals.copy(speedAfterKmh = after, rpmAfter = obdAfter.rpm)
             )
