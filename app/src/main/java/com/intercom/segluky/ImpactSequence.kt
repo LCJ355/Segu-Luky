@@ -65,6 +65,17 @@ object ImpactSequence {
         sqrt(sample.ax * sample.ax + sample.ay * sample.ay + sample.az * sample.az)
 
     /**
+     * Cuanto de la ventana [windowMs] llega a cubrir la muestra mas reciente.
+     *
+     * Sirve para no llamar "ventana de 15 s" a una lectura que solo tiene 2 s: los
+     * hitos diferidos (5 s y 15 s) registran esta cobertura junto al veredicto.
+     */
+    fun coveredMs(samples: List<ImpactSample>, hitAtMs: Long, windowMs: Long): Long {
+        val last = samples.lastOrNull()?.atMs ?: return 0L
+        return (last - hitAtMs).coerceIn(0L, windowMs)
+    }
+
+    /**
      * Confianza en la orientacion del movil, que decide si el giro puede puntuar.
      *
      * Sin calibrar, la actitud de conduccion es una suposicion (0,2). Con la

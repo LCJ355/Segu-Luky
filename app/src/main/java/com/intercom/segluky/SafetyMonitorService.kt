@@ -88,6 +88,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private var lastHitWidthMs = 0L
     /** Ritmo de los ultimos golpes, para no confundir un tramo de badenes con un choque. */
     private val impactPeriodicity = ImpactPeriodicity()
+    /** Instante del golpe que se esta siguiendo, para que un hito tardio no se cuele en otro. */
+    private var sequenceHitAtMs = 0L
     private var orientationGateActive = false
     private var orientationDescription = "Orientacion desactivada"
     private var orientationCalibrated = false
@@ -2454,6 +2456,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         val hitAtMs = ImpactSampleRecorder.lastAtMs()
         // B4: cada golpe contado entra en la memoria de ritmo.
         impactPeriodicity.record(hitAtMs)
+        sequenceHitAtMs = hitAtMs
         val measuredWidth = ImpactSequence.widthMs(
             samples = windowSamples,
             thresholdG = detector.effectiveSensitivityG,
@@ -2543,6 +2546,44 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             SafetyStateStore.update { it.copy(impactAssessment = withDrop.summary) }
             SafetyStateStore.log("Golpe a los 2 s: ${withDrop.summary}")
         }, 2_000L)
+        // Revision externa (1.80s): a los 2 s solo hay 2 s de datos, asi que las
+        // ventanas de 5 s (desaceleracion) y 15 s (recuperacion) se miran en su
+        // propio hito, sobre el mismo golpe. Igual que el resto: solo registro.
+        scheduleSequenceMilestone(hitAtMs, speed, ImpactSequence.DECEL_WINDOW_MS)
+        scheduleSequenceMilestone(hitAtMs, speed, ImpactSequence.RECOVERY_WINDOW_MS)
+    }
+
+    /**
+     * Reevalua la secuencia en un hito (5 s o 15 s) y lo registra con la cobertura
+     * real de la ventana, para no llamar "ventana de 15 s" a una lectura de 2 s.
+     * Si mientras tanto ha habido otro golpe, el hito se descarta.
+     */
+    private fun scheduleSequenceMilestone(hitAtMs: Long, speedBeforeKmh: Float?, windowMs: Long) {
+        window.postDelayed({
+            if (hitAtMs != sequenceHitAtMs) return@postDelayed
+            val samples = ImpactSampleRecorder.snapshot()
+            val covered = ImpactSequence.coveredMs(samples, hitAtMs, windowMs)
+            if (covered <= 0L) return@postDelayed
+            val obd = ObdLinkController.state.value
+            val verdict = ImpactSequence.evaluate(
+                samples = samples,
+                hitAtMs = hitAtMs,
+                thresholdG = detector.effectiveSensitivityG,
+                speedBeforeKmh = speedBeforeKmh,
+                speedAfterKmh = obd.freshSpeed(System.currentTimeMillis()) ?: lastSpeed,
+                rpmAfter = obd.rpm,
+                orientationConfidence = ImpactSequence.orientationConfidence(
+                    calibrated = orientationCalibrated,
+                    accuracyReliable = orientationAccuracyReliable
+                )
+            )
+            val cobertura = if (covered >= windowMs) "completa" else "INCOMPLETA"
+            SafetyStateStore.log(
+                "Secuencia a los ${windowMs / 1000} s " +
+                    "(ventana ${covered / 1000} s, $cobertura): " +
+                    "${verdict.level.label} (${verdict.score}, ${verdict.phase})"
+            )
+        }, windowMs)
     }
     private fun onMotionSample(dynamicG: Float, timestamp: Long) {
         // El giro va con la muestra solo si es reciente; si no, la muestra vale con

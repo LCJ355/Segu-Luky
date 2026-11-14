@@ -119,4 +119,19 @@ class ImpactSequenceTest {
         assertEquals(sinGiroscopio.score, conLecturaBaja.score)
         assertEquals(sinGiroscopio.level, conLecturaBaja.level)
     }
+
+    @Test
+    fun `la cobertura de la ventana se mide con la muestra mas reciente`() {
+        val muestras = listOf(
+            ImpactSample(1_000L, 1f, 0f, 0f),
+            ImpactSample(3_000L, 1f, 0f, 0f)
+        )
+        // 2 s de datos: la ventana de 15 s esta incompleta.
+        assertEquals(2_000L, ImpactSequence.coveredMs(muestras, 1_000L, 15_000L))
+        // Con mas historia por detras, la cobertura se corta en el tamano de la ventana.
+        assertEquals(15_000L, ImpactSequence.coveredMs(muestras, -12_000L, 15_000L))
+        // Sin muestras o con muestras anteriores al golpe no hay cobertura.
+        assertEquals(0L, ImpactSequence.coveredMs(emptyList(), 1_000L, 15_000L))
+        assertEquals(0L, ImpactSequence.coveredMs(muestras, 5_000L, 15_000L))
+    }
 }
