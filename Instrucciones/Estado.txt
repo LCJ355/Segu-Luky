@@ -1975,6 +1975,38 @@ senal). Moto CAN cuando haya cable. Siguen abiertas las pruebas de comportamient
 (§5, §6, §8) y el destello de T. PROMEDIO en ruta.
 
 ======================================================================
+V-1.73s
+======================================================================
+
+Fecha: 14/11/2026
+Version: 1.73s (versionCode 60)
+
+Cambio:
+- Clasificador bache/accidente en cada golpe contado: RUIDO, BACHE, GOLPE DURO o
+  CHOQUE, con puntuacion por pico, ancho del impacto, caida de velocidad, motor
+  calado y cambio de postura. Se reevalua a los 2 s con la velocidad de ese
+  momento.
+- Solo mide: el veredicto va al registro y al estado de la pantalla. El SOS sigue
+  disparandose igual hasta ajustar los umbrales con datos reales del coche.
+- Sin dato de velocidad no se inventa un choque: como mucho GOLPE DURO.
+- 8 pruebas nuevas (ImpactClassifierTest).
+
+Motivo: el objetivo del usuario es distinguir lo mejor posible un golpe real de un
+bache grande. Se empieza midiendo, sin cambiar el disparo.
+
+Prueba realizada: testDebugUnitTest (191 pruebas, 0 fallos), lintDebug (0 errores)
+y assembleRelease. Verificado en el OPPO que la app arranca y la tarjeta del coche
+sigue igual; el veredicto aparecera en el registro al primer golpe real.
+Resultado: compila, verifica e instalado. Sin datos de campo todavia.
+APK generado: APK´
+s/Segu-Luky-1.73s.apk
+Mapping archivado: APK´
+s/mapping/Segu-Luky-1.73s-mapping.txt.gz
+Pendientes: conectar el clasificador al disparo cuando haya datos; 1.74s evidencia
+de choque (codigos, motor y buscador de senal). Probar en coche y en moto.
+
+
+======================================================================
 V-1.72s
 ======================================================================
 

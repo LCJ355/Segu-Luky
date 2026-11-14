@@ -80,6 +80,10 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private var orientationConfigured = false
     /** Perfil de vehiculo con el que arranco el monitor. */
     private var vehicleProfile = VehicleProfile.PHONE
+    /** Ultimo veredicto bache/accidente (solo informativo en esta version). */
+    private var lastImpact: ImpactAssessment? = null
+    /** Ancho del ultimo golpe contado, en ms; 0 si no se midio. */
+    private var lastHitWidthMs = 0L
     private var orientationGateActive = false
     private var orientationDescription = "Orientacion desactivada"
     private var orientationCalibrated = false
@@ -163,6 +167,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             listener = object : AccidentDetector.Listener {
                 override fun onValidationStarted(startedAt: Long) {
                     if (activeEventId == null) activeEventId = UUID.randomUUID().toString()
+                    // Clasificacion bache/accidente: por ahora solo se mide. El veredicto
+                    // va al registro y al snapshot; no cambia cuando salta el SOS.
+                    assessImpact()
                     SafetyStateStore.update {
                         it.copy(
                             phase = SafetyPhase.VALIDATING,
@@ -2424,6 +2431,43 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
      * ficha del dispositivo. Se ejecuta en cada muestra, asi que solo hace trabajo
      * barato (histograma, comparaciones y, como mucho, un rebindeo por permanencia).
      */
+    /**
+     * Clasifica el golpe que se acaba de contar (bache grande o accidente) con las
+     * senales disponibles. Solo mide: el veredicto se registra y se muestra, pero
+     * el disparo del SOS sigue igual hasta validar con datos reales.
+     */
+    private fun assessImpact() {
+        val obdSnapshot = ObdLinkController.state.value
+        val now = System.currentTimeMillis()
+        val speed = obdSnapshot.freshSpeed(now) ?: lastSpeed
+        val signals = ImpactSignals(
+            peakG = detector.lastHitPeakG,
+            thresholdG = detector.effectiveSensitivityG,
+            jerkGPerSecond = detector.lastJerkGPerSecond,
+            widthMs = lastHitWidthMs,
+            speedBeforeKmh = speed,
+            speedAfterKmh = speed,
+            rpmAfter = obdSnapshot.rpm,
+            attitudeChangeDegrees = orientationTiltDegrees,
+            hasVehicleLink = obdSnapshot.isConnected
+        )
+        val assessment = ImpactClassifier.assess(signals)
+        lastImpact = assessment
+        SafetyStateStore.update { it.copy(impactAssessment = assessment.summary) }
+        SafetyStateStore.log("Golpe: ${assessment.summary}")
+        // A los 2 s se mira cuanto ha caido la velocidad: es lo que separa de verdad
+        // un bache de una colision. Tambien solo se registra.
+        window.postDelayed({
+            val after = ObdLinkController.state.value.freshSpeed(System.currentTimeMillis())
+                ?: lastSpeed
+            val withDrop = ImpactClassifier.assess(
+                signals.copy(speedAfterKmh = after, rpmAfter = ObdLinkController.state.value.rpm)
+            )
+            lastImpact = withDrop
+            SafetyStateStore.update { it.copy(impactAssessment = withDrop.summary) }
+            SafetyStateStore.log("Golpe a los 2 s: ${withDrop.summary}")
+        }, 2_000L)
+    }
     private fun onMotionSample(dynamicG: Float, timestamp: Long) {
         adaptive.record(dynamicG, timestamp)
         detector.setAdaptiveFloor(adaptive.effectiveThresholdG)

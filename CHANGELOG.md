@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.73s (versionCode 60)
+
+### Clasificador bache / golpe (solo mide)
+- Cada golpe contado se clasifica con las senales disponibles en **RUIDO, BACHE, GOLPE DURO o CHOQUE** y
+  el veredicto queda en el registro y en el estado que ve la pantalla. **El SOS sigue disparandose
+  igual**: esta version mide para poder ajustar con datos reales.
+- Puntuacion: pico frente al nivel, ancho del impacto (un bache es corto), caida de velocidad (-30 km/h
+  y casi parado), motor calado (RPM 0 con velocidad previa), postura cambiada. A los 2 s se vuelve a
+  evaluar con la velocidad de ese momento, que es lo que de verdad separa un bache de una colision.
+- Sin dato de velocidad no se inventa un choque: como mucho queda en GOLPE DURO.
+- 8 pruebas nuevas (ImpactClassifierTest) con el bache grande, el pico flojo, el golpe ancho, la
+  caida de velocidad, el motor calado y el caso sin datos.
+
 ## 1.72s (versionCode 59)
 
 ### Enlace OBDII del perfil COCHE (ELM327 por Bluetooth)

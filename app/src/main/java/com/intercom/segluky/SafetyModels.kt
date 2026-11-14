@@ -21,6 +21,8 @@ data class SafetySnapshot(
     val speedKmh: Float? = null,
     /** Estado del enlace OBDII del coche. */
     val obd: ObdState = ObdState(),
+    /** Ultimo veredicto bache/accidente (solo informativo en esta version). */
+    val impactAssessment: String? = null,
     val movementLevel: Float = 0f,
     val movementG: Float? = null,
     val gpsAccuracyMeters: Float? = null,
