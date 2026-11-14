@@ -129,6 +129,12 @@ object CalibrationRepository {
             .edit().putString(KEY_BEST_NAME, name).putInt(KEY_BEST_SCORE, score).apply()
     }
 
+    /** Tamano en bytes del bloque guardado, o null si no hay. */
+    fun bestBlockBytes(context: Context): Long? {
+        val name = bestBlock(context)?.first ?: return null
+        return file(context, name)?.length()
+    }
+
     fun clearBestBlock(context: Context): Boolean {
         val name = bestBlock(context)?.first
         context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)

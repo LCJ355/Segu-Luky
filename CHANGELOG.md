@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.75s (versionCode 62)
+
+### Bloque de calibracion a la vista (y se puede borrar)
+- DIAGNOSTICO > ARCHIVOS DE CALIBRACION dice cual es el bloque de 15 minutos guardado: puntuacion y
+  lo que ocupa en MB. Si no hay ninguno, explica la regla (mejor de 15 min, tope de 4 h).
+- Boton **BORRAR GRABACION**: usa `CalibrationRepository.clearBestBlock()`, borra el fichero y deja el
+  registro limpio.
+- `CalibrationRepository.bestBlockBytes()` da el tamano para mostrarlo.
+
 ## 1.74s (versionCode 61)
 
 ### Grabaciones de calibracion: solo el mejor bloque de 15 minutos

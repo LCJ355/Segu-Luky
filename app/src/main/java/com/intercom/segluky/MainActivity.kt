@@ -2244,6 +2244,36 @@ private fun EmergencySettingsScreen(
                             }
                         }
                         Text("ARCHIVOS DE CALIBRACION", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                        val bloque = remember(calibrationAnyRecording.samples) {
+                            CalibrationRepository.bestBlock(context)
+                        }
+                        val tamano = remember(calibrationAnyRecording.samples) {
+                            CalibrationRepository.bestBlockBytes(context)
+                        }
+                        Text(
+                            when {
+                                bloque == null ->
+                                    "Aun no hay bloque guardado. Se queda el mejor de 15 minutos y el " +
+                                        "tope de grabacion es de 4 h."
+                                tamano != null ->
+                                    "Guardado el mejor bloque de 15 min: ${bloque.second} puntos, " +
+                                        String.format(Locale.US, "%.1f", tamano / (1024f * 1024f)) + " MB."
+                                else -> "Guardado el mejor bloque de 15 min: ${bloque.second} puntos."
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        if (bloque != null) {
+                            OutlinedButton(
+                                onClick = {
+                                    if (CalibrationRepository.clearBestBlock(context)) {
+                                        SafetyStateStore.log("Calibracion: bloque guardado borrado")
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                contentPadding = CompactButtonPadding
+                            ) { TightButtonLabel("BORRAR GRABACION") }
+                        }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 onClick = {

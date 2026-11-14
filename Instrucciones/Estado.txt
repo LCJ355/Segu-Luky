@@ -2005,6 +2005,56 @@ s/mapping/Segu-Luky-1.73s-mapping.txt.gz
 Pendientes: conectar el clasificador al disparo cuando haya datos; 1.74s evidencia
 de choque (codigos, motor y buscador de senal). Probar en coche y en moto.
 
+======================================================================
+V-1.74s
+======================================================================
+
+Fecha: 14/11/2026
+Version: 1.74s (versionCode 61)
+
+Cambio:
+- Grabacion de calibracion en bloques de 15 minutos; solo se conserva el de
+  mayor puntuacion (40% bandas de velocidad, 25% filas con velocidad valida,
+  20% Hz reales, 15% actividad). El resto se borra al cerrar cada bloque.
+- Tope de seguridad de 4 h por sesion: se detiene sola y lo anota.
+- CalibrationRetention puro con 6 pruebas (197 en total).
+
+Motivo: acotar el espacio que ocupan las grabaciones (el aprendizaje no crece:
+son 4 numeros por soporte) y quedarse con el bloque mas util.
+APK generado: APK
+´
+s/Segu-Luky-1.74s.apk
+Mapping archivado: APK´
+s/mapping/Segu-Luky-1.74s-mapping.txt.gz
+Pendientes (en 1.75s): mostrar el bloque guardado en la tarjeta y poder borrarlo.
+
+
+======================================================================
+V-1.75s
+======================================================================
+
+Fecha: 14/11/2026
+Version: 1.75s (versionCode 62)
+
+Cambio:
+- La tarjeta DIAGNOSTICO > ARCHIVOS DE CALIBRACION ya dice cual es el bloque de
+  15 min guardado, con su puntuacion y lo que ocupa en MB.
+- Boton BORRAR GRABACION que usa CalibrationRepository.clearBestBlock(); el
+  bloque y su puntuacion quedan limpios y se anota en el registro.
+- CalibrationRepository.bestBlockBytes() para el tamano.
+
+Motivo: cerrar lo que quedo pendiente en la 1.74s (la UI del bloque guardado).
+Prueba realizada: testDebugUnitTest (197 pruebas, 0 fallos), lintDebug (0
+errores) y assembleRelease; verificado en el OPPO.
+APK generado: APK
+´
+s/Segu-Luky-1.75s.apk
+Mapping archivado: APK´
+s/mapping/Segu-Luky-1.75s-mapping.txt.gz
+Pendientes: evidencia de choque (DTC antes/despues, motor calado, buscador de
+senal) y conectar el clasificador bache/accidente al disparo cuando haya datos.
+
+
 
 ======================================================================
 V-1.72s
