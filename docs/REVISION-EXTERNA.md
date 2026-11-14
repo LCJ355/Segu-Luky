@@ -161,7 +161,33 @@ voz, caida/orientacion) y sus soportes:
 
 ## 6. Datos de contexto
 
-- 200 pruebas unitarias en verde, lint sin errores, APK firmado y publicado (version 1.78s).
+- 230 pruebas unitarias en verde, lint sin errores, APK firmado y publicado (version 1.80s).
 - Proyecto: `github.com/LCJ355/Segu-Luky` (publico, sin datos personales en el codigo).
 - Falta la validacion en carretera: no hay todavia un choque real ni una bateria de baches
   medidos con la app.
+
+## 7. Cambios de la 1.80s (respuesta parcial a los puntos 2, 3 y 4)
+
+Esto ya no es una propuesta: esta implementado y medido, aunque el veredicto sigue **sin
+disparar** el SOS.
+
+- **Secuencia en vez de pico unico** (`ImpactSequence`, `ImpactSampleRecorder`). Buffer circular
+  de 20 s (2.000 muestras, tamano fijo). Ventanas: impacto 0-500 ms (pico, RMS, cruces,
+  saturacion a 15,9 g), giro 0-2 s, desaceleracion 0-5 s y recuperacion 0-15 s. Severidad
+  creciente: con caida >= 30 km/h terminando parado, o motor calado, sube a CHOQUE sin esperar
+  a completar la ventana.
+- **Ancho con histeresis** (`ImpactWidthMeter` y `ImpactSequence.widthMs`): entra con el umbral
+  del golpe, se mantiene con el 60 % y solo cierra tras 20 ms por debajo. Devuelve ancho, picos,
+  muestras y saturacion. Un pico de una sola muestra mide 0 ms, no se inventa duracion.
+- **Giroscopio real con confianza** (`ImpactGyroHold`): cada muestra lleva el ultimo giro si
+  tiene menos de 200 ms; si no, giro 0. La rotacion solo puntua (+10) si supera 90 grados/s y
+  la confianza de orientacion es >= 0,5 (0,2 sin actitud calibrada, 1,0 calibrada y precisa,
+  0,4 si la gravedad no es fiable). Como el giroscopio solo se escucha durante la validacion,
+  la secuencia se reevalua a los 2 s, que es cuando la ventana de giro tiene datos.
+- **Ritmo de badenes** (`ImpactPeriodicity`): memoria de los ultimos 10 golpes, intervalos y
+  coeficiente de variacion. Cuatro o mas golpes con CV <= 0,25 y entre 1 s y 90 s restan 8
+  puntos a un golpe duro; un CHOQUE nunca se desmonta por el ritmo.
+- El registro anade la **frecuencia efectiva frente a la pedida** de cada golpe.
+
+Lo que sigue abierto: validar en carretera, decidir cuando el veredicto pasa a disparar el SOS y
+si el ancho medido discrimina de verdad con sensores de 20-50 Hz.

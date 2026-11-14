@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.80s (versionCode 67)
+
+### B2, B3 y B4 del plan de mejoras: la secuencia del golpe, el ancho real y los badenes
+Sigue sin cambiar cuando salta el SOS: esto mide mejor, no dispara distinto.
+
+- **B2 · secuencia (`ImpactSequence` + `ImpactSampleRecorder`).** Analiza la ventana del golpe
+  (forma del impacto, giro, desaceleracion, recuperacion) con picos, RMS, cruces, saturacion del
+  sensor y motor calado, en vez de un unico pico. Guarda los ultimos 20 s de muestras en un buffer
+  circular de tamano fijo. El veredicto se registra con su fase (`Secuencia: ...`).
+- **B3 · ancho con histeresis y giro de verdad.** El ancho del impacto se mide entrando con el
+  umbral del golpe y cerrando solo tras 20 ms por debajo del 60 % (un valle corto ya no parte el
+  golpe en dos), y llega al clasificador en lugar de quedarse a 0. El **giroscopio real** entra en
+  cada muestra (lectura de menos de 200 ms; si esta caducada se usa giro 0) y la rotacion solo
+  puntua con `orientationConfidence` alta: 0,2 sin actitud calibrada, 1,0 calibrada y precisa.
+  Como el giroscopio solo se escucha durante la validacion, la secuencia se reevalua a los 2 s,
+  que es cuando la ventana de giro tiene datos.
+- **B4 · ritmo de badenes.** Memoria de los ultimos 10 golpes con sus intervalos y coeficiente de
+  variacion: cuatro o mas golpes regulares (CV <= 0,25 y entre 1 s y 90 s) restan 8 puntos a un
+  golpe duro, pero **un choque nunca se desmonta** por mucho que el ritmo parezca de badenes.
+- El registro de la secuencia anade tambien la **frecuencia efectiva frente a la pedida**
+  (`Secuencia: ... 148 Hz reales (pedidos 100 Hz)`), para saber si el movil entrega lo que se pide.
+- 230 pruebas (19 nuevas desde 1.79s), `lintDebug` sin errores.
+
 ## 1.79s (versionCode 66)
 
 ### B1 del plan de mejoras: el jerk deja de estar muerto y no infla el score
