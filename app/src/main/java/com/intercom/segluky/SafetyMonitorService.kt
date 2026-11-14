@@ -56,6 +56,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private var primaryMotionSensor: Sensor? = null
     private var gyroscopeSensor: Sensor? = null
     private var gyroscopeRegistered = false
+    /** Ultimo giro leido, para que cada muestra de movimiento lo lleve encima. */
+    private val gyroHold = ImpactGyroHold()
     private var gravitySensor: Sensor? = null
     private var sensorsRegistered = false
     private var locationUpdatesRegistered = false
@@ -537,6 +539,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             Sensor.TYPE_GYROSCOPE -> {
                 if (!gyroscopeRegistered) return
                 detector.onGyroscope(event.values[0], event.values[1], event.values[2])
+                gyroHold.update(eventTime, event.values[0], event.values[1], event.values[2])
                 syncDetectorRuntime()
             }
         }
@@ -967,6 +970,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         if (!gyroscopeRegistered) return
         gyroscopeSensor?.let { sensorManager.unregisterListener(this, it) }
         gyroscopeRegistered = false
+        // Sin giroscopio escuchando no hay giro que valga: que no se cuele en el
+        // siguiente golpe una lectura de la ventana anterior.
+        gyroHold.reset()
     }
 
     private fun unregisterSensors() {
@@ -977,6 +983,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         primaryMotionSensor = null
         gyroscopeSensor = null
         gyroscopeRegistered = false
+        gyroHold.reset()
         gravitySensor = null
         orientationCalibrated = false
         orientationTiltDegrees = null
@@ -2440,10 +2447,13 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         val obdSnapshot = ObdLinkController.state.value
         val now = System.currentTimeMillis()
         val speed = obdSnapshot.freshSpeed(now) ?: lastSpeed
+        // Una sola foto del buffer: ancho y secuencia tienen que mirar lo mismo.
+        val windowSamples = ImpactSampleRecorder.snapshot()
+        val hitAtMs = ImpactSampleRecorder.lastAtMs()
         val measuredWidth = ImpactSequence.widthMs(
-            samples = ImpactSampleRecorder.snapshot(),
+            samples = windowSamples,
             thresholdG = detector.effectiveSensitivityG,
-            hitAtMs = ImpactSampleRecorder.lastAtMs()
+            hitAtMs = hitAtMs
         )
         if (measuredWidth > 0L) lastHitWidthMs = measuredWidth
         val signals = ImpactSignals(
@@ -2461,24 +2471,55 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         lastImpact = assessment
         // B2: lectura de la secuencia completa (impacto, giro y desaceleracion).
         // De momento solo se registra, igual que el clasificador puntual.
+        val confidence = ImpactSequence.orientationConfidence(
+            calibrated = orientationCalibrated,
+            accuracyReliable = orientationAccuracyReliable
+        )
         val secuencia = ImpactSequence.evaluate(
-            samples = ImpactSampleRecorder.snapshot(),
-            hitAtMs = ImpactSampleRecorder.lastAtMs(),
+            samples = windowSamples,
+            hitAtMs = hitAtMs,
             thresholdG = detector.effectiveSensitivityG,
             speedBeforeKmh = speed,
             speedAfterKmh = speed,
-            rpmAfter = obdSnapshot.rpm
+            rpmAfter = obdSnapshot.rpm,
+            orientationConfidence = confidence
         )
-        SafetyStateStore.log("Secuencia: ${secuencia.level.label} (${secuencia.score}, ${secuencia.phase})")
+        val adaptiveState = adaptive.snapshot()
+        val hzReal = adaptiveState.deliveredHz.toInt()
+        SafetyStateStore.log(
+            "Secuencia: ${secuencia.level.label} (${secuencia.score}, ${secuencia.phase}) - " +
+                "giro conf ${formatG(confidence)} - $hzReal Hz reales " +
+                "(pedidos ${adaptiveState.tier.hz} Hz)"
+        )
         SafetyStateStore.update { it.copy(impactAssessment = assessment.summary) }
         SafetyStateStore.log("Golpe: ${assessment.summary}")
         // A los 2 s se mira cuanto ha caido la velocidad: es lo que separa de verdad
         // un bache de una colision. Tambien solo se registra.
         window.postDelayed({
-            val after = ObdLinkController.state.value.freshSpeed(System.currentTimeMillis())
-                ?: lastSpeed
+            val obdAfter = ObdLinkController.state.value
+            val after = obdAfter.freshSpeed(System.currentTimeMillis()) ?: lastSpeed
+            // B3: a los 2 s la ventana de giro ya tiene datos de verdad. El
+            // giroscopio solo se escucha durante la validacion, asi que la lectura
+            // tomada justo en el golpe casi siempre llega sin giro; aqui si puede
+            // puntuar la rotacion.
+            val segunda = ImpactSequence.evaluate(
+                samples = ImpactSampleRecorder.snapshot(),
+                hitAtMs = hitAtMs,
+                thresholdG = detector.effectiveSensitivityG,
+                speedBeforeKmh = speed,
+                speedAfterKmh = after,
+                rpmAfter = obdAfter.rpm,
+                orientationConfidence = ImpactSequence.orientationConfidence(
+                    calibrated = orientationCalibrated,
+                    accuracyReliable = orientationAccuracyReliable
+                )
+            )
+            SafetyStateStore.log(
+                "Secuencia a los 2 s: ${segunda.level.label} " +
+                    "(${segunda.score}, ${segunda.phase})"
+            )
             val withDrop = ImpactClassifier.assess(
-                signals.copy(speedAfterKmh = after, rpmAfter = ObdLinkController.state.value.rpm)
+                signals.copy(speedAfterKmh = after, rpmAfter = obdAfter.rpm)
             )
             lastImpact = withDrop
             SafetyStateStore.update { it.copy(impactAssessment = withDrop.summary) }
@@ -2486,7 +2527,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         }, 2_000L)
     }
     private fun onMotionSample(dynamicG: Float, timestamp: Long) {
-        ImpactSampleRecorder.record(timestamp, dynamicG)
+        // El giro va con la muestra solo si es reciente; si no, la muestra vale con
+        // giro 0 y la secuencia no puntua rotacion (mejor no puntuar que inventarla).
+        ImpactSampleRecorder.record(timestamp, dynamicG, gyroHold.valueAt(timestamp))
         adaptive.record(dynamicG, timestamp)
         detector.setAdaptiveFloor(adaptive.effectiveThresholdG)
         maybeRebindMotionSensor(timestamp)

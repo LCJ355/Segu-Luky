@@ -1,6 +1,8 @@
-﻿package com.intercom.segluky
+package com.intercom.segluky
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ImpactSequenceTest {
@@ -61,5 +63,60 @@ class ImpactSequenceTest {
             speedBeforeKmh = 50f, speedAfterKmh = 0f, rpmAfter = 0
         )
         assertEquals(ImpactVerdict.RUIDO, verdict.level)
+    }
+
+    @Test
+    fun `el giro real sube la puntuacion cuando la actitud es fiable`() {
+        val conGiro = ImpactSequence.evaluate(
+            samples = samples(peak = 6f, crossings = 1, gyro = 140f),
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000,
+            orientationConfidence = 1f
+        )
+        val sinGiro = ImpactSequence.evaluate(
+            samples = samples(peak = 6f, crossings = 1, gyro = 0f),
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000,
+            orientationConfidence = 1f
+        )
+        assertEquals(10, conGiro.score - sinGiro.score)
+        assertTrue(conGiro.reasons.any { it.contains("giro") })
+        assertFalse(sinGiro.reasons.any { it.contains("giro") })
+    }
+
+    @Test
+    fun `sin confianza en la orientacion el giro no puntua`() {
+        val conGiro = ImpactSequence.evaluate(
+            samples = samples(peak = 6f, crossings = 1, gyro = 140f),
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000,
+            orientationConfidence = 0.2f
+        )
+        val sinGiro = ImpactSequence.evaluate(
+            samples = samples(peak = 6f, crossings = 1, gyro = 0f),
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000,
+            orientationConfidence = 0.2f
+        )
+        assertEquals(sinGiro.score, conGiro.score)
+        assertFalse(conGiro.reasons.any { it.contains("giro") })
+    }
+
+    @Test
+    fun `un movil sin giroscopio da el mismo veredicto`() {
+        val conLecturaBaja = ImpactSequence.evaluate(
+            samples = samples(peak = 6f, crossings = 1, gyro = 8f),
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000,
+            orientationConfidence = 1f
+        )
+        val sinGiroscopio = ImpactSequence.evaluate(
+            samples = samples(peak = 6f, crossings = 1, gyro = 0f),
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000,
+            orientationConfidence = 1f
+        )
+        assertEquals(sinGiroscopio.score, conLecturaBaja.score)
+        assertEquals(sinGiroscopio.level, conLecturaBaja.level)
     }
 }

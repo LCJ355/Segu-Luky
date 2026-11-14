@@ -64,6 +64,21 @@ object ImpactSequence {
     fun magnitude(sample: ImpactSample): Float =
         sqrt(sample.ax * sample.ax + sample.ay * sample.ay + sample.az * sample.az)
 
+    /**
+     * Confianza en la orientacion del movil, que decide si el giro puede puntuar.
+     *
+     * Sin calibrar, la actitud de conduccion es una suposicion (0,2). Con la
+     * gravedad calibrada y precisa, el giro es fiable (1,0). Si la gravedad llega
+     * marcada como no fiable se queda por debajo del umbral (0,4): se prefiere no
+     * sumar rotacion antes que sumarla mal.
+     */
+    fun orientationConfidence(calibrated: Boolean, accuracyReliable: Boolean = true): Float =
+        when {
+            !calibrated -> 0.2f
+            accuracyReliable -> 1f
+            else -> 0.4f
+        }
+
     fun evaluate(
         samples: List<ImpactSample>,
         hitAtMs: Long,
