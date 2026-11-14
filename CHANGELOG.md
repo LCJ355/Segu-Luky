@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.76s (versionCode 63)
+
+### El soporte del movil depende del vehiculo
+- Cada perfil ofrece solo los soportes que tienen sentido, para no elegir combinaciones imposibles:
+  - MOVIL: sin definir, bolsillo, mochila, personalizado.
+  - COCHE: sin definir, **coche** (nuevo soporte), personalizado. Ya no aparece deposito ni manillar.
+  - MOTO: manillar, deposito, bolsillo, mochila, personalizado.
+- Nuevo soporte **Coche** en `MountProfile`, con su propio aprendizaje de ruido y traqueteo.
+- Al cambiar de vehiculo, si el soporte elegido no existe en ese vehiculo (deposito en coche) se pasa
+  automaticamente al que corresponde (coche, manillar o bolsillo), sin dejar estados raros.
+- 3 pruebas nuevas (200 en total): soportes permitidos por vehiculo, soporte por defecto permitido y
+  lectura del soporte `coche`.
+
 ## 1.75s (versionCode 62)
 
 ### Bloque de calibracion a la vista (y se puede borrar)

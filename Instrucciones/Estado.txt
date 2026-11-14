@@ -2054,6 +2054,32 @@ s/mapping/Segu-Luky-1.75s-mapping.txt.gz
 Pendientes: evidencia de choque (DTC antes/despues, motor calado, buscador de
 senal) y conectar el clasificador bache/accidente al disparo cuando haya datos.
 
+======================================================================
+V-1.76s
+======================================================================
+
+Fecha: 14/11/2026
+Version: 1.76s (versionCode 63)
+
+Cambio:
+- SOPORTE DEL MOVIL se filtra por vehiculo: MOVIL bolsillo/mochila; COCHE coche;
+  MOTO manillar/deposito, con bolsillo y mochila como apoyo. Fuera combinaciones
+  sin sentido (deposito en coche).
+- Nuevo soporte Coche en MountProfile, con aprendizaje propio.
+- Al cambiar de vehiculo se corrige el soporte si el elegido no vale.
+- 3 pruebas nuevas (200 en total).
+
+Motivo: pedido del usuario ("el soporte tiene que ir de acuerdo con el vehiculo").
+Prueba realizada: testDebugUnitTest (200 pruebas, 0 fallos), lintDebug (0 errores)
+y assembleRelease; verificado en el OPPO cambiando de perfil.
+APK generado: APK´
+s/Segu-Luky-1.76s.apk
+Mapping archivado: APK´
+s/mapping/Segu-Luky-1.76s-mapping.txt.gz
+Pendientes: evidencia de choque (DTC, motor calado, buscador de senal) y conectar
+el clasificador bache/accidente al disparo con datos reales.
+
+
 
 
 ======================================================================

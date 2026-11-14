@@ -15,7 +15,11 @@ enum class VehicleProfile(
     val defaultVoiceGate: Boolean,
     val showsFallGate: Boolean,
     val usesVehicleLink: Boolean,
-    val description: String
+    val description: String,
+    /** Soportes que tienen sentido en este vehiculo, en el orden de los botones. */
+    val allowedMounts: List<MountProfile>,
+    /** Soporte que se pone si el que habia no vale para este vehiculo. */
+    val defaultMount: MountProfile
 ) {
     PHONE(
         id = "movil",
@@ -26,7 +30,9 @@ enum class VehicleProfile(
         defaultVoiceGate = false,
         showsFallGate = true,
         usesVehicleLink = false,
-        description = "El telefono va contigo. Usa los sensores del movil y la velocidad del GPS."
+        description = "El telefono va contigo. Usa los sensores del movil y la velocidad del GPS.",
+        allowedMounts = listOf(MountProfile.UNDEFINED, MountProfile.POCKET, MountProfile.BACKPACK, MountProfile.CUSTOM),
+        defaultMount = MountProfile.POCKET
     ),
     CAR(
         id = "coche",
@@ -38,7 +44,9 @@ enum class VehicleProfile(
         showsFallGate = false,
         usesVehicleLink = true,
         description = "El telefono va en el coche. La velocidad del coche y el enlace OBDII " +
-            "mandan sobre el GPS, y el golpe se confirma con la caida de velocidad."
+            "mandan sobre el GPS, y el golpe se confirma con la caida de velocidad.",
+        allowedMounts = listOf(MountProfile.UNDEFINED, MountProfile.CAR, MountProfile.CUSTOM),
+        defaultMount = MountProfile.CAR
     ),
     MOTO(
         id = "moto",
@@ -50,7 +58,9 @@ enum class VehicleProfile(
         showsFallGate = true,
         usesVehicleLink = false,
         description = "El telefono va en la moto. MODO MOTO y voz activados por defecto; " +
-            "el bus CAN de la moto queda pendiente."
+            "el bus CAN de la moto queda pendiente.",
+        allowedMounts = listOf(MountProfile.HANDLEBAR, MountProfile.TANK, MountProfile.POCKET, MountProfile.BACKPACK, MountProfile.CUSTOM),
+        defaultMount = MountProfile.HANDLEBAR
     );
 
     /**

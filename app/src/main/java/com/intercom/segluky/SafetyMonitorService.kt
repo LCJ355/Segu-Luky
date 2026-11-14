@@ -3004,6 +3004,11 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                     )
                     .apply()
             }
+            // Si el soporte elegido no existe en este vehiculo (deposito en coche), se pasa
+            // al que corresponde para no dejar una combinacion imposible.
+            if (loadMountProfile(context) !in vehicle.allowedMounts) {
+                setMountProfile(context, vehicle.defaultMount)
+            }
             preferences.edit().putString(KEY_VEHICLE_PROFILE, vehicle.id).apply()
             SafetyStateStore.log("Vehiculo: ${vehicle.label}")
             return true

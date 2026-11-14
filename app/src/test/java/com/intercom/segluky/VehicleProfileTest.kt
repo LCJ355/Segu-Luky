@@ -77,4 +77,32 @@ class VehicleProfileTest {
             assertTrue(profile.defaultSensitivityG > 0f)
         }
     }
+
+    @Test
+    fun `cada vehiculo ofrece solo los soportes que tienen sentido`() {
+        assertTrue(VehicleProfile.CAR.allowedMounts.contains(MountProfile.CAR))
+        assertTrue(VehicleProfile.CAR.allowedMounts.contains(MountProfile.CUSTOM))
+        assertFalse(VehicleProfile.CAR.allowedMounts.contains(MountProfile.TANK))
+        assertFalse(VehicleProfile.CAR.allowedMounts.contains(MountProfile.HANDLEBAR))
+        assertTrue(VehicleProfile.MOTO.allowedMounts.contains(MountProfile.HANDLEBAR))
+        assertTrue(VehicleProfile.MOTO.allowedMounts.contains(MountProfile.TANK))
+        assertFalse(VehicleProfile.MOTO.allowedMounts.contains(MountProfile.CAR))
+        assertFalse(VehicleProfile.PHONE.allowedMounts.contains(MountProfile.TANK))
+        assertTrue(VehicleProfile.PHONE.allowedMounts.contains(MountProfile.POCKET))
+    }
+
+    @Test
+    fun `el soporte por defecto de cada vehiculo esta permitido`() {
+        VehicleProfile.entries.forEach { profile ->
+            assertTrue(profile.allowedMounts.contains(profile.defaultMount))
+            assertEquals(VehicleProfile.CAR.defaultMount, MountProfile.CAR)
+            assertEquals(VehicleProfile.MOTO.defaultMount, MountProfile.HANDLEBAR)
+        }
+    }
+
+    @Test
+    fun `el soporte de coche se guarda y se recupera`() {
+        assertEquals(MountProfile.CAR, MountProfile.fromId("coche"))
+        assertEquals("Coche", MountProfile.CAR.label)
+    }
 }

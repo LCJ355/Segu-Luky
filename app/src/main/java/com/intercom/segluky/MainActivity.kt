@@ -1755,10 +1755,11 @@ private fun EmergencySettingsScreen(
                     status = mountProfile.label,
                     tone = if (mountProfile.isDefined) Tone.OK else Tone.WARN,
                     description = "El aprendizaje de ruido y traqueteo se guarda por separado para cada soporte. " +
+                        "Las opciones cambian con el vehiculo: en coche no tiene sentido el deposito. " +
                         "Elige donde viaja el telefono antes de iniciar el monitor."
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        MountProfile.entries.chunked(2).forEach { rowItems ->
+                        vehicleProfile.allowedMounts.chunked(2).forEach { rowItems ->
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 rowItems.forEach { profile ->
                                     val selected = mountProfile == profile

@@ -12,6 +12,7 @@ enum class MountProfile(
     POCKET("bolsillo", "Bolsillo"),
     HANDLEBAR("manillar", "Manillar"),
     TANK("deposito", "Deposito"),
+    CAR("coche", "Coche"),
     BACKPACK("mochila", "Mochila"),
     CUSTOM("personalizado", "Personalizado");
 
