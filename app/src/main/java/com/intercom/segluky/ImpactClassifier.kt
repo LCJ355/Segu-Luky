@@ -114,6 +114,14 @@ object ImpactClassifier {
             reasons.add("sin dato de velocidad del coche")
         }
 
+        // El jerk es otra medida de la misma sacudida: solo aporta cuando no hay
+        // velocidad (unica evidencia) y nunca se suma a la caida de velocidad,
+        // para no inflar la puntuacion por senales correlacionadas.
+        if (signals.speedDropKmh == null && signals.jerkGPerSecond >= 60f) {
+            score += 10
+            reasons.add("jerk alto sin dato de velocidad")
+        }
+
         val stalled = signals.rpmAfter != null &&
             signals.rpmAfter == 0 &&
             (signals.speedBeforeKmh ?: 0f) >= STALL_SPEED_KMH

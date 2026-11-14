@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.79s (versionCode 66)
+
+### B1 del plan de mejoras: el jerk deja de estar muerto y no infla el score
+- `jerkGPerSecond` estaba declarado y no puntuaba. Ahora aporta **+10 solo cuando no hay dato de
+  velocidad**, es decir cuando el acelerometro es la unica evidencia; con velocidad conocida no suma
+  nada, para no contar dos veces la misma sacudida (crítica de la revision externa).
+- Nueva prueba: el jerk sube el score sin velocidad y lo deja igual con velocidad.
+
 ## 1.78s (versionCode 65)
 
 ### Soportes del coche: guantera

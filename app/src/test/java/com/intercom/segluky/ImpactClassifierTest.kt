@@ -97,4 +97,15 @@ class ImpactClassifierTest {
         assertEquals(0, worst.score)
         assertEquals(ImpactVerdict.RUIDO, worst.verdict)
     }
+    @Test
+    fun `el jerk solo aporta cuando no hay velocidad`() {
+        val base = signals(peakG = 5f, widthMs = 40L, speedBefore = null, speedAfter = null, rpm = null)
+        val sinJerk = ImpactClassifier.assess(base.copy(jerkGPerSecond = 5f))
+        val conJerk = ImpactClassifier.assess(base.copy(jerkGPerSecond = 120f))
+        assertTrue(conJerk.score > sinJerk.score)
+        val conVelocidad = signals(peakG = 5f, widthMs = 40L)
+        val a = ImpactClassifier.assess(conVelocidad.copy(jerkGPerSecond = 5f))
+        val b = ImpactClassifier.assess(conVelocidad.copy(jerkGPerSecond = 120f))
+        assertEquals(a.score, b.score)
+    }
 }
