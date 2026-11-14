@@ -1930,6 +1930,50 @@ APK generado: APK´s/Segu-Luky-1.64s.apk
 Mapping archivado: APK´s/mapping/Segu-Luky-1.64s-mapping.txt.gz
 Pendientes: ver el destello en un viaje con AUTO y las pruebas de comportamiento
 que siguen abiertas (§5, §6, §8).
+======================================================================
+V-1.71s
+======================================================================
+
+Fecha: 14/11/2026
+Version: 1.71s (versionCode 58)
+
+Cambio:
+- Nueva tarjeta TIPO DE VEHICULO en Configuracion > Sensores con tres perfiles:
+  MOVIL, COCHE y MOTO. Se cambia con el monitor parado (como el soporte) y
+  cada perfil tiene sus controles y sus ajustes.
+- MOVIL mantiene todo lo anterior. COCHE oculta caida/orientacion (un coche no
+  vuelca), arranca en 4,5 g y estrena la tarjeta ENLACE CON EL COCHE, todavia
+  pendiente del enlace OBDII de la 1.72s. MOTO anade la tarjeta BUS CAN, tambien
+  pendiente del cable, y mantiene MODO MOTO y voz.
+- Ajustes independientes por perfil (nivel, ventana ADAPT., voz y
+  caida/orientacion) con claves propias; MOVIL sigue usando las claves de
+  siempre, asi que actualizar no pierde nada. Primer uso de un perfil con su
+  valor recomendado (el coche 4,5 g) y la ventana que ya habia.
+- Home muestra VEHICULO: <perfil> y el indice de Configuracion marca el perfil
+  activo. El perfil viaja en ajustes.txt y en el CSV de calibracion (columna
+  vehicle y cabecera # vehiculo=).
+- Referencias y analisis: docs/referencia/OBDII (LEEME con SHA-256 de Torque y
+  del manual, ANALISIS-TORQUE.md con el analisis REA) y docs/MOTO-CAN.md con el
+  bus CAN de la Softail 2018 y el pinout del DLC [91A] (pin 1 CAN alta, pin 3
+  CAN baja, 50-70 ohmios).
+
+Motivo: pedido del usuario. Sensores se divide en tres perfiles con los controles
+de cada vehiculo, empezando por el coche con OBDII (adaptador ELM327 Bluetooth
+clasico) y dejando la moto pendiente del cable para el bus CAN.
+
+Prueba realizada: testDebugUnitTest (173 pruebas, 0 fallos; 9 nuevas de
+VehicleProfileTest), lintDebug (0 errores) y assembleRelease. Revisado en el OPPO
+cambiando de perfil: COCHE sin caida/orientacion y con ENLACE, MOTO con BUS CAN y
+con caida/orientacion, y el nivel independiente (COCHE 5,0 g, MOVIL 3,5 g).
+Resultado: compila, verifica y revisado en el movil.
+APK generado: APK´s/Segu-Luky-1.71s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.71s-mapping.txt.gz
+Pendientes: 1.72s enlace OBDII (ELM327 Bluetooth SPP, datos en vivo, velocidad
+del coche); 1.73s regla de choque del coche (golpe + caida de velocidad) y sus
+ajustes; 1.74s evidencia de airbag/choque (DTC, parada de motor, buscador de
+senal). Moto CAN cuando haya cable. Siguen abiertas las pruebas de comportamiento
+(§5, §6, §8) y el destello de T. PROMEDIO en ruta.
+
 
 ======================================================================
 

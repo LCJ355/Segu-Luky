@@ -198,6 +198,8 @@ object CalibrationRepository {
         appendLine("dispositivo=${deviceModel()}")
         appendLine("soporte=${SafetyMonitorService.loadMountProfile(context).id}")
         appendLine("soporte_nombre=${SafetyMonitorService.loadMountProfile(context).label}")
+        appendLine("vehiculo=${SafetyMonitorService.loadVehicleProfile(context).id}")
+        appendLine("vehiculo_nombre=${SafetyMonitorService.loadVehicleProfile(context).label}")
         appendLine("sensibilidad_g=$sensitivity")
         appendLine("umbral_efectivo_g=$effective")
         appendLine("ventana_adaptacion=${SafetyMonitorService.adaptationWindowLabel(SafetyMonitorService.loadAdaptationWindowMode(context))}")

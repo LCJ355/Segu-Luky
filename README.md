@@ -1,4 +1,4 @@
-# Segu-Luky V-1.70s
+# Segu-Luky V-1.71s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -51,7 +51,13 @@ The gear opens an index with four blocks and their live status; each block shows
 only its own settings and a `‹ CONFIGURACION` header to go back (the system back
 button goes up one level, not straight to the home screen).
 
-- **Sensores**: sensitivity slider with its 0..7 scale, the `ADAPT.` averaging window, `PICO/EFECTIVO/SUGERIDO`, `PROBAR GOLPE`, fall/orientation confirmation, voice trigger and diagnostics
+- **Sensores**: starts with **TIPO DE VEHICULO** (`MOVIL` / `COCHE` / `MOTO`). Each profile keeps
+  its own level, averaging window, voice and fall switches, and shows only its own cards: `MOVIL`
+  everything as before; `COCHE` hides fall/orientation (a car does not tip over), starts at 4,5 g and
+  carries the `ENLACE CON EL COCHE` card for the OBDII link; `MOTO` adds the `BUS CAN` card and keeps
+  `MODO MOTO` and voice. Switching needs the monitor stopped. Then the sensitivity slider with its
+  0..7 scale, the `ADAPT.` averaging window, `PICO/EFECTIVO/SUGERIDO`, `PROBAR GOLPE`, fall/orientation
+  confirmation, voice trigger and diagnostics
   (device profile, reset learning, optional CSV/ZIP recording). On the home card only the
   `SENSIBILIDAD A LOS GOLPES = x,x g` label and a read-only `T. PROMEDIO` row (AUTO/1/2/3; in AUTO both AUTO and the applied minute number are green, and that number blinks three times whenever AUTO changes the window).
 - **Contactos SOS**: contact list in call order, editor, and the map-link note.
@@ -105,16 +111,16 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every released version is published in `APK´s/` as
-`Segu-Luky-<version>.apk`. The current release is `Segu-Luky-1.70s.apk`.
+`Segu-Luky-<version>.apk`. The current release is `Segu-Luky-1.71s.apk`.
 
 Only the newest version stays published as a GitHub release: currently `V-1.70s`
-with `Segu-Luky-1.70s.apk` attached. Older releases are deleted so the download page
+with `Segu-Luky-1.71s.apk` attached. Older releases are deleted so the download page
 always shows a single APK (the git tags stay, so the source of every version is
 still reachable). **Buscar actualizacion** reads the GitHub API and compares
 against that one release:
 
 ```text
-gh release create V-1.70s "APK´s/Segu-Luky-1.70s.apk" --title "Segu-Luky V-1.70s" --notes "..."
+gh release create V-1.71s "APK´s/Segu-Luky-1.71s.apk" --title "Segu-Luky V-1.71s" --notes "..."
 ```
 
 The published APK carries **no personal data**: contacts, phone numbers, the bot

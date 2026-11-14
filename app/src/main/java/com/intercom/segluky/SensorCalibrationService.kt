@@ -50,6 +50,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
     private var file: File? = null
     private var activity = CalibrationActivity.WALKING
     private var mountProfile = MountProfile.UNDEFINED
+    private var vehicleProfile = VehicleProfile.PHONE
     @Volatile private var sampleCount = 0L
     private var startedAtElapsed = 0L
     private var running = false
@@ -106,6 +107,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         if (running) return
         activity = selected
         mountProfile = SafetyMonitorService.loadMountProfile(this)
+        vehicleProfile = SafetyMonitorService.loadVehicleProfile(this)
         CalibrationRepository.saveLastActivity(this, selected)
         file = CalibrationRepository.newFile(this, selected)
         writer = runCatching { BufferedWriter(FileWriter(file!!, false)) }.getOrNull()
@@ -175,6 +177,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         w.write("# Segu-Luky calibracion v$version\n")
         w.write("# actividad=${activity.id} (${activity.label})\n")
         w.write("# soporte=${mountProfile.id} (${mountProfile.label})\n")
+        w.write("# vehiculo=${vehicleProfile.id} (${vehicleProfile.label})\n")
         w.write("# fecha=$date\n")
         w.write("# fabricante=${Build.MANUFACTURER}\n")
         w.write("# modelo=${Build.MODEL}\n")
@@ -186,8 +189,8 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         w.write("# sensor_acelerometro=${sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.name ?: "no"}\n")
         w.write("# sensor_gravedad=${sensorManager.getDefaultSensor(Sensor.TYPE_GRAVITY)?.name ?: "no"}\n")
         w.write("# sensor_giroscopio=${sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.name ?: "no"}\n")
-        w.write("# columnas: tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz,jerk_g_s\n")
-        w.write("tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz,jerk_g_s\n")
+        w.write("# columnas: tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz,jerk_g_s,vehicle\n")
+        w.write("tipo,t_ms,a,b,c,extra,wall_ms,magnitude,mount,event,speed_kmh,target_hz,jerk_g_s,vehicle\n")
     }
 
     private fun registerSensors(rateHz: Int) {
@@ -294,7 +297,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         appendLine(
             "$kind,$tMs,${values[0]},${values[1]},${values[2]},," +
                 "${System.currentTimeMillis()},$magnitude,${mountProfile.id},," +
-                "${speedColumn()},$currentTargetHz,$jerkText\n"
+                "${speedColumn()},$currentTargetHz,$jerkText,${vehicleProfile.id}\n"
         )
     }
 
@@ -358,7 +361,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         appendLine(
             "gps,$tMs,${location.latitude},${location.longitude},$speed,$acc," +
                 "${System.currentTimeMillis()},0,${mountProfile.id},gps," +
-                "${speedKmh ?: ""},$currentTargetHz,\n"
+                "${speedKmh ?: ""},$currentTargetHz,,${vehicleProfile.id}\n"
         )
     }
 
@@ -410,7 +413,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         appendLine(
             "rate,$now,$rateHz,${CalibrationRatePolicy.targetHz(speedKmh)},$speedText,," +
                 "${System.currentTimeMillis()},0,${mountProfile.id},RATE_CHANGE," +
-                "$speedText,$rateHz,\n"
+                "$speedText,$rateHz,,${vehicleProfile.id}\n"
         )
     }
 

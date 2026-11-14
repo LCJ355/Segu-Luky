@@ -140,6 +140,11 @@ class MainActivity : ComponentActivity() {
         var intercomNoticeFeedback by remember { mutableStateOf<String?>(null) }
         var screen by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(AppScreen.HOME) }
         var sensitivityG by remember { mutableStateOf(SafetyMonitorService.loadSensitivity(context)) }
+        // Con el monitor detenido nadie publica el perfil: se siembra desde las preferencias.
+        LaunchedEffect(Unit) {
+            val vehicle = SafetyMonitorService.loadVehicleProfile(context)
+            SafetyStateStore.update { it.copy(vehicleProfile = vehicle) }
+        }
         var voiceKeywordsGate by remember { mutableStateOf(SafetyMonitorService.loadVoiceKeywordsGate(context)) }
         var fallOrientationGate by remember { mutableStateOf(SafetyMonitorService.loadFallOrientationGate(context)) }
         var whatsappAutoSend by remember { mutableStateOf(WhatsAppAutoSend.isEnabled(context)) }
@@ -435,6 +440,21 @@ class MainActivity : ComponentActivity() {
                             fallOrientationGate = enabled
                             SafetyMonitorService.saveFallOrientationGate(context, enabled)
                             SafetyMonitorService.notifyConfigChanged(context)
+                        }
+                    },
+                    onVehicleChange = { vehicle ->
+                        // Cambiar de vehiculo cambia nivel, ventana e interruptores: se
+                        // hace con el monitor detenido y se recargan los ajustes del perfil.
+                        if (SafetyMonitorService.setVehicleProfile(context, vehicle)) {
+                            SafetyStateStore.update { it.copy(vehicleProfile = vehicle) }
+                            sensitivityG = SafetyMonitorService.loadSensitivity(context)
+                            voiceKeywordsGate = SafetyMonitorService.loadVoiceKeywordsGate(context)
+                            fallOrientationGate = SafetyMonitorService.loadFallOrientationGate(context)
+                            SafetyMonitorService.notifyConfigChanged(context)
+                            true
+                        } else {
+                            SafetyStateStore.log("Deten el monitor antes de cambiar de vehiculo")
+                            false
                         }
                     },
                     sosActionsEnabled = sosActionsEnabled,
@@ -1360,6 +1380,7 @@ private fun EmergencySettingsScreen(
     onHitTest: () -> Unit,
     fallOrientationGate: Boolean,
     onFallOrientationGateChange: (Boolean) -> Unit,
+    onVehicleChange: (VehicleProfile) -> Boolean,
     sosActionsEnabled: Boolean,
     voiceKeywordsGate: Boolean,
     audioPermissionGranted: Boolean,
@@ -1392,6 +1413,7 @@ private fun EmergencySettingsScreen(
     var editingContact by remember { mutableStateOf<EmergencyContact?>(null) }
     var smsAuto by remember { mutableStateOf(SafetyMonitorService.loadSmsAuto(context)) }
     var mountProfile by remember { mutableStateOf(SafetyMonitorService.loadMountProfile(context)) }
+    var vehicleProfile by remember { mutableStateOf(SafetyMonitorService.loadVehicleProfile(context)) }
     val calibrationAnyRecording by CalibrationStateStore.state.collectAsStateWithLifecycle()
     val editorVisible = addingContact || editingContact != null
     val smsPermissionLauncher = rememberLauncherForActivityResult(
@@ -1443,18 +1465,13 @@ private fun EmergencySettingsScreen(
             item {
                 SettingsEntryRow(
                     title = "SENSORES",
-                    status = when {
-                        fallOrientationGate && voiceKeywordsGate -> "MOTO + VOZ"
-                        fallOrientationGate -> "MODO MOTO"
-                        voiceKeywordsGate -> "SOLO VOZ"
-                        else -> "GOLPE DIRECTO"
+                    status = vehicleProfile.badge,
+                    tone = Tone.OK,
+                    description = when (vehicleProfile) {
+                        VehicleProfile.PHONE -> "Golpes, caidas, voz de ayuda y datos del sensor."
+                        VehicleProfile.CAR -> "Coche: nivel propio y enlace OBDII en la siguiente version."
+                        VehicleProfile.MOTO -> "Moto: modo moto y voz; bus CAN pendiente."
                     },
-                    tone = when {
-                        fallOrientationGate -> Tone.OK
-                        voiceKeywordsGate -> Tone.WARN
-                        else -> Tone.OFF
-                    },
-                    description = "Golpes, caidas, voz de ayuda y datos del sensor.",
                     onClick = { section = SettingsSection.SENSORS }
                 )
             }
@@ -1680,6 +1697,60 @@ private fun EmergencySettingsScreen(
             item {
                 val monitorStopped = snapshot.phase == SafetyPhase.STOPPED
                 SeguCard(
+                    title = "TIPO DE VEHICULO",
+                    status = vehicleProfile.label,
+                    tone = Tone.OK,
+                    description = vehicleProfile.description
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            VehicleProfile.selectable.forEach { profile ->
+                                val selected = vehicleProfile == profile
+                                OutlinedButton(
+                                    onClick = { if (onVehicleChange(profile)) vehicleProfile = profile },
+                                    modifier = Modifier.weight(1f),
+                                    enabled = monitorStopped && !calibrationAnyRecording.recording &&
+                                        !criticalSettingsLocked,
+                                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                        containerColor = if (selected) {
+                                            StrongGreen.copy(alpha = 0.16f)
+                                        } else {
+                                            Color.Transparent
+                                        },
+                                        contentColor = if (selected) {
+                                            StrongGreen
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        }
+                                    ),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                        horizontal = 4.dp,
+                                        vertical = 4.dp
+                                    )
+                                ) {
+                                    Text(
+                                        profile.badge,
+                                        maxLines = 1,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
+                            }
+                        }
+                        if (!monitorStopped || calibrationAnyRecording.recording) {
+                            Text(
+                                if (!monitorStopped) "Deten el monitor para cambiar de vehiculo."
+                                else "Deten la grabacion de sensores para cambiar de vehiculo.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+            item {
+                val monitorStopped = snapshot.phase == SafetyPhase.STOPPED
+                SeguCard(
                     title = "SOPORTE DEL MOVIL",
                     status = mountProfile.label,
                     tone = if (mountProfile.isDefined) Tone.OK else Tone.WARN,
@@ -1768,9 +1839,10 @@ private fun EmergencySettingsScreen(
                     )
                 }
             }
-            item {
-                SeguCard(
-                    title = "CAIDA / ORIENTACION",
+            if (vehicleProfile.showsFallGate) {
+                item {
+                    SeguCard(
+                        title = "CAIDA / ORIENTACION",
                     status = if (fallOrientationGate) "MODO MOTO" else "GOLPE DIRECTO",
                     tone = if (fallOrientationGate) Tone.OK else Tone.OFF,
                     trailing = {
@@ -1794,6 +1866,7 @@ private fun EmergencySettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
             }
             item {
                 val voiceBlocked = voiceKeywordsGate && !audioPermissionGranted
@@ -1827,6 +1900,30 @@ private fun EmergencySettingsScreen(
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (vehicleProfile == VehicleProfile.CAR) {
+                item {
+                    SeguCard(
+                        title = "ENLACE CON EL COCHE",
+                        status = "PENDIENTE",
+                        tone = Tone.WARN,
+                        description = "En la siguiente version: adaptador ELM327 por Bluetooth para leer la " +
+                            "velocidad real del coche, las revoluciones y los avisos de averia. Mientras " +
+                            "tanto la velocidad sale del GPS."
+                    )
+                }
+            }
+            if (vehicleProfile == VehicleProfile.MOTO) {
+                item {
+                    SeguCard(
+                        title = "BUS CAN DE LA MOTO",
+                        status = "PENDIENTE",
+                        tone = Tone.WARN,
+                        description = "La Softail 2018 publica la velocidad por el bus CAN (conector DLC de 6 " +
+                            "pines: pin 1 CAN alta, pin 3 CAN baja). Falta el cable para leerlo; el analisis " +
+                            "esta en docs/MOTO-CAN.md."
                     )
                 }
             }
@@ -3146,6 +3243,14 @@ private fun PhaseHeroCard(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "VEHICULO: ${snapshot.vehicleProfile.badge}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             val monitoring = phase != SafetyPhase.STOPPED
             // La fase solo se anuncia cuando aporta algo: "APAGADO" y "OK" ya los
             // indica el color del boton del monitor.

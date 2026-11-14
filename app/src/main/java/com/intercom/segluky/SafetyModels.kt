@@ -16,6 +16,8 @@ enum class SafetyPhase {
 data class SafetySnapshot(
     val phase: SafetyPhase = SafetyPhase.STOPPED,
     val detail: String = "",
+    /** Vehiculo elegido en Configuracion > Sensores. */
+    val vehicleProfile: VehicleProfile = VehicleProfile.PHONE,
     val speedKmh: Float? = null,
     val movementLevel: Float = 0f,
     val movementG: Float? = null,

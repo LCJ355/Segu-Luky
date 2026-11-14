@@ -78,6 +78,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private var sensorDescription = "Sensor pendiente"
     private var orientationAccuracyReliable = true
     private var orientationConfigured = false
+    /** Perfil de vehiculo con el que arranco el monitor. */
+    private var vehicleProfile = VehicleProfile.PHONE
     private var orientationGateActive = false
     private var orientationDescription = "Orientacion desactivada"
     private var orientationCalibrated = false
@@ -302,6 +304,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             now = { SystemClock.elapsedRealtime() }
         )
         detector.setGolpeSensitivity(loadSensitivity(this))
+        vehicleProfile = loadVehicleProfile(this)
+        SafetyStateStore.update { it.copy(vehicleProfile = vehicleProfile) }
         adaptive = AdaptiveSensitivity(
             mode = loadAdaptationWindowMode(this),
             initialProfile = loadDeviceProfile(this)
@@ -376,6 +380,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             }
             ACTION_RELOAD_CONFIG -> {
                 val wasOrientationConfigured = orientationConfigured
+                vehicleProfile = loadVehicleProfile(this)
+                SafetyStateStore.update { it.copy(vehicleProfile = vehicleProfile) }
                 orientationConfigured = loadFallOrientationGate(this)
                 val sensitivity = loadSensitivity(this)
                 detector.setFallOrientationGateEnabled(orientationConfigured)
@@ -2386,6 +2392,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
         SafetyStateStore.update {
             it.copy(
+                vehicleProfile = vehicleProfile,
                 gpsAvailable = gpsFresh,
                 gpsAccuracyMeters = lastAccuracy,
                 gpsFixAgeSeconds = locationAge?.takeIf { age -> age != Long.MAX_VALUE }?.div(1_000L),
@@ -2817,9 +2824,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         private const val EXTRA_SENSITIVITY_G = "sensitivity_g"
         private const val PREFERENCES = "segu_prefs"
         private const val KEY_SENSITIVITY_G = "sensitivity_g"
-        private const val DEFAULT_SENSITIVITY_G = 3.5f
         private const val KEY_ADAPTATION_WINDOW_MODE = "adaptation_window_mode"
         private const val KEY_MOUNT_PROFILE = "mount_profile"
+        private const val KEY_VEHICLE_PROFILE = "vehicle_profile"
         private const val KEY_DEVICE_NOISE_G = "device_noise_g"
         private const val KEY_DEVICE_P99_G = "device_p99_g"
         private const val KEY_DEVICE_HZ = "device_hz"
@@ -2849,18 +2856,21 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
         fun saveSensitivity(context: Context, g: Float) {
             val value = g.coerceIn(AccidentDetector.MIN_SENSITIVITY_G, AccidentDetector.MAX_SENSITIVITY_G)
+            val vehicle = loadVehicleProfile(context)
             context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-                .edit().putFloat(KEY_SENSITIVITY_G, value).apply()
+                .edit().putFloat(vehicle.key(KEY_SENSITIVITY_G), value).apply()
         }
 
         fun setSensitivity(context: Context, g: Float) {
             saveSensitivity(context, g)
         }
 
-        fun loadSensitivity(context: Context): Float =
-            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-                .getFloat(KEY_SENSITIVITY_G, DEFAULT_SENSITIVITY_G)
+        fun loadSensitivity(context: Context): Float {
+            val vehicle = loadVehicleProfile(context)
+            return context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .getFloat(vehicle.key(KEY_SENSITIVITY_G), vehicle.defaultSensitivityG)
                 .coerceIn(AccidentDetector.MIN_SENSITIVITY_G, AccidentDetector.MAX_SENSITIVITY_G)
+        }
 
         /** Guarda la ventana de aprendizaje y recarga la configuracion si el monitor vive. */
         internal fun setAdaptationWindow(context: Context, mode: AdaptationWindowMode) {
@@ -2883,13 +2893,69 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         internal fun loadAdaptationWindowMode(context: Context): AdaptationWindowMode =
             AdaptationWindowMode.fromId(
                 context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-                    .getString(KEY_ADAPTATION_WINDOW_MODE, AdaptationWindowMode.AUTO.id)
+                    .getString(
+                        loadVehicleProfile(context).key(KEY_ADAPTATION_WINDOW_MODE),
+                        AdaptationWindowMode.AUTO.id
+                    )
             )
 
         private fun saveAdaptationWindowMode(context: Context, mode: AdaptationWindowMode) {
             context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-                .edit().putString(KEY_ADAPTATION_WINDOW_MODE, mode.id).apply()
+                .edit().putString(
+                    loadVehicleProfile(context).key(KEY_ADAPTATION_WINDOW_MODE),
+                    mode.id
+                ).apply()
         }
+
+        /** Perfil de vehiculo activo: Movil, Coche o Moto. */
+        internal fun loadVehicleProfile(context: Context): VehicleProfile =
+            VehicleProfile.fromId(
+                context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                    .getString(KEY_VEHICLE_PROFILE, VehicleProfile.PHONE.id)
+            )
+
+        /**
+         * Cambia el perfil mientras el monitor esta detenido. El primer uso de un
+         * perfil arranca con el nivel y los interruptores que pide ese vehiculo
+         * (el coche con mas nivel que la moto) y hereda la ventana ADAPT. actual.
+         */
+        internal fun setVehicleProfile(context: Context, vehicle: VehicleProfile): Boolean {
+            if (SafetyStateStore.snapshot.value.phase != SafetyPhase.STOPPED) return false
+            val previous = loadVehicleProfile(context)
+            if (previous == vehicle) return true
+            val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+            if (vehicle != VehicleProfile.PHONE && !hasVehicleSettings(context, vehicle)) {
+                preferences.edit()
+                    .putFloat(
+                        vehicle.key(KEY_SENSITIVITY_G),
+                        vehicle.defaultSensitivityG
+                    )
+                    .putString(
+                        vehicle.key(KEY_ADAPTATION_WINDOW_MODE),
+                        preferences.getString(
+                            VehicleProfile.PHONE.key(KEY_ADAPTATION_WINDOW_MODE),
+                            AdaptationWindowMode.AUTO.id
+                        ) ?: AdaptationWindowMode.AUTO.id
+                    )
+                    .putBoolean(
+                        vehicle.key(KEY_VOICE_KEYWORDS_GATE),
+                        vehicle.defaultVoiceGate
+                    )
+                    .putBoolean(
+                        vehicle.key(KEY_FALL_ORIENTATION_GATE),
+                        vehicle.defaultFallGate
+                    )
+                    .apply()
+            }
+            preferences.edit().putString(KEY_VEHICLE_PROFILE, vehicle.id).apply()
+            SafetyStateStore.log("Vehiculo: ${vehicle.label}")
+            return true
+        }
+
+        /** true cuando ese perfil ya tiene ajustes propios guardados. */
+        internal fun hasVehicleSettings(context: Context, vehicle: VehicleProfile): Boolean =
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .contains(vehicle.key(KEY_SENSITIVITY_G))
 
         internal fun loadMountProfile(context: Context): MountProfile =
             MountProfile.fromId(
@@ -2990,18 +3056,23 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
                 (context.getSystemService(AlarmManager::class.java)?.canScheduleExactAlarms() ?: false)
 
-        fun loadFallOrientationGate(context: Context): Boolean =
-            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-                .getBoolean(KEY_FALL_ORIENTATION_GATE, true)
-
-        fun saveFallOrientationGate(context: Context, enabled: Boolean) {
-            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-                .edit().putBoolean(KEY_FALL_ORIENTATION_GATE, enabled).apply()
+        fun loadFallOrientationGate(context: Context): Boolean {
+            val vehicle = loadVehicleProfile(context)
+            return context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .getBoolean(vehicle.key(KEY_FALL_ORIENTATION_GATE), vehicle.defaultFallGate)
         }
 
-        fun loadVoiceKeywordsGate(context: Context): Boolean =
+        fun saveFallOrientationGate(context: Context, enabled: Boolean) {
+            val vehicle = loadVehicleProfile(context)
             context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-                .getBoolean(KEY_VOICE_KEYWORDS_GATE, false)
+                .edit().putBoolean(vehicle.key(KEY_FALL_ORIENTATION_GATE), enabled).apply()
+        }
+
+        fun loadVoiceKeywordsGate(context: Context): Boolean {
+            val vehicle = loadVehicleProfile(context)
+            return context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .getBoolean(vehicle.key(KEY_VOICE_KEYWORDS_GATE), vehicle.defaultVoiceGate)
+        }
 
         fun loadSmsAuto(context: Context): Boolean =
             context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -3013,8 +3084,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         }
 
         fun saveVoiceKeywordsGate(context: Context, enabled: Boolean) {
+            val vehicle = loadVehicleProfile(context)
             context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-                .edit().putBoolean(KEY_VOICE_KEYWORDS_GATE, enabled).apply()
+                .edit().putBoolean(vehicle.key(KEY_VOICE_KEYWORDS_GATE), enabled).apply()
         }
 
         fun hasPreciseLocationPermission(context: Context): Boolean =

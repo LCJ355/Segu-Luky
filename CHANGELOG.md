@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.71s (versionCode 58)
+
+### Perfiles MOVIL, COCHE y MOTO en Sensores
+- Nueva tarjeta **TIPO DE VEHICULO** al principio de Configuracion → Sensores, con tres
+  botones: `MOVIL`, `COCHE` y `MOTO`. Se cambia con el monitor parado (o con la grabacion de
+  sensores parada) y cada perfil recuerda los suyos.
+- **Controles por perfil**:
+  - MOVIL: soporte del movil, sensibilidad, caida/orientacion, voz y diagnostico (lo de siempre).
+  - COCHE: soporte, sensibilidad con **nivel propio de 4,5 g**, voz, tarjeta **ENLACE CON EL
+    COCHE** (el OBDII llega en la 1.72s) y diagnostico. Sin caida/orientacion: un coche no vuelca.
+  - MOTO: soporte, sensibilidad, caida/orientacion (MODO MOTO), voz, tarjeta **BUS CAN DE LA MOTO**
+    (pendiente del cable) y diagnostico.
+- **Ajustes independientes por perfil**: nivel de golpe, ventana ADAPT., voz y caida/orientacion se
+  guardan con clave propia. MOVIL sigue usando las claves de siempre, asi que actualizar no pierde
+  ningun ajuste; el primer uso de COCHE/MOTO arranca con lo que pide ese vehiculo.
+- La pantalla principal muestra `VEHICULO: <perfil>` y el indice de Configuracion marca el perfil
+  activo en la fila SENSORES.
+- El perfil viaja en `ajustes.txt` (`vehiculo=`, `vehiculo_nombre=`) y en el CSV de calibracion (nueva
+  columna `vehicle` y cabecera `# vehiculo=...`).
+
+### Referencia OBDII y moto
+- `docs/referencia/OBDII/`: que es cada fichero, tamanos y SHA-256, con el analisis estatico de
+  Torque Pro hecho con REA (`ANALISIS-TORQUE.md`).
+- `docs/MOTO-CAN.md`: del manual de la Softail 2018 salen el bus CAN, los modulos que hay en el, que
+  **la velocidad viaja al cuadro por CAN** y el pinout del conector `[91A]` (pin 1 CAN alta, pin 3 CAN
+  baja, 50-70 ohmios entre ellos). Plan de escucha pasiva para cuando haya cable.
+
 ## 1.70s (versionCode 57)
 
 ### Perfil por soporte

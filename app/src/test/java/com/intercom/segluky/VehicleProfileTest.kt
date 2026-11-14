@@ -1,0 +1,80 @@
+package com.intercom.segluky
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class VehicleProfileTest {
+
+    @Test
+    fun `un id vacio o inventado vuelve a movil`() {
+        assertEquals(VehicleProfile.PHONE, VehicleProfile.fromId(null))
+        assertEquals(VehicleProfile.PHONE, VehicleProfile.fromId(""))
+        assertEquals(VehicleProfile.PHONE, VehicleProfile.fromId("  "))
+        assertEquals(VehicleProfile.PHONE, VehicleProfile.fromId("inventado"))
+    }
+
+    @Test
+    fun `cada perfil se recupera por su id`() {
+        VehicleProfile.entries.forEach { profile ->
+            assertEquals(profile, VehicleProfile.fromId(profile.id))
+            assertEquals(profile, VehicleProfile.fromId(" ${profile.id} "))
+        }
+    }
+
+    @Test
+    fun `movil conserva las claves de siempre para no perder los ajustes`() {
+        assertEquals("sensitivity_g", VehicleProfile.PHONE.key("sensitivity_g"))
+        assertEquals("fall_orientation_gate", VehicleProfile.PHONE.key("fall_orientation_gate"))
+    }
+
+    @Test
+    fun `coche y moto guardan sus ajustes aparte`() {
+        assertEquals("sensitivity_g_coche", VehicleProfile.CAR.key("sensitivity_g"))
+        assertEquals("sensitivity_g_moto", VehicleProfile.MOTO.key("sensitivity_g"))
+        assertNotEquals(VehicleProfile.CAR.key("sensitivity_g"), VehicleProfile.MOTO.key("sensitivity_g"))
+        assertNotEquals(VehicleProfile.PHONE.key("sensitivity_g"), VehicleProfile.CAR.key("sensitivity_g"))
+    }
+
+    @Test
+    fun `el coche no usa la compuerta de inclinacion`() {
+        assertFalse(VehicleProfile.CAR.showsFallGate)
+        assertTrue(VehicleProfile.PHONE.showsFallGate)
+        assertTrue(VehicleProfile.MOTO.showsFallGate)
+        assertFalse(VehicleProfile.CAR.defaultFallGate)
+        assertTrue(VehicleProfile.MOTO.defaultFallGate)
+    }
+
+    @Test
+    fun `el coche arranca con un nivel mas alto que la moto y el movil`() {
+        assertTrue(VehicleProfile.CAR.defaultSensitivityG > VehicleProfile.PHONE.defaultSensitivityG)
+        assertTrue(VehicleProfile.CAR.defaultSensitivityG > VehicleProfile.MOTO.defaultSensitivityG)
+    }
+
+    @Test
+    fun `solo el coche usa enlace con el vehiculo`() {
+        assertTrue(VehicleProfile.CAR.usesVehicleLink)
+        assertFalse(VehicleProfile.PHONE.usesVehicleLink)
+        assertFalse(VehicleProfile.MOTO.usesVehicleLink)
+    }
+
+    @Test
+    fun `la moto arranca con la voz activada`() {
+        assertTrue(VehicleProfile.MOTO.defaultVoiceGate)
+        assertFalse(VehicleProfile.PHONE.defaultVoiceGate)
+        assertFalse(VehicleProfile.CAR.defaultVoiceGate)
+    }
+
+    @Test
+    fun `los tres perfiles son seleccionables y tienen etiqueta`() {
+        assertEquals(3, VehicleProfile.selectable.size)
+        VehicleProfile.entries.forEach { profile ->
+            assertTrue(profile.label.isNotBlank())
+            assertTrue(profile.badge.isNotBlank())
+            assertTrue(profile.description.isNotBlank())
+            assertTrue(profile.defaultSensitivityG > 0f)
+        }
+    }
+}
