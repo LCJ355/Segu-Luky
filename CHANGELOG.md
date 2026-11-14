@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.74s (versionCode 61)
+
+### Grabaciones de calibracion: solo el mejor bloque de 15 minutos
+- La grabacion se parte en bloques de **15 minutos**. Al cerrarse cada bloque se puntua (bandas de
+  velocidad cubiertas, filas con velocidad valida, Hz reales frente a pedidos y actividad) y **solo se
+  queda el de mayor puntuacion**; el resto se borra al momento. En disco hay como mucho un bloque
+  bueno y el que se esta grabando.
+- **Tope de seguridad de 4 horas** por sesion: al llegar, la grabacion se detiene sola y lo anota en el
+  registro. Tambien sigue estando el limite natural de almacenamiento del movil.
+- El bloque guardado y su puntuacion se recuerdan entre arranques, y se puede borrar cuando se quiera.
+- 6 pruebas nuevas (`CalibrationRetentionTest`): puntuacion de un bloque completo, bloque sin
+  velocidad, bloque vacio, sustitucion solo si mejora, bandas y los dos topes.
+
 ## 1.73s (versionCode 60)
 
 ### Clasificador bache / golpe (solo mide)

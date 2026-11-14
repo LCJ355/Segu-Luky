@@ -67,6 +67,8 @@ object CalibrationStateStore {
 object CalibrationRepository {
     const val PREFERENCES = "segu_prefs"
     private const val KEY_LAST_ACTIVITY = "calibration_last_activity"
+    private const val KEY_BEST_NAME = "calibration_best_name"
+    private const val KEY_BEST_SCORE = "calibration_best_score"
     private const val DIR_NAME = "calibracion"
 
     fun directory(context: Context): File {
@@ -111,6 +113,28 @@ object CalibrationRepository {
 
     fun delete(context: Context, name: String): Boolean =
         file(context, name)?.delete() ?: false
+
+    /** Bloque de 15 min que se conserva (nombre y puntuacion), si hay uno. */
+    fun bestBlock(context: Context): Pair<String, Int>? {
+        val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+        val name = preferences.getString(KEY_BEST_NAME, "").orEmpty()
+        if (name.isBlank()) return null
+        return name to preferences.getInt(KEY_BEST_SCORE, 0)
+    }
+
+    fun saveBestBlock(context: Context, name: String, score: Int) {
+        val previous = bestBlock(context)?.first
+        if (!previous.isNullOrBlank() && previous != name) delete(context, previous)
+        context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+            .edit().putString(KEY_BEST_NAME, name).putInt(KEY_BEST_SCORE, score).apply()
+    }
+
+    fun clearBestBlock(context: Context): Boolean {
+        val name = bestBlock(context)?.first
+        context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+            .edit().remove(KEY_BEST_NAME).remove(KEY_BEST_SCORE).apply()
+        return if (name.isNullOrBlank()) false else delete(context, name)
+    }
 
     fun loadLastActivity(context: Context): CalibrationActivity =
         CalibrationActivity.fromId(

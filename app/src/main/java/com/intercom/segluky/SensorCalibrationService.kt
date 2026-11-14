@@ -53,6 +53,15 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
     private var vehicleProfile = VehicleProfile.PHONE
     @Volatile private var sampleCount = 0L
     private var startedAtElapsed = 0L
+    // Bloque de 15 min: solo se conserva el mas significativo (tope de seguridad: 4 h).
+    private var segmentStartedAtElapsed = 0L
+    private var segRows = 0L
+    private var segSpeedRows = 0L
+    private val segBands = BooleanArray(CalibrationRetention.SPEED_BANDS)
+    private var segTargetHzSum = 0L
+    private var segHzSamples = 0L
+    private var segRateChanges = 0
+    private var segJerkPeaks = 0
     private var running = false
     private var locationRegistered = false
     private var lastFlushAt = 0L
@@ -134,6 +143,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
         registerSensors(initialHz)
         registerLocation()
         startedAtElapsed = now
+        resetSegment(now)
         lastFlushAt = now
         sampleCount = 0L
         running = true
@@ -290,6 +300,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
             }
             lastMotionAt = tMs
             lastMotionDynamicG = dynamicG
+            if (jerk.isFinite() && kotlin.math.abs(jerk) >= CalibrationRetention.JERK_PEAK_G_PER_S) segJerkPeaks++
             if (jerk.isFinite()) jerk.toString() else ""
         } else {
             ""
@@ -358,6 +369,12 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
             lastKnownSpeedKmh = null
             updateRateForSpeed(null, SystemClock.elapsedRealtime())
         }
+        speedKmh?.let { value ->
+            segSpeedRows++
+            segBands[CalibrationRetention.band(value)] = true
+        }
+        segTargetHzSum += currentTargetHz
+        segHzSamples++
         appendLine(
             "gps,$tMs,${location.latitude},${location.longitude},$speed,$acc," +
                 "${System.currentTimeMillis()},0,${mountProfile.id},gps," +
@@ -370,6 +387,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
             runCatching {
                 writer?.write(line)
                 sampleCount++
+                segRows++
             }
         }
     }
@@ -409,6 +427,7 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
     }
 
     private fun appendRateRow(now: Long, rateHz: Int, speedKmh: Float?) {
+        segRateChanges++
         val speedText = speedKmh?.toString().orEmpty()
         appendLine(
             "rate,$now,$rateHz,${CalibrationRatePolicy.targetHz(speedKmh)},$speedText,," +
@@ -468,6 +487,12 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
                 return
             }
             val now = SystemClock.elapsedRealtime()
+            if (now - startedAtElapsed >= CalibrationRetention.RECORDING_MAX_MS) {
+                SafetyStateStore.log("Calibracion: tope de 4 h alcanzado, se detiene")
+                stopRecording()
+                return
+            }
+            rotateSegmentIfNeeded(now)
             if (lastKnownSpeedKmh != null && now - lastKnownSpeedAt > CalibrationRatePolicy.SPEED_MAX_AGE_MS) {
                 lastKnownSpeedKmh = null
                 updateRateForSpeed(null, now)
@@ -601,6 +626,65 @@ class SensorCalibrationService : Service(), SensorEventListener, LocationListene
 
     private fun magnitude(x: Float, y: Float, z: Float): Float =
         kotlin.math.sqrt(x * x + y * y + z * z)
+
+    private fun resetSegment(now: Long) {
+        segmentStartedAtElapsed = now
+        segRows = 0L
+        segSpeedRows = 0L
+        segBands.fill(false)
+        segTargetHzSum = 0L
+        segHzSamples = 0L
+        segRateChanges = 0
+        segJerkPeaks = 0
+    }
+
+    private fun currentSegmentStats(now: Long): CalibrationSegmentStats {
+        val elapsed = (now - segmentStartedAtElapsed).coerceAtLeast(1L)
+        val bands = segBands.count { it }
+        val achieved = if (elapsed > 0L) segRows * 1_000f / elapsed else 0f
+        val target = if (segHzSamples > 0L) segTargetHzSum.toFloat() / segHzSamples else 0f
+        return CalibrationSegmentStats(
+            rows = segRows,
+            speedRows = segSpeedRows,
+            bandsCovered = bands,
+            achievedHz = achieved,
+            targetHz = target,
+            rateChanges = segRateChanges,
+            jerkPeaks = segJerkPeaks
+        )
+    }
+
+    /**
+     * Cierra el bloque de 15 min y decide si se queda: solo uno, el de mayor
+     * puntuacion. Despues sigue grabando en un bloque nuevo.
+     */
+    private fun rotateSegmentIfNeeded(now: Long) {
+        if (segmentStartedAtElapsed == 0L) return
+        if (now - segmentStartedAtElapsed < CalibrationRetention.SEGMENT_MS) return
+        val stats = currentSegmentStats(now)
+        val score = CalibrationRetention.score(stats)
+        val bestScore = CalibrationRepository.bestBlock(this)?.second ?: -1
+        val keep = CalibrationRetention.replaces(stats, score, bestScore)
+        flushWriter()
+        runCatching { writer?.close() }
+        writer = null
+        val current = file
+        if (keep) {
+            CalibrationRepository.saveBestBlock(this, current?.name.orEmpty(), score)
+            SafetyStateStore.log("Calibracion: bloque de 15 min guardado ($score puntos)")
+        } else {
+            current?.let { CalibrationRepository.delete(this, it.name) }
+            SafetyStateStore.log("Calibracion: bloque de 15 min descartado ($score puntos)")
+        }
+        file = CalibrationRepository.newFile(this, activity)
+        writer = runCatching { BufferedWriter(FileWriter(file!!, false)) }.getOrNull()
+        if (writer == null) {
+            stopRecording()
+            return
+        }
+        writeHeader()
+        resetSegment(now)
+    }
 
     private fun stopRecording() {
         running = false
