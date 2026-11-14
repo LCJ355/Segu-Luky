@@ -2453,6 +2453,17 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         )
         val assessment = ImpactClassifier.assess(signals)
         lastImpact = assessment
+        // B2: lectura de la secuencia completa (impacto, giro y desaceleracion).
+        // De momento solo se registra, igual que el clasificador puntual.
+        val secuencia = ImpactSequence.evaluate(
+            samples = ImpactSampleRecorder.snapshot(),
+            hitAtMs = ImpactSampleRecorder.lastAtMs(),
+            thresholdG = detector.effectiveSensitivityG,
+            speedBeforeKmh = speed,
+            speedAfterKmh = speed,
+            rpmAfter = obdSnapshot.rpm
+        )
+        SafetyStateStore.log("Secuencia: ${secuencia.level.label} (${secuencia.score}, ${secuencia.phase})")
         SafetyStateStore.update { it.copy(impactAssessment = assessment.summary) }
         SafetyStateStore.log("Golpe: ${assessment.summary}")
         // A los 2 s se mira cuanto ha caido la velocidad: es lo que separa de verdad
@@ -2469,6 +2480,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         }, 2_000L)
     }
     private fun onMotionSample(dynamicG: Float, timestamp: Long) {
+        ImpactSampleRecorder.record(timestamp, dynamicG)
         adaptive.record(dynamicG, timestamp)
         detector.setAdaptiveFloor(adaptive.effectiveThresholdG)
         maybeRebindMotionSensor(timestamp)
