@@ -98,8 +98,30 @@ class ImpactSequenceTest {
             speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000,
             orientationConfidence = 0.2f
         )
-        assertEquals(sinGiro.score, conGiro.score)
-        assertFalse(conGiro.reasons.any { it.contains("giro") })
+        // B - revision externa: la orientacion ya no es la puerta del giro; solo
+        // matiza si se puede hablar de cambio de postura.
+        assertEquals(sinGiro.score + 10, conGiro.score)
+        assertTrue(conGiro.reasons.any { it.contains("sin orientacion calibrada") })
+    }
+
+    @Test
+    fun `el giro sin calidad no puntua aunque haya rotacion`() {
+        val sinCalidad = ImpactSequence.evaluate(
+            samples = samples(peak = 6f, crossings = 1, gyro = 140f),
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000,
+            orientationConfidence = 1f,
+            gyroConfidence = 0.2f
+        )
+        val sinGiro = ImpactSequence.evaluate(
+            samples = samples(peak = 6f, crossings = 1, gyro = 0f),
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000,
+            orientationConfidence = 1f,
+            gyroConfidence = 0.2f
+        )
+        assertEquals(sinGiro.score, sinCalidad.score)
+        assertTrue(sinCalidad.reasons.any { it.contains("sin calidad") })
     }
 
     @Test
@@ -133,5 +155,51 @@ class ImpactSequenceTest {
         // Sin muestras o con muestras anteriores al golpe no hay cobertura.
         assertEquals(0L, ImpactSequence.coveredMs(emptyList(), 1_000L, 15_000L))
         assertEquals(0L, ImpactSequence.coveredMs(muestras, 5_000L, 15_000L))
+    }
+
+    @Test
+    fun `el ancho a 100 Hz se puede usar y a 20 Hz no`() {
+        val rapido = tren(spacingMs = 10L, count = 20, g = 6f)
+        val calidadRapida = ImpactSequence.widthQuality(rapido, 3.5f, 1_000L)
+        assertTrue(calidadRapida.reliable)
+        assertTrue(calidadRapida.widthMs >= 150L)
+        assertEquals(20, calidadRapida.samplesAbove)
+
+        val lento = tren(spacingMs = 50L, count = 10, g = 6f)
+        val calidadLenta = ImpactSequence.widthQuality(lento, 3.5f, 1_000L)
+        assertFalse("a 20 Hz el ancho no es resoluble", calidadLenta.reliable)
+    }
+
+    @Test
+    fun `la tolerancia del ancho crece con el intervalo de muestreo`() {
+        // A 20 Hz el hueco de una muestra dura 50 ms: con 20 ms cerraria el golpe.
+        val lento = tren(spacingMs = 50L, count = 10, g = 6f, dipAt = 4, dipG = 1f)
+        val conToleranciaFija = ImpactSequence.widthMs(lento, 3.5f, 1_000L)
+        val conToleranciaReal = ImpactSequence.widthQuality(lento, 3.5f, 1_000L)
+        assertTrue(conToleranciaReal.toleranceMs > ImpactSequence.MIN_WIDTH_TOLERANCE_MS)
+        assertTrue(
+            "fija $conToleranciaFija ms, real ${conToleranciaReal.widthMs} ms",
+            conToleranciaReal.widthMs > conToleranciaFija
+        )
+    }
+
+    @Test
+    fun `menos de tres muestras por encima del umbral no son fiables`() {
+        val pocas = listOf(
+            ImpactSample(1_000L, 6f, 0f, 0f),
+            ImpactSample(1_010L, 1f, 0f, 0f),
+            ImpactSample(1_020L, 6f, 0f, 0f)
+        )
+        assertFalse(ImpactSequence.widthQuality(pocas, 3.5f, 1_000L).reliable)
+    }
+
+    private fun tren(spacingMs: Long, count: Int, g: Float, dipAt: Int = -1, dipG: Float = 1f):
+        List<ImpactSample> {
+        val list = ArrayList<ImpactSample>(count)
+        for (i in 0 until count) {
+            val value = if (i == dipAt) dipG else g
+            list.add(ImpactSample(1_000L + i * spacingMs, value, 0f, 0f))
+        }
+        return list
     }
 }

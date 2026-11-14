@@ -19,13 +19,28 @@ data class ImpactSequenceVerdict(
 )
 
 /**
+ * Medida del ancho con la resolucion con la que se ha tomado. [reliable] en falso
+ * significa que el ancho no se debe usar para puntuar (pocas muestras o menos de
+ * 50 Hz), solo como diagnostico.
+ */
+data class ImpactWidthQuality(
+    val widthMs: Long,
+    val samplesAbove: Int,
+    val sampleIntervalMs: Float,
+    val toleranceMs: Long,
+    val reliable: Boolean
+)
+
+/**
  * Analiza la secuencia alrededor de un golpe en vez de un unico pico.
  *
  * Fases: forma del impacto (0-0,5 s), giro (0-2 s), desaceleracion (0-5 s) y
  * recuperacion (0-15 s). La severidad sube en cuanto hay evidencia critica: no
  * espera a completar la ventana si la velocidad se ha caido o el motor se calo.
  *
- * Solo mide: no dispara nada. El giro no cuenta si la orientacion no es fiable.
+ * Solo mide: no dispara nada. El giro puntua por la calidad de su propia lectura
+ * (frescura y huecos), no por la calibracion de la orientacion: la magnitud en
+ * grados/s no necesita saber como esta colocado el telefono.
  */
 object ImpactSequence {
     const val TICK_MS = 150L
@@ -35,27 +50,48 @@ object ImpactSequence {
     const val RECOVERY_WINDOW_MS = 15_000L
     const val ROTATION_MIN_DEG = 90f
     const val MIN_ORIENTATION_CONFIDENCE = 0.5f
+    const val MIN_GYRO_CONFIDENCE = 0.5f
     const val SATURATION_G = 15.9f
+    /** Tolerancia minima del ancho: por debajo se cerraria con un solo hueco. */
+    const val MIN_WIDTH_TOLERANCE_MS = 20L
+    /** Un intervalo de muestra mayor que esto (menos de 50 Hz) no mide el ancho. */
+    const val MAX_RELIABLE_INTERVAL_MS = 20f
+    /** Menos de tres muestras por encima del umbral no describen un impacto. */
+    const val MIN_SAMPLES_ABOVE = 3
 
     /**
      * Ancho del impacto medido con histeresis sobre una lista de muestras: entra
      * con el umbral de golpe, se mantiene con el 60 % y no cierra hasta que pasan
-     * 20 ms por debajo. Devuelve 0 si no hay impacto que medir.
+     * [toleranceMs] por debajo. La tolerancia debe crecer con el intervalo real de
+     * muestreo: con 20 ms a 20 Hz (una muestra cada 50 ms) basta un hueco para
+     * cerrar el impacto.
      */
-    fun widthMs(samples: List<ImpactSample>, thresholdG: Float, hitAtMs: Long): Long {
+    fun widthMs(
+        samples: List<ImpactSample>,
+        thresholdG: Float,
+        hitAtMs: Long,
+        toleranceMs: Long = MIN_WIDTH_TOLERANCE_MS
+    ): Long {
         val enter = thresholdG.coerceAtLeast(0.1f)
         val exit = (enter * 0.6f).coerceAtLeast(0.1f)
         var startedAt = -1L
         var lastAbove = -1L
+        var closed = false
         val limit = hitAtMs + IMPACT_WINDOW_MS
         for (sample in samples) {
             if (sample.atMs < hitAtMs || sample.atMs > limit) continue
+            if (closed) break
             val g = magnitude(sample)
             if (startedAt < 0L) {
                 if (g >= enter) { startedAt = sample.atMs; lastAbove = sample.atMs }
                 continue
             }
-            if (g >= exit) lastAbove = sample.atMs
+            if (g >= exit) {
+                lastAbove = sample.atMs
+            } else if (sample.atMs - lastAbove > toleranceMs) {
+                // Impacto cerrado: lo que venga despues es otro, no ensancha este.
+                closed = true
+            }
         }
         if (startedAt < 0L || lastAbove < 0L) return 0L
         return (lastAbove - startedAt).coerceAtLeast(0L)
@@ -63,6 +99,45 @@ object ImpactSequence {
 
     fun magnitude(sample: ImpactSample): Float =
         sqrt(sample.ax * sample.ax + sample.ay * sample.ay + sample.az * sample.az)
+
+    /**
+     * Ancho mas la resolucion con la que se ha medido: intervalo real de muestreo,
+     * tolerancia aplicada, muestras por encima del umbral y si el resultado es
+     * fiable (>= 50 Hz y al menos tres muestras). Por debajo de eso el ancho sirve
+     * de diagnostico, no para puntuar.
+     */
+    fun widthQuality(samples: List<ImpactSample>, thresholdG: Float, hitAtMs: Long): ImpactWidthQuality {
+        val enter = thresholdG.coerceAtLeast(0.1f)
+        val window = samples.filter { it.atMs in hitAtMs..(hitAtMs + IMPACT_WINDOW_MS) }
+        if (window.size < 2) {
+            return ImpactWidthQuality(0L, window.size, 0f, MIN_WIDTH_TOLERANCE_MS, false)
+        }
+        val interval = medianIntervalMs(window)
+        val tolerance = maxOf(MIN_WIDTH_TOLERANCE_MS, (interval * 1.5f).toLong())
+        val width = widthMs(window, thresholdG, hitAtMs, tolerance)
+        val above = window.count { magnitude(it) >= enter }
+        val reliable = width > 0L &&
+            above >= MIN_SAMPLES_ABOVE &&
+            interval > 0f &&
+            interval <= MAX_RELIABLE_INTERVAL_MS
+        return ImpactWidthQuality(width, above, interval, tolerance, reliable)
+    }
+
+    /** Intervalo mediano entre muestras consecutivas, en ms. */
+    fun medianIntervalMs(samples: List<ImpactSample>): Float {
+        if (samples.size < 2) return 0f
+        val intervals = ArrayList<Float>(samples.size - 1)
+        for (index in 1 until samples.size) {
+            intervals.add((samples[index].atMs - samples[index - 1].atMs).toFloat())
+        }
+        intervals.sort()
+        val middle = intervals.size / 2
+        return if (intervals.size % 2 == 1) {
+            intervals[middle]
+        } else {
+            (intervals[middle - 1] + intervals[middle]) / 2f
+        }
+    }
 
     /**
      * Cuanto de la ventana [windowMs] llega a cubrir la muestra mas reciente.
@@ -97,7 +172,8 @@ object ImpactSequence {
         speedBeforeKmh: Float?,
         speedAfterKmh: Float?,
         rpmAfter: Int?,
-        orientationConfidence: Float = 1f
+        orientationConfidence: Float = 1f,
+        gyroConfidence: Float = 1f
     ): ImpactSequenceVerdict {
         val reasons = ArrayList<String>()
         val threshold = thresholdG.coerceAtLeast(0.1f)
@@ -123,9 +199,16 @@ object ImpactSequence {
         if (crossings >= 2) { score += 10; reasons.add("$crossings cruces: rebote") }
         if (rms > threshold) { score += 5; reasons.add("sacudida sostenida") }
         if (saturated) { score += 8; reasons.add("sensor saturado") }
-        if (rotation >= ROTATION_MIN_DEG && orientationConfidence >= MIN_ORIENTATION_CONFIDENCE) {
+        if (rotation >= ROTATION_MIN_DEG && gyroConfidence >= MIN_GYRO_CONFIDENCE) {
             score += 10
             reasons.add("giro ${rotation.toInt()} grados/s")
+            // La orientacion no valida la magnitud del giro; solo matiza si se
+            // puede hablar de cambio de postura.
+            if (orientationConfidence < MIN_ORIENTATION_CONFIDENCE) {
+                reasons.add("giro sin orientacion calibrada")
+            }
+        } else if (rotation >= ROTATION_MIN_DEG) {
+            reasons.add("giro ${rotation.toInt()} grados/s sin calidad")
         }
 
         val drop = if (speedBeforeKmh != null && speedAfterKmh != null) {

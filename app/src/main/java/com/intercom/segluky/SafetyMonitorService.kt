@@ -2457,12 +2457,16 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         // B4: cada golpe contado entra en la memoria de ritmo.
         impactPeriodicity.record(hitAtMs)
         sequenceHitAtMs = hitAtMs
-        val measuredWidth = ImpactSequence.widthMs(
+        val width = ImpactSequence.widthQuality(
             samples = windowSamples,
             thresholdG = detector.effectiveSensitivityG,
             hitAtMs = hitAtMs
         )
-        if (measuredWidth > 0L) lastHitWidthMs = measuredWidth
+        // A - revision externa: el ancho solo alimenta al clasificador si la
+        // frecuencia permite medirlo. A 20-50 Hz la tolerancia de 20 ms no resuelve
+        // nada y "ancho >= 60 ms" significaria cosas distintas en cada movil, asi
+        // que se registra como diagnostico pero no puntua.
+        lastHitWidthMs = if (width.reliable) width.widthMs else 0L
         val signals = ImpactSignals(
             peakG = detector.lastHitPeakG,
             thresholdG = detector.effectiveSensitivityG,
@@ -2489,15 +2493,24 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             speedBeforeKmh = speed,
             speedAfterKmh = speed,
             rpmAfter = obdSnapshot.rpm,
-            orientationConfidence = confidence
+            orientationConfidence = confidence,
+            gyroConfidence = gyroQualityNow()
         )
         val adaptiveState = adaptive.snapshot()
         val hzReal = adaptiveState.deliveredHz.toInt()
         SafetyStateStore.log(
             "Secuencia: ${secuencia.level.label} (${secuencia.score}, ${secuencia.phase}) - " +
-                "giro conf ${formatG(confidence)} - $hzReal Hz reales " +
+                "giro conf ${formatG(gyroQualityNow())} - $hzReal Hz reales " +
                 "(pedidos ${adaptiveState.tier.hz} Hz)"
         )
+        if (width.widthMs > 0L) {
+            SafetyStateStore.log(
+                "Ancho: ${width.widthMs} ms (${width.samplesAbove} muestras, " +
+                    "${hzFromInterval(width.sampleIntervalMs)} Hz, " +
+                    "tolerancia ${width.toleranceMs} ms, " +
+                    (if (width.reliable) "fiable" else "NO fiable: no puntua") + ")"
+            )
+        }
         SafetyStateStore.update { it.copy(impactAssessment = assessment.summary) }
         SafetyStateStore.log("Golpe: ${assessment.summary}")
         // A los 2 s se mira cuanto ha caido la velocidad: es lo que separa de verdad
@@ -2519,25 +2532,33 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 orientationConfidence = ImpactSequence.orientationConfidence(
                     calibrated = orientationCalibrated,
                     accuracyReliable = orientationAccuracyReliable
-                )
+                ),
+                gyroConfidence = gyroQualityNow()
             )
             SafetyStateStore.log(
                 "Secuencia a los 2 s: ${segunda.level.label} " +
                     "(${segunda.score}, ${segunda.phase})"
             )
-            // B4: si el ritmo es de badenes, el veredicto baja de sospecha; un
-            // choque ya declarado se mantiene y solo se anota el patron.
+            // C - revision externa: el ritmo de badenes solo resta con contexto
+            // benigno (el vehiculo siguio circulando). Sin eso, varios golpes
+            // regulares pueden ser justo un accidente con impactos multiples.
             if (impactPeriodicity.isRepetitivePattern()) {
-                val ajustada = impactPeriodicity.adjust(segunda)
-                val cambio = if (ajustada.level == segunda.level) {
-                    "se mantiene ${ajustada.level.label}"
+                val benigno = benignContext(speed, after, obdAfter.rpm, segunda)
+                val ajustada = impactPeriodicity.adjust(segunda, benign = benigno)
+                val detalle = impactPeriodicity.description()
+                if (!benigno) {
+                    SafetyStateStore.log(
+                        "Patron repetitivo ($detalle): sin contexto benigno, no resta " +
+                            "(${segunda.level.label})"
+                    )
                 } else {
-                    "${segunda.level.label} -> ${ajustada.level.label}"
+                    val cambio = if (ajustada.level == segunda.level) {
+                        "se mantiene ${ajustada.level.label}"
+                    } else {
+                        "${segunda.level.label} -> ${ajustada.level.label}"
+                    }
+                    SafetyStateStore.log("Patron repetitivo ($detalle): $cambio (${ajustada.score})")
                 }
-                SafetyStateStore.log(
-                    "Patron repetitivo (${impactPeriodicity.description()}): " +
-                        "$cambio (${ajustada.score})"
-                )
             }
             val withDrop = ImpactClassifier.assess(
                 signals.copy(speedAfterKmh = after, rpmAfter = obdAfter.rpm)
@@ -2575,7 +2596,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 orientationConfidence = ImpactSequence.orientationConfidence(
                     calibrated = orientationCalibrated,
                     accuracyReliable = orientationAccuracyReliable
-                )
+                ),
+                gyroConfidence = gyroQualityNow()
             )
             val cobertura = if (covered >= windowMs) "completa" else "INCOMPLETA"
             SafetyStateStore.log(
@@ -2585,6 +2607,37 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             )
         }, windowMs)
     }
+
+    /**
+     * B - revision externa: calidad del giro por su propia lectura (frescura y
+     * huecos de entrega). No depende de que la orientacion este calibrada: la
+     * magnitud en grados/s es valida sin saber como esta colocado el movil.
+     */
+    private fun gyroQualityNow(): Float = gyroHold.qualityAt(ImpactSampleRecorder.lastAtMs())
+
+    /**
+     * C - revision externa: contexto benigno para el ritmo de badenes. Solo si el
+     * vehiculo siguio circulando con normalidad se puede restar sospecha; sin dato
+     * de velocidad, o con parada/calado, no se resta nada.
+     */
+    private fun benignContext(
+        speedBeforeKmh: Float?,
+        speedAfterKmh: Float?,
+        rpmAfter: Int?,
+        verdict: ImpactSequenceVerdict
+    ): Boolean {
+        if (verdict.level == ImpactVerdict.CHOQUE) return false
+        val before = speedBeforeKmh ?: return false
+        val after = speedAfterKmh ?: return false
+        if (before - after >= ImpactClassifier.SEVERE_SPEED_DROP_KMH) return false
+        if (after <= ImpactClassifier.STOPPED_KMH) return false
+        if (rpmAfter != null && rpmAfter == 0) return false
+        return true
+    }
+
+    private fun hzFromInterval(intervalMs: Float): Int =
+        if (intervalMs <= 0f) 0 else (1_000f / intervalMs).toInt()
+
     private fun onMotionSample(dynamicG: Float, timestamp: Long) {
         // El giro va con la muestra solo si es reciente; si no, la muestra vale con
         // giro 0 y la secuencia no puntua rotacion (mejor no puntuar que inventarla).

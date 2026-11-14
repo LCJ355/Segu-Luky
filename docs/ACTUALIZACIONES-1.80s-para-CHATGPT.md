@@ -266,3 +266,25 @@ histeresis del ancho (60 % del umbral y 20 ms de tolerancia) y la caducidad de 2
 - Version instalada y publicada: **1.80s (versionCode 67)**, release unica `V-1.80s`.
 - **Falta la validacion en carretera**: no hay todavia ni un choque real ni una bateria de
   baches medidos con la app. Todo lo de arriba esta probado en unitarios, no en asfalto.
+
+## 12. Addendum: cambios posteriores a la revision externa (sin publicar aun)
+
+Tras una revision critica de esta misma version (documento `Revision_critica_Segu-Luky_1.80s.docx`,
+respuesta en `docs/RESPUESTA-REVISION-1.80s.md`) se corrigieron **cinco cosas**, sin cambiar
+ningun peso de puntuacion. Lo que sigue ya no coincide con lo descrito arriba:
+
+1. **Buffer**: 4.000 huecos (20 s a 200 Hz) y retencion por tiempo. Con 2.000 muestras a 148 Hz
+   solo se cubrian 13,5 s y la ventana de recuperacion no cabia.
+2. **Ventanas**: hitos diferidos a los 5 s y 15 s, sobre el mismo golpe, con la cobertura real
+   registrada ("ventana 15 s, completa" / "INCOMPLETA"). Antes solo se evaluaban golpe y 2 s.
+3. **Ancho (A)**: la tolerancia crece con el intervalo real (`max(20 ms, 1,5 × intervalo)`) y el
+   ancho **solo puntua si es fiable** (>= 50 Hz y 3 muestras por encima del umbral). Se elimino
+   `ImpactWidthMeter`, que duplicaba la histeresis con tolerancia fija.
+4. **Giro (B)**: la rotacion puntua por la **calidad de su propia lectura** (frescura y huecos),
+   no por la calibracion de orientacion. `orientationConfidence` solo anade un motivo.
+5. **Periodicidad (C)**: la resta exige **contexto benigno** (velocidad conocida y mantenida)
+   y **6 golpes**, y usa mediana y desviacion absoluta mediana en vez de media y tipica. Sin
+   velocidad no resta; un CHOQUE nunca se desmonta.
+
+Estado: 242 pruebas en verde, `lintDebug` limpio. Pendiente de publicar como version nueva
+(la 1.80s instalada sigue siendo la de antes de este addendum).

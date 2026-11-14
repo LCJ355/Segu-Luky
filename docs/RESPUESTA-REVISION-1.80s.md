@@ -4,8 +4,11 @@ Contrapunto técnico al documento `Revision_critica_Segu-Luky_1.80s.docx`, compr
 código real del repositorio (no solo en la descripción). Cada hallazgo se clasifica como
 **confirmado y corregido**, **confirmado y pendiente de decisión** o **matizado**.
 
-Estado: `main` con 236 pruebas en verde y `lintDebug` sin errores. Los pesos y umbrales de
-puntuación **no se han tocado** en este round, como pide el apartado 6.10 de la revisión.
+Estado: `main` con **242 pruebas en verde** y `lintDebug` sin errores. Corregidos en este round
+el buffer, las ventanas de 5/15 s y los tres cambios acordados con el autor (ancho por
+resolución, calidad del giro y periodicidad condicionada). **Los pesos y umbrales de puntuación
+no se han cambiado**: lo que cambia es *cuándo* se aplican el ancho y la resta del patrón, no
+las cifras.
 
 ---
 
@@ -97,54 +100,82 @@ Consecuencias reales, no teóricas:
 - El pico de una muestra con ancho 0 ms no demuestra que el golpe durase cero: solo que no hay
   resolución para medirlo.
 
-**Pendiente de decisión** (toca la puntuación, así que no se ha hecho):
+**IMPLANTADO (A).** Lo que se ha hecho:
 
 1. Tolerancia proporcional a la resolución: `max(20 ms, 1,5 × intervalo mediano)` → 20 Hz: 75 ms;
    25 Hz: 60 ms; 50 Hz: 30 ms; 100 y 148 Hz: 20 ms.
-2. Registrar `ancho (muestras, Hz)` y marcar el ancho como no fiable si el evento tiene menos de
-   3 muestras por encima del umbral.
-3. No puntuar ancho por debajo de ~50 Hz hasta tener datos: usarlo solo como diagnóstico.
+2. Nuevo `ImpactSequence.widthQuality(...)`: devuelve ancho, muestras por encima del umbral,
+   intervalo real, tolerancia aplicada y si el resultado es fiable. El registro lo dice:
 
-Lo que ya se puede ver hoy sin cambiar nada: el registro imprime los Hz reales en la misma línea
-del veredicto, así que un bache con 20 Hz y otro con 148 Hz se distinguen al leer.
+```text
+Ancho: 190 ms (20 muestras, 100 Hz, tolerancia 20 ms, fiable)
+Ancho: 450 ms (10 muestras, 20 Hz, tolerancia 75 ms, NO fiable: no puntua)
+```
 
----
+3. El ancho **solo alimenta al clasificador si es fiable** (>= 50 Hz y al menos 3 muestras por
+   encima del umbral). Si no, se registra como diagnóstico y las reglas "ancho >= 60 ms / +15" y
+   "pico corto / -6" no se aplican. Antes de esto, el ancho ya se medía sin saber si era medible.
 
-## 5. Giro contra confianza de orientación: matizado y pendiente
+Pruebas nuevas: a 100 Hz el ancho es fiable y a 20 Hz no; la tolerancia crece con el intervalo y
+no parte el golpe en un hueco de una muestra; menos de tres muestras por encima no es fiable.
 
-**Parcialmente de acuerdo.** La crítica es correcta en el fondo: la **magnitud** del giroscopio en
-grados/s no necesita conocer la orientación absoluta del móvil. La calibración de gravedad sirve
-para postura/cambio de orientación, no para validar una velocidad angular.
-
-Cómo está hoy: el +10 del giro exige `orientationConfidence >= 0,5`, que sale de
-`orientationCalibrated` y de la fiabilidad de la gravedad (0,2 / 0,4 / 1,0). Es decir, hoy se usa
-como puerta de una magnitud que no lo necesitaría.
-
-Pendiente de decisión (toca puntuación):
-
-- `gyroConfidence`: sensor presente, lectura finita, sin huecos, antigüedad menor que 200 ms y
-  sesgo razonable → puerta del giro.
-- `orientationConfidence`: solo para cambio de orientación y postura.
-- Degradación gradual con motivo ("giroscopio sin datos desde hace 300 ms"), no tres estados.
-
-La caducidad de 200 ms se queda, pero queda por probar con huecos reales de cada móvil.
+**Cambio de fondo**: `ImpactWidthMeter` (la variante con estado de B3, que solo se usaba en sus
+pruebas) **se ha eliminado**. Tenía la misma histéresis con tolerancia fija de 20 ms y dos copias
+de la misma regla son una invitación a que se separen. Ahora hay una sola implementación, la pura.
 
 ---
 
-## 6. Periodicidad: confirmado, se cambia a contexto benigno condicionado
+## 5. Giro contra confianza de orientación: se separan (B)
 
-**De acuerdo.** Hoy `ImpactPeriodicity.adjust()` resta 8 puntos **siempre** que detecta patrón
-(4 golpes, CV <= 0,25, intervalos 1-90 s), y solo protege el `CHOQUE` ya declarado. Un accidente
-con varios impactos podría verse como "badenes" y bajar de `GOLPE DURO` a `BACHE`.
+**De acuerdo en el fondo:** la **magnitud** del giroscopio en grados/s no necesita conocer la
+orientación absoluta del móvil. Antes el +10 del giro exigía `orientationConfidence >= 0,5`, que
+sale de la calibración de gravedad: se usaba como puerta de algo que no lo necesitaba.
 
-Pendiente de decisión (cambia etiquetas, no el SOS):
+**IMPLANTADO (B).**
 
-- Solo restar con **evidencia benigna positiva**: velocidad conocida y mantenida (o recuperada),
-  sin parada posterior, sin motor calado, sin saturación acompañada de señales graves y sin giro
-  severo. Si no hay velocidad, la periodicidad **no resta**.
-- Nunca restar con señales graves, SOS manual ni cuenta atrás ya iniciada.
-- Robustecer las estadísticas: mediana y desviación absoluta mediana en vez de solo CV, y exigir
-  más observaciones (mínimo 5 intervalos) antes de llamar "benigno" a un tramo.
+- `ImpactGyroHold.qualityAt(atMs)` mide la calidad del giro por su propia lectura: 1 mientras es
+  fresca (< 100 ms), decae en línea hasta 0 al caducar (200 ms) y se queda a la mitad si la
+  entrega tiene un hueco (> 150 ms). Esa es la puerta del giro (`gyroConfidence >= 0,5`).
+- `orientationConfidence` **ya no bloquea la puntuación**: solo añade el motivo
+  "giro sin orientacion calibrada" cuando el giro puntúa sin actitud fiable, y queda para el
+  cambio de orientación/postura cuando se implemente.
+- Motivos nuevos en el registro: "giro 140 grados/s" (puntúa), "giro 140 grados/s sin calidad"
+  (no puntúa, lectura poco fiable), "giro sin orientacion calibrada" (puntúa, actitud sin calibrar).
+
+Pruebas nuevas: la calidad empieza en 1 con lectura fresca, decae a la mitad a medio camino,
+es 0 sin lectura o caducada, un hueco de entrega la baja a la mitad y `reset` la deja a 0; y en
+la secuencia, giro con confianza puntúa, sin calidad no puntúa y sin orientación calibrada
+puntúa igual pero lo deja escrito.
+
+Queda pendiente probar la caducidad de 200 ms con huecos reales de cada móvil.
+
+---
+
+## 6. Periodicidad: contexto benigno condicionado (C)
+
+**De acuerdo.** Antes `ImpactPeriodicity.adjust()` restaba 8 puntos **siempre** que detectaba
+patrón (4 golpes, CV <= 0,25, intervalos 1-90 s) y solo protegía el `CHOQUE`. Un accidente con
+varios impactos podía parecer "badenes" y bajar de `GOLPE DURO` a `BACHE`.
+
+**IMPLANTADO (C).**
+
+- La resta exige **contexto benigno**: velocidad conocida antes y después, caída menor de
+  30 km/h, velocidad final por encima de 10 km/h y sin motor calado. Sin dato de velocidad **no
+  se resta nada**.
+- Un `CHOQUE` nunca se desmonta: se mantiene y solo se anota el patrón.
+- Estadística robusta: **mediana** de los intervalos y **desviación absoluta mediana** (MAD) en
+  lugar de media y desviación típica, con umbral MAD/mediana <= 0,25.
+- Hacen falta **6 golpes (5 intervalos)**, no 4: con dos o tres golpes el ritmo no es concluyente.
+- El registro distingue los dos casos:
+
+```text
+Patron repetitivo (6 impactos, mediana 20.0 s, MAD 0.00): sin contexto benigno, no resta (GOLPE DURO)
+Patron repetitivo (6 impactos, mediana 20.0 s, MAD 0.00): GOLPE DURO -> BACHE (37)
+```
+
+Pruebas nuevas: seis impactos regulares forman patrón y cinco no; sin contexto benigno no resta;
+con contexto baja de golpe duro a bache; un choque sigue siendo choque; un intervalo raro suelto
+no rompe el patrón (para eso está la MAD) y una cadencia irregular sí lo rompe.
 
 ---
 
@@ -207,14 +238,18 @@ del apartado 4 de la revisión (baches, badenes, juntas, frenadas, móvil caído
 
 ## 10. Sobre "no cambiar pesos por intuición"
 
-Cumplido en este round: **0 pesos y 0 umbrales** modificados. Lo único que cambia el
-comportamiento observable es:
+Cumplido: **0 pesos y 0 umbrales** modificados (pico, RMS, cruces, saturación, velocidad, calado,
+giro siguen con las mismas cifras). Lo que cambia es el **régimen de aplicación**, y todo con
+prueba asociada:
 
-- el buffer guarda mas historia (mas datos para el mismo análisis), y
-- se añaden dos evaluaciones diferidas (5 s y 15 s) que **solo escriben en el registro**.
+- el buffer guarda mas historia (mas datos para el mismo análisis);
+- dos evaluaciones diferidas (5 s y 15 s) que **solo escriben en el registro**;
+- (A) el ancho solo puntúa si la frecuencia permite medirlo;
+- (B) el giro se abre por la calidad de su lectura, no por la calibración de orientación;
+- (C) la resta por badenes exige contexto benigno y 6 golpes (antes 4).
 
-Los cuatro cambios que sí tocan la puntuación están listados como **pendientes de decisión**
-(apartados 4, 5, 6 y 7) con su prueba asociada y sin cifras inventadas.
+Sigue pendiente, por necesitar datos etiquetados: los topes por familia de señales (apartado 3),
+la saturación como dato censurado y la vía de confirmación sin OBD (apartado 7).
 
 ---
 
@@ -222,13 +257,13 @@ Los cuatro cambios que sí tocan la puntuación están listados como **pendiente
 
 | Hallazgo de la revisión | Estado |
 |---|---|
-| Buffer 2.000 muestras no son 20 s a 148 Hz | **confirmado y corregido** (4.000 + purga por tiempo, 5 pruebas) |
-| Ventanas de 5 s y 15 s sin evaluar | **confirmado y corregido** (hitos a 5 s y 15 s con cobertura, solo registro) |
-| Suma de señales correlacionadas | confirmado como riesgo; propuesta por familias, sin tocar pesos |
-| Ancho no resoluble a 20-50 Hz | confirmado con tabla por frecuencia; corrección pendiente de decisión |
-| Confianza de orientación usada como puerta del giro | aceptado; separación pendiente de decisión |
-| Periodicidad puede rebajar un evento grave | aceptado; contexto benigno condicionado pendiente de decisión |
-| "Sin velocidad no hay CHOQUE" bloquea a las motos | confirmado; vía de confirmación propuesta, pendiente de datos |
+| Buffer 2.000 muestras no son 20 s a 148 Hz | **corregido** (4.000 + purga por tiempo, 5 pruebas) |
+| Ventanas de 5 s y 15 s sin evaluar | **corregido** (hitos a 5 s y 15 s con cobertura, solo registro) |
+| Ancho no resoluble a 20-50 Hz | **corregido (A)**: tolerancia por resolución y ancho que solo puntúa si es fiable; `ImpactWidthMeter` eliminado |
+| Confianza de orientación usada como puerta del giro | **corregido (B)**: calidad propia del giro, orientación solo informativa |
+| Periodicidad puede rebajar un evento grave | **corregido (C)**: contexto benigno + 6 golpes + mediana/MAD |
+| Suma de señales correlacionadas | confirmado como riesgo; topes por familia pendientes de datos etiquetados |
+| "Sin velocidad no hay CHOQUE" bloquea a las motos | confirmado; vía de confirmación pendiente de datos de carretera |
 | TICK_MS sin uso | aceptado: no se añade temporizador (escrito en `docs/ACTUALIZACIONES-1.80s-para-CHATGPT.md`) |
 | Semántica de ejes | aclarado en el código: el eje X lleva la magnitud agregada, no un vector 3D |
 | Duplicidad clasificador/secuencia | plan por fases en el apartado 8 |

@@ -48,4 +48,44 @@ class ImpactGyroHoldTest {
             0.001f
         )
     }
+
+    @Test
+    fun `la calidad del giro empieza en uno con lectura fresca`() {
+        val hold = ImpactGyroHold()
+        hold.update(1_000L, 0f, 0f, 120f)
+        assertEquals(1f, hold.qualityAt(1_000L), 0.001f)
+        assertEquals(1f, hold.qualityAt(1_000L + ImpactGyroHold.FRESH_MS), 0.001f)
+    }
+
+    @Test
+    fun `la calidad decae entre fresca y caducada`() {
+        val hold = ImpactGyroHold()
+        hold.update(1_000L, 0f, 0f, 120f)
+        val media = hold.qualityAt(1_000L + (ImpactGyroHold.FRESH_MS + ImpactGyroHold.MAX_AGE_MS) / 2)
+        assertEquals(0.5f, media, 0.05f)
+    }
+
+    @Test
+    fun `sin lectura vigente la calidad es cero`() {
+        val hold = ImpactGyroHold()
+        assertEquals(0f, hold.qualityAt(1_000L), 0.001f)
+        hold.update(1_000L, 0f, 0f, 120f)
+        assertEquals(0f, hold.qualityAt(1_000L + ImpactGyroHold.MAX_AGE_MS + 1L), 0.001f)
+    }
+
+    @Test
+    fun `un hueco de entrega baja la calidad a la mitad`() {
+        val hold = ImpactGyroHold()
+        hold.update(1_000L, 0f, 0f, 120f)
+        hold.update(1_000L + ImpactGyroHold.GAP_MS + 50L, 0f, 0f, 120f)
+        assertEquals(0.5f, hold.qualityAt(1_000L + ImpactGyroHold.GAP_MS + 50L), 0.01f)
+    }
+
+    @Test
+    fun `reset deja la calidad a cero`() {
+        val hold = ImpactGyroHold()
+        hold.update(1_000L, 0f, 0f, 120f)
+        hold.reset()
+        assertEquals(0f, hold.qualityAt(1_001L), 0.001f)
+    }
 }
