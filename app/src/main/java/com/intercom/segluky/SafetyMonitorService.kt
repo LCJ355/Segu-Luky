@@ -2440,6 +2440,12 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         val obdSnapshot = ObdLinkController.state.value
         val now = System.currentTimeMillis()
         val speed = obdSnapshot.freshSpeed(now) ?: lastSpeed
+        val measuredWidth = ImpactSequence.widthMs(
+            samples = ImpactSampleRecorder.snapshot(),
+            thresholdG = detector.effectiveSensitivityG,
+            hitAtMs = ImpactSampleRecorder.lastAtMs()
+        )
+        if (measuredWidth > 0L) lastHitWidthMs = measuredWidth
         val signals = ImpactSignals(
             peakG = detector.lastHitPeakG,
             thresholdG = detector.effectiveSensitivityG,

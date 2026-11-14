@@ -1,4 +1,4 @@
-﻿package com.intercom.segluky
+package com.intercom.segluky
 
 import kotlin.math.sqrt
 
@@ -36,6 +36,30 @@ object ImpactSequence {
     const val ROTATION_MIN_DEG = 90f
     const val MIN_ORIENTATION_CONFIDENCE = 0.5f
     const val SATURATION_G = 15.9f
+
+    /**
+     * Ancho del impacto medido con histeresis sobre una lista de muestras: entra
+     * con el umbral de golpe, se mantiene con el 60 % y no cierra hasta que pasan
+     * 20 ms por debajo. Devuelve 0 si no hay impacto que medir.
+     */
+    fun widthMs(samples: List<ImpactSample>, thresholdG: Float, hitAtMs: Long): Long {
+        val enter = thresholdG.coerceAtLeast(0.1f)
+        val exit = (enter * 0.6f).coerceAtLeast(0.1f)
+        var startedAt = -1L
+        var lastAbove = -1L
+        val limit = hitAtMs + IMPACT_WINDOW_MS
+        for (sample in samples) {
+            if (sample.atMs < hitAtMs || sample.atMs > limit) continue
+            val g = magnitude(sample)
+            if (startedAt < 0L) {
+                if (g >= enter) { startedAt = sample.atMs; lastAbove = sample.atMs }
+                continue
+            }
+            if (g >= exit) lastAbove = sample.atMs
+        }
+        if (startedAt < 0L || lastAbove < 0L) return 0L
+        return (lastAbove - startedAt).coerceAtLeast(0L)
+    }
 
     fun magnitude(sample: ImpactSample): Float =
         sqrt(sample.ax * sample.ax + sample.ay * sample.ay + sample.az * sample.az)
