@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.81s (versionCode 68)
+
+### Respuesta a la revision critica de 1.80s (sin tocar los pesos)
+Sigue sin cambiar cuando salta el SOS: esto mide con mas criterio, no avisa distinto.
+
+- **Buffer por tiempo.** El buffer de muestras tenia 2.000 huecos: con los 148 Hz reales medidos
+  en un OPPO solo cubria 13,5 s, asi que la ventana de recuperacion (15 s) no cabia. Ahora son
+  4.000 huecos (20 s a 200 Hz) y la retencion la manda el tiempo, no la capacidad.
+- **Ventanas de 5 y 15 s.** `DECEL_WINDOW_MS` y `RECOVERY_WINDOW_MS` estaban declaradas y sin
+  usar: la secuencia solo se evaluaba en el golpe y a los 2 s. Ahora hay hitos a los 5 s y a los
+  15 s sobre el mismo golpe (se descartan si ha habido otro), y el registro dice la cobertura
+  real: "ventana 15 s, completa" o "INCOMPLETA".
+- **Ancho por resolucion (A).** La tolerancia de histeresis crece con el intervalo real de
+  muestreo (`max(20 ms; 1,5 x intervalo)`), asi que a 20 Hz no basta un hueco de una muestra para
+  cerrar el impacto. El ancho **solo puntua si es fiable** (>= 50 Hz y 3 muestras por encima del
+  umbral); si no, queda como diagnostico y las reglas de ancho no se aplican. El registro dice
+  muestras, Hz, tolerancia y fiabilidad. Se elimina `ImpactWidthMeter`, que duplicaba la misma
+  histeresis con tolerancia fija.
+- **Calidad del giro (B).** La rotacion ya no depende de que la orientacion este calibrada: la
+  magnitud en grados/s se valida con su propia lectura (fresca < 100 ms, caduca a 200 ms, hueco
+  de entrega > 150 ms la baja a la mitad). `orientationConfidence` queda para postura y solo
+  anade el motivo "giro sin orientacion calibrada".
+- **Badenes condicionados (C).** La resta por ritmo repetido exige **contexto benigno** (velocidad
+  conocida y mantenida, sin parada ni motor calado) y **6 golpes** en vez de 4, con mediana y
+  desviacion absoluta mediana en lugar de media y tipica. Sin dato de velocidad no resta; un
+  CHOQUE nunca se desmonta.
+- 242 pruebas (6 nuevas) y `lintDebug` sin errores.
+
 ## 1.80s (versionCode 67)
 
 ### B2, B3 y B4 del plan de mejoras: la secuencia del golpe, el ancho real y los badenes
