@@ -444,6 +444,42 @@ class AccidentDetectorTest {
         assertTrue(events.promotedToValidation)
         assertTrue(events.manualReasons.isEmpty())
         assertEquals(1, events.validations)
+        assertTrue(events.lastValidationFromPromotion)
+    }
+
+    @Test
+    fun candidatoConVelocidadDeHaceMasDeCincoSegundosNoPasaAValidacion() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        detector.setGolpeSensitivity(3f)
+        detector.setFallOrientationGateEnabled(true)
+
+        // La moto ya esta parada: el ultimo dato de velocidad tiene mas de 5 s.
+        detector.onLocation(40f, timestamp = 1_000L)
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 7_500L)
+
+        detector.tick(timestamp = 22_600L)
+
+        assertEquals(SafetyPhase.MONITORING, detector.runtimeState().phase)
+        assertFalse(events.promotedToValidation)
+        assertEquals(0, events.validations)
+    }
+
+    @Test
+    fun elReboteTrasElGolpeNoCancelaElRescateDeBolsillo() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        detector.setGolpeSensitivity(3f)
+        detector.setFallOrientationGateEnabled(true)
+
+        detector.onLocation(40f, timestamp = 900L)
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_000L)
+        // A los 3 s el movil aun traquetea por el golpe: no es que el motorista se mueva.
+        detector.onDynamicAcceleration(g(0.5f), 0f, 0f, timestamp = 4_000L)
+        detector.tick(timestamp = 16_100L)
+
+        assertEquals(SafetyPhase.VALIDATING, detector.runtimeState().phase)
+        assertTrue(events.promotedToValidation)
     }
 
     @Test
@@ -455,8 +491,8 @@ class AccidentDetectorTest {
 
         detector.onLocation(40f, timestamp = 900L)
         detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_000L)
-        // A los 3 s el movil sigue moviendose: no es el caso del bolsillo quieto.
-        detector.onDynamicAcceleration(g(0.5f), 0f, 0f, timestamp = 4_000L)
+        // A los 9 s el movil sigue moviendose con fuerza: no es el bolsillo quieto.
+        detector.onDynamicAcceleration(g(0.9f), 0f, 0f, timestamp = 10_000L)
         detector.tick(timestamp = 16_100L)
 
         assertEquals(SafetyPhase.MONITORING, detector.runtimeState().phase)
@@ -542,9 +578,11 @@ class AccidentDetectorTest {
         var motionDetected = false
         var candidateAborted = false
         var promotedToValidation = false
+        var lastValidationFromPromotion = false
 
-        override fun onValidationStarted(startedAt: Long) {
+        override fun onValidationStarted(startedAt: Long, fromPromotion: Boolean) {
             validations++
+            lastValidationFromPromotion = fromPromotion
         }
 
         override fun onValidationExpired() {

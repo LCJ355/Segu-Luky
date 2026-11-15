@@ -97,7 +97,7 @@ class AccidentDetectorJerkTest {
     private class RecordingListener : AccidentDetector.Listener {
         val manualReasons = mutableListOf<String>()
 
-        override fun onValidationStarted(startedAt: Long) = Unit
+        override fun onValidationStarted(startedAt: Long, fromPromotion: Boolean) = Unit
         override fun onValidationExpired() = Unit
         override fun onAutomaticEmergency() = Unit
         override fun onManualEmergency(reason: String) {

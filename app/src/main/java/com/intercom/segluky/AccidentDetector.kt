@@ -1,4 +1,4 @@
-﻿package com.intercom.segluky
+package com.intercom.segluky
 
 import kotlin.math.abs
 import kotlin.math.exp
@@ -11,7 +11,13 @@ class AccidentDetector(
     private val now: () -> Long = { System.nanoTime() / 1_000_000L }
 ) {
     interface Listener {
-        fun onValidationStarted(startedAt: Long)
+        /**
+         * [fromPromotion] es true cuando la validacion no la abre un golpe nuevo,
+         * sino un candidato que no confirmo inclinacion y se rescata por velocidad
+         * e inmovilidad. En ese caso no hay golpe que clasificar: el instante del
+         * impacto quedo quince segundos atras.
+         */
+        fun onValidationStarted(startedAt: Long, fromPromotion: Boolean = false)
         fun onValidationExpired()
         fun onAutomaticEmergency()
         fun onManualEmergency(reason: String)
@@ -305,7 +311,7 @@ class AccidentDetector(
             if (phase == SafetyPhase.MONITORING) {
                 phase = SafetyPhase.FALL_CANDIDATE
                 candidateDeadlineAt = timestamp + FALL_CANDIDATE_WINDOW_MS
-                candidateHitSpeedKmh = recentQualifiedSpeed(timestamp)
+                candidateHitSpeedKmh = recentPocketSpeed(timestamp)
                 motionSinceHit = false
                 listener.onFallCandidateArmed()
             } else if (phase == SafetyPhase.FALL_CANDIDATE) {
@@ -315,12 +321,13 @@ class AccidentDetector(
         }
 
         if (thresholdHit) notifySignificantMovement(timestamp)
+        if (phase == SafetyPhase.FALL_CANDIDATE &&
+            dynamicG > POCKET_MOTION_THRESHOLD_G &&
+            timestamp - lastStrongHitAt >= POCKET_SETTLE_MS
+        ) {
+            motionSinceHit = true
+        }
         if (dynamicG > MOTION_THRESHOLD_G) {
-            if (phase == SafetyPhase.FALL_CANDIDATE &&
-                timestamp - lastStrongHitAt >= POCKET_SETTLE_MS
-            ) {
-                motionSinceHit = true
-            }
             if (phase == SafetyPhase.VALIDATING) markMoving(timestamp)
         } else if (phase == SafetyPhase.VALIDATING && immobileSince == null) {
             immobileSince = timestamp
@@ -333,11 +340,19 @@ class AccidentDetector(
         if (!x.isFinite() || !y.isFinite() || !z.isFinite() || timestamp < 0L) return
         if (lastGyroscopeAt != UNSET_TIME && timestamp < lastGyroscopeAt) return
         val magnitude = vectorMagnitude(x, y, z) ?: return
-        if (phase == SafetyPhase.VALIDATING &&
-            timestamp >= (validationStartedAt ?: return) &&
-            magnitude > GYROSCOPE_MOTION_RAD_S
-        ) {
-            markMoving(timestamp)
+        if (magnitude > GYROSCOPE_MOTION_RAD_S) {
+            val hitAt = lastStrongHitAt
+            val candidateMoved = phase == SafetyPhase.FALL_CANDIDATE &&
+                hitAt != UNSET_TIME &&
+                timestamp - hitAt >= POCKET_SETTLE_MS
+            if (candidateMoved) {
+                // Girar el movil es manejo del aparato, no rebote del golpe.
+                motionSinceHit = true
+            } else if (phase == SafetyPhase.VALIDATING &&
+                timestamp >= (validationStartedAt ?: return)
+            ) {
+                markMoving(timestamp)
+            }
         }
         lastGyroscopeAt = timestamp
     }
@@ -351,7 +366,7 @@ class AccidentDetector(
                     // candidato no confirmo inclinacion, pero el golpe fue a velocidad
                     // y el movil se quedo quieto (accidente con el telefono encima).
                     resumeMonitoring()
-                    startValidation(timestamp)
+                    startValidation(timestamp, fromPromotion = true)
                     listener.onFallCandidatePromotedToValidation()
                 } else {
                     resumeMonitoring()
@@ -485,14 +500,14 @@ class AccidentDetector(
         }
     }
 
-    private fun startValidation(timestamp: Long): Boolean {
+    private fun startValidation(timestamp: Long, fromPromotion: Boolean = false): Boolean {
         if (phase != SafetyPhase.MONITORING || timestamp < 0L) return false
         phase = SafetyPhase.VALIDATING
         validationStartedAt = timestamp
         immobileSince = timestamp
         candidateHitSpeedKmh = null
         motionSinceHit = false
-        listener.onValidationStarted(timestamp)
+        listener.onValidationStarted(timestamp, fromPromotion)
         return true
     }
 
@@ -519,20 +534,25 @@ class AccidentDetector(
         return speed >= POCKET_MIN_SPEED_KMH
     }
 
-    private fun recentQualifiedSpeed(timestamp: Long): Float? {
-        val speed = lastQualifiedSpeedKmh ?: return null
-        val at = lastQualifiedSpeedAt
-        if (at == UNSET_TIME || timestamp < at) return null
-        if (timestamp - at > RECENT_LOCATION_WINDOW_MS) return null
-        return speed
-    }
+    /**
+     * Velocidad para el rescate de bolsillo. El golpe tiene que haber ocurrido
+     * mientras se circulaba de verdad, asi que se exige un dato muy reciente: con
+     * la ventana larga de localizacion, una velocidad de hace un minuto (el
+     * semaforo anterior) convertia cualquier golpe con el movil quieto en un
+     * candidato a accidente.
+     */
+    private fun recentPocketSpeed(timestamp: Long): Float? =
+        recentSpeedWithin(timestamp, POCKET_SPEED_MAX_AGE_MS)
 
-    /** Para el jerk la velocidad tiene que ser actual, no un fix de hace un minuto. */
-    private fun recentJerkSpeed(timestamp: Long): Float? {
+    /** Para el jerk la velocidad tambien tiene que ser actual, no de hace un minuto. */
+    private fun recentJerkSpeed(timestamp: Long): Float? =
+        recentSpeedWithin(timestamp, JerkAssist.SPEED_MAX_AGE_MS)
+
+    private fun recentSpeedWithin(timestamp: Long, maxAgeMs: Long): Float? {
         val speed = lastQualifiedSpeedKmh ?: return null
         val at = lastQualifiedSpeedAt
         if (at == UNSET_TIME || timestamp < at) return null
-        if (timestamp - at > JerkAssist.SPEED_MAX_AGE_MS) return null
+        if (timestamp - at > maxAgeMs) return null
         return speed
     }
 
@@ -594,8 +614,18 @@ class AccidentDetector(
         /** Velocidad minima del golpe para considerar el rescate de bolsillo. */
         const val POCKET_MIN_SPEED_KMH = 20f
 
+        /** Antiguedad maxima del dato de velocidad para el rescate de bolsillo. */
+        const val POCKET_SPEED_MAX_AGE_MS = 5_000L
+
         /** Margen tras el golpe antes de contar movimiento (deja pasar el rebote). */
-        const val POCKET_SETTLE_MS = 2_000L
+        const val POCKET_SETTLE_MS = 6_000L
+
+        /**
+         * Movimiento que cancela el rescate de bolsillo. Es mas alto que
+         * [MOTION_THRESHOLD_G] a proposito: la vibracion del motor supera 0,15 g
+         * casi siempre y cancelaba el rescate justo cuando hace falta.
+         */
+        const val POCKET_MOTION_THRESHOLD_G = 0.45f
 
         private const val DEFAULT_USER_SENSITIVITY_G = 3.5f
         private const val ADAPTIVE_FLOOR_DEADBAND_G = 0.01f

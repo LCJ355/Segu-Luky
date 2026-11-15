@@ -1165,6 +1165,29 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.82s - Un golpe con el movil en el bolsillo solo cuenta si la velocidad es de los ultimos " +
+        "5 segundos; el margen tras el golpe sube a 6 segundos y ya no lo cancela la vibracion del motor. " +
+        "Los golpes ya no se clasifican dos veces ni con una caida de velocidad inventada.")
+    appendLine("1.81s - La secuencia del golpe se mide tambien a los 5 y a los 15 segundos; el ancho y el giro " +
+        "solo puntuan cuando son fiables y los badenes exigen un viaje sin frenazos ni caladas.")
+    appendLine("1.80s - Cada golpe se clasifica en ruido, bache, golpe duro o choque mirando la forma del " +
+        "impacto, el giro, la caida de velocidad y la recuperacion.")
+    appendLine("1.79s - La sacudida brusca (jerk) solo suma cuando no hay dato de velocidad, para no contar " +
+        "dos veces el mismo golpe.")
+    appendLine("1.78s - En COCHE los soportes son sin definir, bolsillo, guantera o personalizado; el soporte " +
+        "Coche pasa a llamarse Guantera.")
+    appendLine("1.77s - Al cambiar de vehiculo, la tarjeta de soporte ensena el soporte que se aplica de verdad.")
+    appendLine("1.76s - Cada vehiculo ofrece solo los soportes que tienen sentido, asi no se eligen " +
+        "combinaciones imposibles.")
+    appendLine("1.75s - DIAGNOSTICO > ARCHIVOS DE CALIBRACION dice cual es el bloque guardado, su puntuacion y " +
+        "su tamano, y se puede borrar.")
+    appendLine("1.74s - Las grabaciones de calibracion se parten en bloques de 15 minutos y solo se conserva el " +
+        "de mejor puntuacion.")
+    appendLine("1.73s - Cada golpe contado se clasifica en ruido, bache, golpe duro o choque (solo mide: no " +
+        "cambia cuando salta el aviso).")
+    appendLine("1.72s - En COCHE aparece ENLACE CON EL COCHE para leer velocidad y regimen del motor por " +
+        "Bluetooth con un ELM327.")
+    appendLine("1.71s - Configuracion > Sensores empieza con TIPO DE VEHICULO: MOVIL, COCHE o MOTO.")
     appendLine("1.70s - Linea nueva: perfil aprendido por soporte (bolsillo, manillar, deposito, mochila, " +
         "personalizado) y calibracion con tasa proporcional a la velocidad (20-100 Hz). El CSV incluye " +
         "soporte, velocidad, magnitud, hora de pared y cambios de tasa.")

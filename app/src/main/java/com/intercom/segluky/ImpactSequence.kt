@@ -183,7 +183,10 @@ object ImpactSequence {
         }
         val peak = impact.maxOf { magnitude(it) }
         val rms = sqrt(impact.sumOf { (magnitude(it) * magnitude(it)).toDouble() } / impact.size).toFloat()
-        val crossings = impact.count { magnitude(it) >= threshold }
+        // Un "cruce" es una subida real por encima del umbral, no una muestra por
+        // encima: a 100 Hz contar muestras daba 50 y regalaba siempre los 10 puntos
+        // de rebote. Con subidas, un golpe limpio suma 1 y un rebote suma 2 o mas.
+        val crossings = countUpCrossings(impact, threshold)
         val saturated = peak >= SATURATION_G
         val rotation = samples
             .filter { it.atMs in hitAtMs..(hitAtMs + ROTATION_WINDOW_MS) }
@@ -228,7 +231,7 @@ object ImpactSequence {
 
         val total = score.coerceIn(0, 100)
         val phase = when {
-            hitAtMs + ROTATION_WINDOW_MS > hitAtMs + IMPACT_WINDOW_MS && rotation >= ROTATION_MIN_DEG -> "giro"
+            rotation >= ROTATION_MIN_DEG && gyroConfidence >= MIN_GYRO_CONFIDENCE -> "giro"
             drop != null -> "desaceleracion"
             else -> "impacto"
         }
@@ -240,6 +243,21 @@ object ImpactSequence {
             else -> ImpactVerdict.RUIDO
         }
         return ImpactSequenceVerdict(total, level, phase, reasons)
+    }
+
+    /**
+     * Numero de subidas por encima del umbral dentro de la ventana, en orden
+     * temporal. Cada subida es un golpe; varios golpes seguidos son un rebote.
+     */
+    private fun countUpCrossings(impact: List<ImpactSample>, threshold: Float): Int {
+        var crossings = 0
+        var above = false
+        for (sample in impact.sortedBy { it.atMs }) {
+            val nowAbove = magnitude(sample) >= threshold
+            if (nowAbove && !above) crossings++
+            above = nowAbove
+        }
+        return crossings
     }
 
     private fun fmt(value: Float): String =

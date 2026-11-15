@@ -1,4 +1,4 @@
-﻿SEGU-LUKY V-1.81s - PROTOCOLO Y ALGORITMO
+﻿SEGU-LUKY V-1.82s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
@@ -80,6 +80,13 @@ A) CAIDA DE MOTO AUTOMATICA (interruptor CAIDA / ORIENTACION, activado por defec
      ventana (accidente con el telefono en el bolsillo, donde la inclinacion no
      confirma nada), el candidato no se descarta: se pasa a vigilar inmovilidad y
      el SOS salta si sigue quieto 5 min.
+   - (1.82s) Ese rescate de bolsillo pide velocidad de los ultimos 5 s (antes
+     valia un dato de hace 60 s), deja 6 s de margen tras el golpe y solo lo
+     cancela un movimiento real: 0,45 g o giro con el giroscopio. La vibracion
+     del motor queda por debajo y ya no lo apaga.
+   - (1.82s) Un candidato promovido no se clasifica: la validacion dice si viene
+     de un golpe real o de una promocion, y solo en el primer caso se miden
+     impacto, secuencia y ritmo de badenes.
    - El candidato se ABORTA sin SOS si el movil vuelve a vertical (menos de 25
      grados, 12 muestras seguidas), si el GPS da 30 km/h o mas, o si expira la
      ventana con movimiento.
@@ -246,7 +253,8 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   (15 s)     |               |                   |
      |       |               |                   |
      | inclinacion >= 55 grados durante 4 s      |
-     | o (1.54s) golpe a >=20 km/h y movil quieto|
+     | o golpe a >=20 km/h (velocidad < 5 s)     |
+     |   y movil quieto 6 s (1.82s)              |
      +-------+---------------+-------------------+
                              |
                              v
@@ -268,5 +276,5 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.81s (versionCode 68) - 14/11/2026
+Version: V-1.82s (versionCode 69) - 15/11/2026
 

@@ -1046,75 +1046,6 @@ Resultado: OK; tests unitarios en verde; monitor dejado detenido.
 APK generado: app-release.apk (1.27s).
 Pendientes: decidir si se elimina tambien el gesto de dos dedos dentro de la app.
 
-======================================================================
-V-1.47s
-======================================================================
-
-Fecha: 11/12/2026
-Version: 1.47s (versionCode 39)
-
-Cambio:
-- La tarjeta INTERCOM-LUKY deja de estar en Instrucciones y pasa a
-  Configuracion, justo antes de CONTACTOS SOS.
-- Se extrae a un composable propio (IntercomCard) para no duplicar codigo.
-- Textos nuevos: el aviso solo suena en verde.
-    NO INSTALADA (gris): el aviso no suena en ningun sitio
-    INSTALADA, NO ACTIVA (naranja): InterCOM apagado, el aviso no suena en
-      ningun sitio
-    ACTIVA (verde): InterCOM encendido (+ grupo y numero de motoristas)
-  El parrafo explicativo y los mensajes de PROBAR AVISO dicen lo mismo, y la
-  fila INTERCOM del resumen de sensores se ajusta igual.
-
-Motivo: pedido del usuario; la tarjeta se consulta al configurar el SOS y no
-durante la lectura de instrucciones. Aclarar que en naranja o gris el aviso no
-suena en ningun sitio.
-
-Prueba realizada: testDebugUnitTest + lintDebug (81 pruebas, 0 fallos) y
-assembleRelease. En el OPPO, dentro de Configuracion: la tarjeta aparece antes
-de CONTACTOS SOS, con ACTIVA (verde) y Version V-4.1 (403); tras force-stop de
-InterCOM y ACTUALIZAR pasa a INSTALADA, NO ACTIVA (naranja); PROBAR AVISO en
-naranja responde "InterCOM apagado: el aviso no suena en ningun sitio. Enciende
-INTERCOM WiFi/Datos en InterCOM-Luky."; al volver a encender InterCOM y pulsar
-ACTUALIZAR vuelve a verde y borra el mensaje anterior.
-Resultado: correcto, sin textos recortados (las lineas largas hacen wrap).
-APK generado: APK´s/Segu-Luky-1.47s.apk
-Pendientes:
-- Probar el aviso de voz con un segundo movil dentro del grupo o del INTERCOM
-  WiFi; hasta ahora la unica prueba es de un solo dispositivo.
-======================================================================
-
-======================================================================
-V-1.48s
-======================================================================
-
-Fecha: 12/11/2026
-Version: 1.48s (versionCode 40)
-
-Cambio (correcciones del informe INFORME-BUGS-1.47s.md):
-- Escalada de llamadas: se elimina ANSWER_PHONE_CALLS (se declaraba y nunca se
-  concedia). La app ya no cuelga ni marca sobre una llamada activa: la llamada
-  conectada de 5 min cierra la ronda como atendida.
-- Un timbrado o un buzon ya no cortan la ronda: al terminar cualquier llamada se
-  pasa al siguiente contacto y el registro anota "posible respuesta".
-- Un aviso de fin de llamada que llega antes de que el marcado nuevo se
-  establezca se ignora (es el del intento anterior).
-- Microfono: el servicio declara el tipo microphone y lo pide solo con la voz
-  activa y permiso, para que Android 14+ no entregue silencio con la pantalla
-  apagada. Si el sistema lo rechaza, arranca sin el tipo y lo registra.
-- Instrucciones y protocolo actualizados (sin el gesto de dos dedos, con el
-  comportamiento nuevo de llamadas y microfono).
-
-Prueba realizada: testDebugUnitTest (86 pruebas, 0 fallos), lintDebug (0 errores)
-y assembleRelease. Manifiesto compilado con foregroundServiceType
-location|microphone|specialUse y FOREGROUND_SERVICE_MICROPHONE; firma
-CN=Segu-Luky con la misma huella que las versiones anteriores.
-Resultado: compila y verifica; pendiente la prueba en dispositivo (voz con
-pantalla apagada, llamadas reales y fin de ronda).
-APK generado: APK´s/Segu-Luky-1.48s.apk
-Mapping archivado: APK´s/mapping/Segu-Luky-1.48s-mapping.txt.gz
-Pendientes: §5 (IPC de InterCOM en el hilo principal), §6 (Telegram sin
-reintento), §7 (etiquetas en Buscar actualizacion), §8 (WhatsAppUnlockActivity).
-======================================================================
 
 1.28s (versionCode 20)
 Fecha: 2026-02-20
@@ -1424,6 +1355,74 @@ Verificacion:
 - APK generado: app-release.apk (1.46s).
 
 ======================================================================
+V-1.47s
+======================================================================
+
+Fecha: 11/12/2026
+Version: 1.47s (versionCode 39)
+
+Cambio:
+- La tarjeta INTERCOM-LUKY deja de estar en Instrucciones y pasa a
+  Configuracion, justo antes de CONTACTOS SOS.
+- Se extrae a un composable propio (IntercomCard) para no duplicar codigo.
+- Textos nuevos: el aviso solo suena en verde.
+    NO INSTALADA (gris): el aviso no suena en ningun sitio
+    INSTALADA, NO ACTIVA (naranja): InterCOM apagado, el aviso no suena en
+      ningun sitio
+    ACTIVA (verde): InterCOM encendido (+ grupo y numero de motoristas)
+  El parrafo explicativo y los mensajes de PROBAR AVISO dicen lo mismo, y la
+  fila INTERCOM del resumen de sensores se ajusta igual.
+
+Motivo: pedido del usuario; la tarjeta se consulta al configurar el SOS y no
+durante la lectura de instrucciones. Aclarar que en naranja o gris el aviso no
+suena en ningun sitio.
+
+Prueba realizada: testDebugUnitTest + lintDebug (81 pruebas, 0 fallos) y
+assembleRelease. En el OPPO, dentro de Configuracion: la tarjeta aparece antes
+de CONTACTOS SOS, con ACTIVA (verde) y Version V-4.1 (403); tras force-stop de
+InterCOM y ACTUALIZAR pasa a INSTALADA, NO ACTIVA (naranja); PROBAR AVISO en
+naranja responde "InterCOM apagado: el aviso no suena en ningun sitio. Enciende
+INTERCOM WiFi/Datos en InterCOM-Luky."; al volver a encender InterCOM y pulsar
+ACTUALIZAR vuelve a verde y borra el mensaje anterior.
+Resultado: correcto, sin textos recortados (las lineas largas hacen wrap).
+APK generado: APK´s/Segu-Luky-1.47s.apk
+Pendientes:
+- Probar el aviso de voz con un segundo movil dentro del grupo o del INTERCOM
+  WiFi; hasta ahora la unica prueba es de un solo dispositivo.
+======================================================================
+
+======================================================================
+V-1.48s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.48s (versionCode 40)
+
+Cambio (correcciones del informe INFORME-BUGS-1.47s.md):
+- Escalada de llamadas: se elimina ANSWER_PHONE_CALLS (se declaraba y nunca se
+  concedia). La app ya no cuelga ni marca sobre una llamada activa: la llamada
+  conectada de 5 min cierra la ronda como atendida.
+- Un timbrado o un buzon ya no cortan la ronda: al terminar cualquier llamada se
+  pasa al siguiente contacto y el registro anota "posible respuesta".
+- Un aviso de fin de llamada que llega antes de que el marcado nuevo se
+  establezca se ignora (es el del intento anterior).
+- Microfono: el servicio declara el tipo microphone y lo pide solo con la voz
+  activa y permiso, para que Android 14+ no entregue silencio con la pantalla
+  apagada. Si el sistema lo rechaza, arranca sin el tipo y lo registra.
+- Instrucciones y protocolo actualizados (sin el gesto de dos dedos, con el
+  comportamiento nuevo de llamadas y microfono).
+
+Prueba realizada: testDebugUnitTest (86 pruebas, 0 fallos), lintDebug (0 errores)
+y assembleRelease. Manifiesto compilado con foregroundServiceType
+location|microphone|specialUse y FOREGROUND_SERVICE_MICROPHONE; firma
+CN=Segu-Luky con la misma huella que las versiones anteriores.
+Resultado: compila y verifica; pendiente la prueba en dispositivo (voz con
+pantalla apagada, llamadas reales y fin de ronda).
+APK generado: APK´s/Segu-Luky-1.48s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.48s-mapping.txt.gz
+Pendientes: §5 (IPC de InterCOM en el hilo principal), §6 (Telegram sin
+reintento), §7 (etiquetas en Buscar actualizacion), §8 (WhatsAppUnlockActivity).
+======================================================================
 V-1.49s
 ======================================================================
 
@@ -1543,6 +1542,45 @@ huella que muestra la app coincide con la de docs/SEGURIDAD.md.
 
 ======================================================================
 V-1.53s
+======================================================================
+
+Fecha: 12/11/2026
+Version: 1.53s (versionCode 45)
+
+Cambio:
+- Historial: la lista de Informacion > Historial seguia parada en 1.41s y no
+  mencionaba ninguna version de la 1.42s a la 1.52s. Se anaden las doce
+  entradas que faltaban y la 1.53s va arriba del todo.
+- TelegramBotOutbox: cada mutacion de la cola era un ciclo
+  leer-modificar-escribir sin proteccion sobre un JSON de SharedPreferences.
+  El servicio crea una instancia en el hilo del manejador y el trabajador de
+  red apunta ahi el resultado de cada envio; si un enqueue leia la lista justo
+  antes de que el trabajador apuntara una entrega, la escritura del enqueue
+  borraba ese apunte. Ese contacto se quedaba sin aviso y sin reintento, justo
+  en el canal que existe porque el movil va en el bolsillo. Ahora enqueue,
+  record, clearEvent y clear pasan por un candado compartido por instancias y
+  la escritura se persiste con commit() antes de soltarlo.
+- closeEvent(eventId): resumen final y borrado del evento bajo el mismo
+  candado. Antes se leia el resumen y luego se borraba, asi que un aviso
+  entregado entre las dos llamadas quedaba en el registro como "sin entregar".
+- La cola ya no depende de Context: TelegramOutboxStore esconde el almacen y
+  las pruebas usan una version en memoria. Se anade
+  testImplementation("org.json:json:20240303") porque las clases org.json de
+  android.jar son stubs ("not mocked") en las pruebas JVM.
+
+Motivo: los dos fallos que quedaban abiertos de la revision de la 1.52s; el del
+outbox podia perder un aviso de SOS sin dejar rastro en el registro.
+
+Prueba realizada: testDebugUnitTest (113 pruebas, 0 fallos; 10 nuevas de la
+cola en TelegramBotOutboxTest), lintDebug (0 errores) y assembleRelease.
+Comprobado que la prueba de los dos hilos escribiendo a la vez falla al quitar
+el candado y pasa con el puesto.
+Resultado: compila y verifica; pendiente ver el historial completo en el movil.
+APK generado: APK´s/Segu-Luky-1.53s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.53s-mapping.txt.gz
+Pendientes: las tres pruebas de comportamiento (§5, §6, §8) y verificar que el
+Historial del movil llega hasta la 1.53s.
+
 ======================================================================
 V-1.54s
 ======================================================================
@@ -1931,6 +1969,41 @@ Mapping archivado: APK´s/mapping/Segu-Luky-1.64s-mapping.txt.gz
 Pendientes: ver el destello en un viaje con AUTO y las pruebas de comportamiento
 que siguen abiertas (§5, §6, §8).
 ======================================================================
+NOTA: SIN VERSIONES DE LA 1.65s A LA 1.69s
+======================================================================
+
+La numeracion salta de la 1.64s (versionCode 56) a la 1.70s (versionCode 57).
+Esas cinco versiones no llegaron a existir y no se inventan entradas para
+ellas. La 1.70s, que si existe y faltaba en esta bitacora, se registra a
+continuacion.
+
+======================================================================
+V-1.70s (versionCode 57)
+======================================================================
+
+Entrada reconstruida desde CHANGELOG.md: el bloque original no estaba en
+este archivo.
+
+Cambio:
+- Perfil por soporte del movil: sin definir, bolsillo, manillar, deposito,
+  mochila y personalizado; el perfil aprendido (ruido, traqueteo, muestreo y
+  uso acumulado) se guarda por soporte y se hereda al elegir el primero.
+- Calibracion por velocidad: 20 Hz de 0 a 12,5 km/h y escalones de 20 Hz
+  hasta 100 Hz a partir de 50 km/h, con mediana de 3 fixes, 10 s de
+  estabilidad y 15 s minimos entre cambios.
+- Jerk incremental como refuerzo (maximo +0,35 g), solo con velocidad de
+  menos de 10 s y a partir de 20 km/h; nunca dispara por si mismo.
+- El CSV de calibracion anade wall_ms, magnitude, mount, event, speed_kmh,
+  target_hz y jerk_g_s.
+
+Motivo: cerrar el hueco de la bitacora entre la 1.64s y la 1.71s.
+Prueba realizada: segun CHANGELOG.md, pruebas unitarias de JerkAssist y
+AccidentDetectorJerkTest en verde.
+Resultado: registrado; falta la comprobacion en el movil de esa version.
+APK generado: APK´s/Segu-Luky-1.70s.apk
+Pendientes: los que ya recogia el CHANGELOG de la 1.70s.
+
+======================================================================
 V-1.71s
 ======================================================================
 
@@ -1975,133 +2048,6 @@ senal). Moto CAN cuando haya cable. Siguen abiertas las pruebas de comportamient
 (§5, §6, §8) y el destello de T. PROMEDIO en ruta.
 
 ======================================================================
-V-1.73s
-======================================================================
-
-Fecha: 14/11/2026
-Version: 1.73s (versionCode 60)
-
-Cambio:
-- Clasificador bache/accidente en cada golpe contado: RUIDO, BACHE, GOLPE DURO o
-  CHOQUE, con puntuacion por pico, ancho del impacto, caida de velocidad, motor
-  calado y cambio de postura. Se reevalua a los 2 s con la velocidad de ese
-  momento.
-- Solo mide: el veredicto va al registro y al estado de la pantalla. El SOS sigue
-  disparandose igual hasta ajustar los umbrales con datos reales del coche.
-- Sin dato de velocidad no se inventa un choque: como mucho GOLPE DURO.
-- 8 pruebas nuevas (ImpactClassifierTest).
-
-Motivo: el objetivo del usuario es distinguir lo mejor posible un golpe real de un
-bache grande. Se empieza midiendo, sin cambiar el disparo.
-
-Prueba realizada: testDebugUnitTest (191 pruebas, 0 fallos), lintDebug (0 errores)
-y assembleRelease. Verificado en el OPPO que la app arranca y la tarjeta del coche
-sigue igual; el veredicto aparecera en el registro al primer golpe real.
-Resultado: compila, verifica e instalado. Sin datos de campo todavia.
-APK generado: APK´
-s/Segu-Luky-1.73s.apk
-Mapping archivado: APK´
-s/mapping/Segu-Luky-1.73s-mapping.txt.gz
-Pendientes: conectar el clasificador al disparo cuando haya datos; 1.74s evidencia
-de choque (codigos, motor y buscador de senal). Probar en coche y en moto.
-
-======================================================================
-V-1.74s
-======================================================================
-
-Fecha: 14/11/2026
-Version: 1.74s (versionCode 61)
-
-Cambio:
-- Grabacion de calibracion en bloques de 15 minutos; solo se conserva el de
-  mayor puntuacion (40% bandas de velocidad, 25% filas con velocidad valida,
-  20% Hz reales, 15% actividad). El resto se borra al cerrar cada bloque.
-- Tope de seguridad de 4 h por sesion: se detiene sola y lo anota.
-- CalibrationRetention puro con 6 pruebas (197 en total).
-
-Motivo: acotar el espacio que ocupan las grabaciones (el aprendizaje no crece:
-son 4 numeros por soporte) y quedarse con el bloque mas util.
-APK generado: APK
-´
-s/Segu-Luky-1.74s.apk
-Mapping archivado: APK´
-s/mapping/Segu-Luky-1.74s-mapping.txt.gz
-Pendientes (en 1.75s): mostrar el bloque guardado en la tarjeta y poder borrarlo.
-
-
-======================================================================
-V-1.75s
-======================================================================
-
-Fecha: 14/11/2026
-Version: 1.75s (versionCode 62)
-
-Cambio:
-- La tarjeta DIAGNOSTICO > ARCHIVOS DE CALIBRACION ya dice cual es el bloque de
-  15 min guardado, con su puntuacion y lo que ocupa en MB.
-- Boton BORRAR GRABACION que usa CalibrationRepository.clearBestBlock(); el
-  bloque y su puntuacion quedan limpios y se anota en el registro.
-- CalibrationRepository.bestBlockBytes() para el tamano.
-
-Motivo: cerrar lo que quedo pendiente en la 1.74s (la UI del bloque guardado).
-Prueba realizada: testDebugUnitTest (197 pruebas, 0 fallos), lintDebug (0
-errores) y assembleRelease; verificado en el OPPO.
-APK generado: APK
-´
-s/Segu-Luky-1.75s.apk
-Mapping archivado: APK´
-s/mapping/Segu-Luky-1.75s-mapping.txt.gz
-Pendientes: evidencia de choque (DTC antes/despues, motor calado, buscador de
-senal) y conectar el clasificador bache/accidente al disparo cuando haya datos.
-
-======================================================================
-V-1.76s
-======================================================================
-
-Fecha: 14/11/2026
-Version: 1.76s (versionCode 63)
-
-Cambio:
-- SOPORTE DEL MOVIL se filtra por vehiculo: MOVIL bolsillo/mochila; COCHE coche;
-  MOTO manillar/deposito, con bolsillo y mochila como apoyo. Fuera combinaciones
-  sin sentido (deposito en coche).
-- Nuevo soporte Coche en MountProfile, con aprendizaje propio.
-- Al cambiar de vehiculo se corrige el soporte si el elegido no vale.
-- 3 pruebas nuevas (200 en total).
-
-Motivo: pedido del usuario ("el soporte tiene que ir de acuerdo con el vehiculo").
-Prueba realizada: testDebugUnitTest (200 pruebas, 0 fallos), lintDebug (0 errores)
-y assembleRelease; verificado en el OPPO cambiando de perfil.
-APK generado: APK´
-s/Segu-Luky-1.76s.apk
-Mapping archivado: APK´
-s/mapping/Segu-Luky-1.76s-mapping.txt.gz
-Pendientes: evidencia de choque (DTC, motor calado, buscador de senal) y conectar
-el clasificador bache/accidente al disparo con datos reales.
-
-======================================================================
-V-1.77s
-======================================================================
-
-Fecha: 14/11/2026
-Version: 1.77s (versionCode 64)
-
-Cambio:
-- Al cambiar de vehiculo la tarjeta SOPORTE DEL MOVIL muestra el soporte aplicado.
-- Version de correccion sobre 1.76s (filtrado de soportes por vehiculo).
-
-Motivo: en COCHE el filtro ya era correcto pero la etiqueta seguia en Bolsillo.
-APK generado: APK
-´
-s/Segu-Luky-1.77s.apk
-Mapping archivado: APK´
-s/mapping/Segu-Luky-1.77s-mapping.txt.gz
-
-
-
-
-
-======================================================================
 V-1.72s
 ======================================================================
 
@@ -2136,10 +2082,8 @@ adaptadores emparejados (ninguno todavia) y avisa de que hay que emparejar el
 ELM327; los cuatro valores quedan en raya hasta que haya coche.
 Resultado: compila, verifica y revisado en el movil; falta probarlo con el
 adaptador y el coche reales.
-APK generado: APK´
-s/Segu-Luky-1.72s.apk
-Mapping archivado: APK´
-s/mapping/Segu-Luky-1.72s-mapping.txt.gz
+APK generado: APK´s/Segu-Luky-1.72s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.72s-mapping.txt.gz
 Pendientes: 1.73s regla de choque del coche (golpe + caida de velocidad) con
 esta velocidad; 1.74s evidencia de airbag (codigos tras el golpe, parada de motor
 y buscador de senal). Probar el enlace con el ELM327 en el coche.
@@ -2147,44 +2091,246 @@ y buscador de senal). Probar el enlace con el ELM327 en el coche.
 
 
 ======================================================================
+V-1.73s
+======================================================================
 
-Fecha: 12/11/2026
-Version: 1.53s (versionCode 45)
+Fecha: 14/11/2026
+Version: 1.73s (versionCode 60)
 
 Cambio:
-- Historial: la lista de Informacion > Historial seguia parada en 1.41s y no
-  mencionaba ninguna version de la 1.42s a la 1.52s. Se anaden las doce
-  entradas que faltaban y la 1.53s va arriba del todo.
-- TelegramBotOutbox: cada mutacion de la cola era un ciclo
-  leer-modificar-escribir sin proteccion sobre un JSON de SharedPreferences.
-  El servicio crea una instancia en el hilo del manejador y el trabajador de
-  red apunta ahi el resultado de cada envio; si un enqueue leia la lista justo
-  antes de que el trabajador apuntara una entrega, la escritura del enqueue
-  borraba ese apunte. Ese contacto se quedaba sin aviso y sin reintento, justo
-  en el canal que existe porque el movil va en el bolsillo. Ahora enqueue,
-  record, clearEvent y clear pasan por un candado compartido por instancias y
-  la escritura se persiste con commit() antes de soltarlo.
-- closeEvent(eventId): resumen final y borrado del evento bajo el mismo
-  candado. Antes se leia el resumen y luego se borraba, asi que un aviso
-  entregado entre las dos llamadas quedaba en el registro como "sin entregar".
-- La cola ya no depende de Context: TelegramOutboxStore esconde el almacen y
-  las pruebas usan una version en memoria. Se anade
-  testImplementation("org.json:json:20240303") porque las clases org.json de
-  android.jar son stubs ("not mocked") en las pruebas JVM.
+- Clasificador bache/accidente en cada golpe contado: RUIDO, BACHE, GOLPE DURO o
+  CHOQUE, con puntuacion por pico, ancho del impacto, caida de velocidad, motor
+  calado y cambio de postura. Se reevalua a los 2 s con la velocidad de ese
+  momento.
+- Solo mide: el veredicto va al registro y al estado de la pantalla. El SOS sigue
+  disparandose igual hasta ajustar los umbrales con datos reales del coche.
+- Sin dato de velocidad no se inventa un choque: como mucho GOLPE DURO.
+- 8 pruebas nuevas (ImpactClassifierTest).
 
-Motivo: los dos fallos que quedaban abiertos de la revision de la 1.52s; el del
-outbox podia perder un aviso de SOS sin dejar rastro en el registro.
+Motivo: el objetivo del usuario es distinguir lo mejor posible un golpe real de un
+bache grande. Se empieza midiendo, sin cambiar el disparo.
 
-Prueba realizada: testDebugUnitTest (113 pruebas, 0 fallos; 10 nuevas de la
-cola en TelegramBotOutboxTest), lintDebug (0 errores) y assembleRelease.
-Comprobado que la prueba de los dos hilos escribiendo a la vez falla al quitar
-el candado y pasa con el puesto.
-Resultado: compila y verifica; pendiente ver el historial completo en el movil.
-APK generado: APK´s/Segu-Luky-1.53s.apk
-Mapping archivado: APK´s/mapping/Segu-Luky-1.53s-mapping.txt.gz
-Pendientes: las tres pruebas de comportamiento (§5, §6, §8) y verificar que el
-Historial del movil llega hasta la 1.53s.
+Prueba realizada: testDebugUnitTest (191 pruebas, 0 fallos), lintDebug (0 errores)
+y assembleRelease. Verificado en el OPPO que la app arranca y la tarjeta del coche
+sigue igual; el veredicto aparecera en el registro al primer golpe real.
+Resultado: compila, verifica e instalado. Sin datos de campo todavia.
+APK generado: APK´s/Segu-Luky-1.73s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.73s-mapping.txt.gz
+Pendientes: conectar el clasificador al disparo cuando haya datos; 1.74s evidencia
+de choque (codigos, motor y buscador de senal). Probar en coche y en moto.
 
+======================================================================
+V-1.74s
+======================================================================
+
+Fecha: 14/11/2026
+Version: 1.74s (versionCode 61)
+
+Cambio:
+- Grabacion de calibracion en bloques de 15 minutos; solo se conserva el de
+  mayor puntuacion (40% bandas de velocidad, 25% filas con velocidad valida,
+  20% Hz reales, 15% actividad). El resto se borra al cerrar cada bloque.
+- Tope de seguridad de 4 h por sesion: se detiene sola y lo anota.
+- CalibrationRetention puro con 6 pruebas (197 en total).
+
+Motivo: acotar el espacio que ocupan las grabaciones (el aprendizaje no crece:
+son 4 numeros por soporte) y quedarse con el bloque mas util.
+APK generado: APK´s/Segu-Luky-1.74s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.74s-mapping.txt.gz
+Pendientes (en 1.75s): mostrar el bloque guardado en la tarjeta y poder borrarlo.
+
+======================================================================
+V-1.75s
+======================================================================
+
+Fecha: 14/11/2026
+Version: 1.75s (versionCode 62)
+
+Cambio:
+- La tarjeta DIAGNOSTICO > ARCHIVOS DE CALIBRACION ya dice cual es el bloque de
+  15 min guardado, con su puntuacion y lo que ocupa en MB.
+- Boton BORRAR GRABACION que usa CalibrationRepository.clearBestBlock(); el
+  bloque y su puntuacion quedan limpios y se anota en el registro.
+- CalibrationRepository.bestBlockBytes() para el tamano.
+
+Motivo: cerrar lo que quedo pendiente en la 1.74s (la UI del bloque guardado).
+Prueba realizada: testDebugUnitTest (197 pruebas, 0 fallos), lintDebug (0
+errores) y assembleRelease; verificado en el OPPO.
+APK generado: APK´s/Segu-Luky-1.75s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.75s-mapping.txt.gz
+Pendientes: evidencia de choque (DTC antes/despues, motor calado, buscador de
+senal) y conectar el clasificador bache/accidente al disparo cuando haya datos.
+
+======================================================================
+V-1.76s
+======================================================================
+
+Fecha: 14/11/2026
+Version: 1.76s (versionCode 63)
+
+Cambio:
+- SOPORTE DEL MOVIL se filtra por vehiculo: MOVIL bolsillo/mochila; COCHE coche;
+  MOTO manillar/deposito, con bolsillo y mochila como apoyo. Fuera combinaciones
+  sin sentido (deposito en coche).
+- Nuevo soporte Coche en MountProfile, con aprendizaje propio.
+- Al cambiar de vehiculo se corrige el soporte si el elegido no vale.
+- 3 pruebas nuevas (200 en total).
+
+Motivo: pedido del usuario ("el soporte tiene que ir de acuerdo con el vehiculo").
+Prueba realizada: testDebugUnitTest (200 pruebas, 0 fallos), lintDebug (0 errores)
+y assembleRelease; verificado en el OPPO cambiando de perfil.
+APK generado: APK´s/Segu-Luky-1.76s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.76s-mapping.txt.gz
+Pendientes: evidencia de choque (DTC, motor calado, buscador de senal) y conectar
+el clasificador bache/accidente al disparo con datos reales.
+
+======================================================================
+V-1.77s
+======================================================================
+
+Fecha: 14/11/2026
+Version: 1.77s (versionCode 64)
+
+Cambio:
+- Al cambiar de vehiculo la tarjeta SOPORTE DEL MOVIL muestra el soporte aplicado.
+- Version de correccion sobre 1.76s (filtrado de soportes por vehiculo).
+
+Motivo: en COCHE el filtro ya era correcto pero la etiqueta seguia en Bolsillo.
+APK generado: APK´s/Segu-Luky-1.77s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.77s-mapping.txt.gz
+
+
+
+
+======================================================================
+V-1.78s (versionCode 65)
+======================================================================
+
+Entrada reconstruida desde CHANGELOG.md.
+
+Cambio:
+- En COCHE el soporte es Sin definir / Bolsillo / Guantera / Personalizado;
+  el soporte generico "Coche" pasa a llamarse Guantera y se aplica al entrar
+  en COCHE desde otro soporte.
+Motivo: el telefono en un coche se deja en la guantera, no suelto.
+Prueba realizada: 200 pruebas unitarias en verde (las de soportes adaptadas
+a Guantera).
+Resultado: compila y verifica; pendiente verlo en el movil.
+APK generado: APK´s/Segu-Luky-1.78s.apk
+Pendientes: ninguno propio.
+
+======================================================================
+V-1.79s (versionCode 66)
+======================================================================
+
+Entrada reconstruida desde CHANGELOG.md.
+
+Cambio:
+- B1 del plan de mejoras: jerkGPerSecond estaba declarado y no puntuaba.
+  Ahora aporta +10 solo cuando no hay dato de velocidad, es decir cuando el
+  acelerometro es la unica evidencia; con velocidad conocida no suma nada
+  para no contar dos veces la misma sacudida.
+Motivo: critica de la revision externa (senal muerta y doble conteo).
+Prueba realizada: nueva prueba de que el jerk sube el score sin velocidad y
+lo deja igual con velocidad.
+Resultado: compila y verifica.
+APK generado: APK´s/Segu-Luky-1.79s.apk
+Pendientes: ninguno propio.
+
+======================================================================
+V-1.80s (versionCode 67)
+======================================================================
+
+Entrada reconstruida desde CHANGELOG.md.
+
+Cambio:
+- B2 secuencia: ImpactSequence e ImpactSampleRecorder analizan la ventana del
+  golpe (forma, giro, desaceleracion y recuperacion) con picos, RMS, cruces,
+  saturacion y motor calado; buffer circular de 20 s.
+- B3 ancho y giro: ancho con histeresis (entra con el umbral, cierra tras
+  20 ms por debajo del 60 %) y giroscopio real en cada muestra; la rotacion
+  solo puntua con actitud calibrada y la secuencia se reevalua a los 2 s.
+- B4 ritmo de badenes: memoria de los 10 ultimos golpes; cuatro o mas golpes
+  regulares restan 8 puntos a un golpe duro, pero un choque nunca se
+  desmonta por parecer un ritmo de badenes.
+Motivo: medir la secuencia completa en vez de un unico pico.
+Prueba realizada: 230 pruebas (19 nuevas desde la 1.79s) y lintDebug sin
+errores.
+Resultado: compila y verifica.
+APK generado: APK´s/Segu-Luky-1.80s.apk
+Pendientes: los del plan de mejoras (A y C ya en la 1.81s).
+
+======================================================================
+V-1.81s (versionCode 68)
+======================================================================
+
+Entrada reconstruida desde CHANGELOG.md.
+
+Cambio:
+- Buffer por tiempo: 4.000 huecos (20 s a 200 Hz) en vez de 2.000, que a los
+  148 Hz reales solo cubrian 13,5 s y no dejaban sitio a la ventana de 15 s.
+- Ventanas de 5 y 15 s: DECEL_WINDOW_MS y RECOVERY_WINDOW_MS estaban
+  declaradas sin usar; ahora hay hitos a los 5 s y a los 15 s sobre el mismo
+  golpe, con la cobertura real en el registro ("completa" o "INCOMPLETA").
+- Ancho por resolucion (A): la tolerancia crece con el intervalo de muestreo
+  y el ancho solo puntua si es fiable (>= 50 Hz y 3 muestras por encima).
+- Calidad del giro (B): la rotacion se valida con su propia lectura (fresca
+  < 100 ms, caduca a 200 ms) y ya no depende de la orientacion calibrada.
+- Badenes condicionados (C): la resta exige contexto benigno y 6 golpes, con
+  mediana y desviacion absoluta mediana.
+Motivo: respuesta a la revision critica de la 1.80s sin tocar los pesos.
+Prueba realizada: 242 pruebas (6 nuevas) y lintDebug sin errores.
+Resultado: compila y verifica.
+APK generado: APK´s/Segu-Luky-1.81s.apk
+Pendientes: los cuatro puntos de la revision de la 1.81s (1.82s).
+
+======================================================================
+V-1.82s (versionCode 69)
+======================================================================
+
+Fecha: 15/11/2026
+Version: 1.82s (versionCode 69)
+
+Cambio:
+- Rescate de bolsillo: la velocidad que decide si un golpe fue en marcha
+  tenia una ventana de 60 s (RECENT_LOCATION_WINDOW_MS), asi que un dato del
+  semaforo anterior podia promover a validacion un golpe con el movil quieto.
+  Ahora usa POCKET_SPEED_MAX_AGE_MS = 5 s, reutilizado por recentSpeedWithin
+  (tambien para el jerk, 10 s).
+- Rescate de bolsillo: el margen tras el golpe pasa de 2 s a 6 s y el
+  movimiento que cancela el rescate sube a POCKET_MOTION_THRESHOLD_G = 0,45 g.
+  Con 0,15 g la vibracion del motor cancelaba el rescate justo en el caso
+  para el que existe; el giroscopio tambien cuenta como manejo del aparato.
+- La promocion del candidato ya no clasifica un golpe que no ha ocurrido:
+  onValidationStarted(startedAt, fromPromotion) y el servicio solo llama a
+  assessImpact si la validacion viene de un golpe real.
+- assessImpact(trigger): el instante del golpe lo pone el detector, no la
+  ultima muestra del buffer. Al promover, la muestra era de 15 s antes, la
+  ventana de impacto salia vacia e ImpactPeriodicity recibia una entrada
+  falsa que podia fabricar un patron repetitivo y restar 8 puntos.
+- ImpactSequence.evaluate: los "cruces" cuentan subidas por encima del
+  umbral, no muestras por encima (a 100 Hz cualquier golpe regalaba los 10
+  puntos de rebote). La fase "giro" ya no depende de una comparacion
+  tautologica: exige rotacion y calidad de giroscopio.
+- El clasificador puntual recibe speedAfterKmh = null en el instante del
+  golpe: pasar la misma velocidad como antes y despues daba una caida de
+  0 km/h y restaba siempre 6 puntos por "velocidad intacta".
+- Se quita el BOM de AccidentDetector.kt (era el unico .kt con BOM).
+
+Motivo: los cuatro puntos de la revision de la 1.81s, mas la reparacion de
+esta bitacora (rutas partidas por el caracter de APK´s, entrada de la 1.53s
+sin cuerpo y bloques fuera de orden).
+Prueba realizada: testDebugUnitTest (247 pruebas, 0 fallos; 5 nuevas:
+velocidad de mas de 5 s no promueve, el rebote no cancela el rescate, la
+promocion avisa, un solo golpe no regala el rebote y la fase de giro exige
+calidad) y lintDebug (0 errores, 9 avisos), mas assembleRelease.
+Resultado: compila y verifica; pendiente la prueba en carretera.
+APK generado: APK´s/Segu-Luky-1.82s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.82s-mapping.txt.gz
+Pendientes: probar en el movil que un golpe con el telefono en el bolsillo a
+mas de 20 km/h abre la validacion, y que un golpe aparcado ya no la abre.
+
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

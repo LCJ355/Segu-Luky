@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.82s (versionCode 69)
+
+### Los cuatro puntos de la revision de 1.81s
+Cambia en un caso concreto cuando se abre la validacion: golpe con el movil en el bolsillo y
+velocidad de los ultimos 5 segundos. Ahi la frase de la 1.81s ("sigue sin cambiar cuando salta
+el SOS") deja de ser exacta. La decision de avisar, los pesos y el numero de golpes contados
+siguen igual.
+
+- **Velocidad fresca en el rescate de bolsillo.** La velocidad que decide si el golpe fue en
+  marcha usaba `RECENT_LOCATION_WINDOW_MS` (60 s), asi que un dato del semaforo anterior podia
+  promover a validacion un golpe con el movil quieto. Ahora exige `POCKET_SPEED_MAX_AGE_MS` = 5 s.
+  El mismo criterio (`recentSpeedWithin`) lo usa el jerk, que mantiene sus 10 s.
+- **Margen y umbral de movimiento del rescate.** `POCKET_SETTLE_MS` pasa de 2 s a 6 s y el
+  movimiento que cancela el rescate sube a `POCKET_MOTION_THRESHOLD_G` = 0,45 g. Con 0,15 g la
+  vibracion del motor cancelaba el rescate justo en el caso para el que existe. Girar el aparato
+  despues del margen tambien lo cancela (`onGyroscope`).
+- **Promocion sin golpe.** `onValidationStarted(startedAt, fromPromotion)` dice si la validacion
+  viene de un golpe real o de promover un candidato, y `SafetyMonitorService` solo llama a
+  `assessImpact` en el primer caso: ya no se clasifica un golpe que no ha ocurrido.
+- **`assessImpact(trigger)`.** El instante del golpe lo pone el detector en vez de la ultima
+  muestra del buffer. Al promover, esa muestra podia ser de 15 s antes: la ventana de impacto
+  salia vacia e `ImpactPeriodicity` recibia una entrada falsa (patron repetitivo inventado y
+  -8 puntos).
+- **Cruces reales y fase de giro.** `ImpactSequence` cuenta subidas por encima del umbral y no
+  muestras por encima (a 100 Hz cualquier golpe regalaba los +10 de rebote), y la fase "giro" ya
+  no depende de una comparacion tautologica: pide rotacion y calidad de giroscopio.
+- **`speedAfterKmh = null` en el instante del golpe.** Pasar la misma velocidad como antes y
+  despues daba una caida de 0 km/h, restaba siempre 6 puntos por "velocidad intacta" y dejaba
+  muerta la rama de jerk del clasificador.
+- 247 pruebas (5 nuevas) y `lintDebug` sin errores.
+- `Instrucciones/Estado.txt` reparado: rutas de APK partidas por el caracter de `APK´s`, la
+  entrada de la 1.53s sin cuerpo, bloques fuera de orden y los huecos 1.65s-1.70s y 1.72s.
+
 ## 1.81s (versionCode 68)
 
 ### Respuesta a la revision critica de 1.80s (sin tocar los pesos)

@@ -9,11 +9,36 @@ class ImpactSequenceTest {
 
     private fun samples(peak: Float, crossings: Int, gyro: Float, count: Int = 6): List<ImpactSample> {
         val list = ArrayList<ImpactSample>()
+        var hits = 0
         for (i in 0 until count) {
-            val factor = if (crossings >= 2 && i % 2 == 0) 1f else 0.6f
-            list.add(ImpactSample(1_000L + i * 50L, peak * factor, 0.1f, 0.1f, if (i == 1) gyro else 8f))
+            val isHit = hits < crossings && i % 2 == 0
+            if (isHit) hits++
+            val level = if (isHit) peak else 1f
+            list.add(ImpactSample(1_000L + i * 50L, level, 0.1f, 0.1f, if (i == 0) gyro else 8f))
         }
         return list
+    }
+
+    @Test
+    fun `un solo golpe no regala el bonus de rebote`() {
+        // Un pico unico sube el umbral una vez. Contar muestras por encima daba
+        // "muchos cruces" a cualquier golpe grabado a 50-100 Hz.
+        val verdict = ImpactSequence.evaluate(
+            samples = samples(peak = 6f, crossings = 1, gyro = 20f),
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000
+        )
+        assertFalse(verdict.reasons.any { it.contains("cruces") })
+    }
+
+    @Test
+    fun `dos subidas por encima del umbral son rebote`() {
+        val verdict = ImpactSequence.evaluate(
+            samples = samples(peak = 6f, crossings = 2, gyro = 20f),
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000
+        )
+        assertTrue(verdict.reasons.any { it.contains("2 cruces") })
     }
 
     @Test
@@ -140,6 +165,24 @@ class ImpactSequenceTest {
         )
         assertEquals(sinGiroscopio.score, conLecturaBaja.score)
         assertEquals(sinGiroscopio.level, conLecturaBaja.level)
+    }
+
+    @Test
+    fun `la fase de giro exige rotacion y calidad de giroscopio`() {
+        val conCalidad = ImpactSequence.evaluate(
+            samples = samples(peak = 6f, crossings = 1, gyro = 140f),
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 40f, rpmAfter = 2_000
+        )
+        assertEquals("giro", conCalidad.phase)
+
+        val sinCalidad = ImpactSequence.evaluate(
+            samples = samples(peak = 6f, crossings = 1, gyro = 140f),
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 40f, rpmAfter = 2_000,
+            gyroConfidence = 0.2f
+        )
+        assertEquals("desaceleracion", sinCalidad.phase)
     }
 
     @Test

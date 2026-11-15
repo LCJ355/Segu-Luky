@@ -171,11 +171,14 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
         detector = AccidentDetector(
             listener = object : AccidentDetector.Listener {
-                override fun onValidationStarted(startedAt: Long) {
+                override fun onValidationStarted(startedAt: Long, fromPromotion: Boolean) {
                     if (activeEventId == null) activeEventId = UUID.randomUUID().toString()
                     // Clasificacion bache/accidente: por ahora solo se mide. El veredicto
                     // va al registro y al snapshot; no cambia cuando salta el SOS.
-                    assessImpact()
+                    // Si la validacion viene del rescate de bolsillo no hay golpe que
+                    // clasificar: el impacto quedo 15 s atras y medir la muestra de
+                    // ahora inventaria un choque y ensuciaria el ritmo de badenes.
+                    if (!fromPromotion) assessImpact(startedAt)
                     SafetyStateStore.update {
                         it.copy(
                             phase = SafetyPhase.VALIDATING,
@@ -2446,14 +2449,19 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
      * Clasifica el golpe que se acaba de contar (bache grande o accidente) con las
      * senales disponibles. Solo mide: el veredicto se registra y se muestra, pero
      * el disparo del SOS sigue igual hasta validar con datos reales.
+     *
+     * [trigger] es el instante del golpe, el mismo que acaba de usar el detector:
+     * la muestra mas reciente del buffer puede ser bastante posterior (p. ej. al
+     * promover un candidato de bolsillo) y entonces la ventana de impacto salia
+     * vacia y se inventaba una entrada en el ritmo de badenes.
      */
-    private fun assessImpact() {
+    private fun assessImpact(trigger: Long) {
         val obdSnapshot = ObdLinkController.state.value
         val now = System.currentTimeMillis()
         val speed = obdSnapshot.freshSpeed(now) ?: lastSpeed
         // Una sola foto del buffer: ancho y secuencia tienen que mirar lo mismo.
         val windowSamples = ImpactSampleRecorder.snapshot()
-        val hitAtMs = ImpactSampleRecorder.lastAtMs()
+        val hitAtMs = trigger
         // B4: cada golpe contado entra en la memoria de ritmo.
         impactPeriodicity.record(hitAtMs)
         sequenceHitAtMs = hitAtMs
@@ -2473,7 +2481,10 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             jerkGPerSecond = detector.lastJerkGPerSecond,
             widthMs = lastHitWidthMs,
             speedBeforeKmh = speed,
-            speedAfterKmh = speed,
+            // En el instante del golpe todavia no hay "despues": pasarlo igual que
+            // "antes" daba una caida de 0 km/h y restaba siempre 6 puntos por
+            // "velocidad intacta". El valor real se rellena a los 2 s.
+            speedAfterKmh = null,
             rpmAfter = obdSnapshot.rpm,
             attitudeChangeDegrees = orientationTiltDegrees,
             hasVehicleLink = obdSnapshot.isConnected
@@ -2491,7 +2502,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             hitAtMs = hitAtMs,
             thresholdG = detector.effectiveSensitivityG,
             speedBeforeKmh = speed,
-            speedAfterKmh = speed,
+            speedAfterKmh = null,
             rpmAfter = obdSnapshot.rpm,
             orientationConfidence = confidence,
             gyroConfidence = gyroQualityNow()
