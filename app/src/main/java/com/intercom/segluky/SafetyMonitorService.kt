@@ -3177,7 +3177,13 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
         fun confirm(context: Context) = send(context, ACTION_CONFIRM)
         fun cancel(context: Context) = send(context, ACTION_CANCEL)
-        fun notifyConfigChanged(context: Context) = send(context, ACTION_RELOAD_CONFIG)
+        fun notifyConfigChanged(context: Context) {
+            // With the monitor stopped there is no live configuration to reload.
+            // Starting the service only to stop it again runs onDestroy(), which
+            // resets SafetyStateStore and can undo the vehicle/profile just saved.
+            if (SafetyStateStore.snapshot.value.phase == SafetyPhase.STOPPED) return
+            send(context, ACTION_RELOAD_CONFIG)
+        }
 
         fun saveSensitivity(context: Context, g: Float) {
             val value = g.coerceIn(AccidentDetector.MIN_SENSITIVITY_G, AccidentDetector.MAX_SENSITIVITY_G)

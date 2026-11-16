@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.85s (versionCode 72)
+
+### Acceso rapido a modo y audio
+
+- **Boton `- M O D O -`.** Debajo del SOS, con el mismo tamano que `MONITOR` y
+  texto verde. Rota entre `Bolsillo`, `Moto` y `Coche`, ajustando vehiculo y
+  soporte.
+- **Cambio de modo fiable.** La recarga de configuracion ya no arranca el
+  servicio cuando el monitor esta parado; antes su `onDestroy()` reseteaba el
+  estado y el modo volvia al anterior.
+- **Nivel de audio seleccionable.** Circulo hueco naranja cuando esta disponible
+  y punto verde cuando esta activo. Al iniciar `MONITOR` se activa solo, pidiendo
+  microfono si hace falta, y sigue pudiendo desactivarse.
+- **Interfaz mas limpia.** Eliminadas la linea redundante `VEHICULO: ...` y la
+  linea de `MOVIMIENTO DEL MOVIL`.
+- 248 pruebas y `lintDebug` sin errores.
+
 ## 1.84s (versionCode 71)
 
 ### Ajustes de interfaz y vuelco en coche

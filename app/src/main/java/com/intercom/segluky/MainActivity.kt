@@ -151,10 +151,12 @@ class MainActivity : ComponentActivity() {
         var showGpsOffWarning by remember { mutableStateOf(false) }
         var showAbout by remember { mutableStateOf(false) }
         var sosActionsEnabled by remember { mutableStateOf(repository.areSosActionsEnabled()) }
+        var homeMountProfile by remember { mutableStateOf(SafetyMonitorService.loadMountProfile(context)) }
         var audioPermissionGranted by remember { mutableStateOf(hasAudioPermission(context)) }
         var callPermissionGranted by remember { mutableStateOf(hasCallPermission(context)) }
         var notificationPermissionGranted by remember { mutableStateOf(hasNotificationPermission(context)) }
         var permissionFeedback by remember { mutableStateOf<String?>(null) }
+        var pendingVoiceEnable by remember { mutableStateOf(false) }
         val lifecycleOwner = LocalLifecycleOwner.current
         val intercomScope = rememberCoroutineScope()
         // La consulta al puente de InterCOM es binder a otra app: se hace fuera del
@@ -169,6 +171,7 @@ class MainActivity : ComponentActivity() {
         DisposableEffect(lifecycleOwner) {
             val observer = LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
+                    homeMountProfile = SafetyMonitorService.loadMountProfile(context)
                     audioPermissionGranted = hasAudioPermission(context)
                     callPermissionGranted = hasCallPermission(context)
                     notificationPermissionGranted = hasNotificationPermission(context)
@@ -195,6 +198,14 @@ class MainActivity : ComponentActivity() {
             notificationPermissionGranted = hasNotificationPermission(context)
             permissionFeedback = permissionDenialMessage(result)
             showGpsOffWarning = !SafetyMonitorService.isGpsProviderEnabled(context)
+            if (pendingVoiceEnable) {
+                pendingVoiceEnable = false
+                if (hasAudioPermission(context)) {
+                    audioPermissionGranted = true
+                    voiceKeywordsGate = true
+                    SafetyMonitorService.saveVoiceKeywordsGate(context, true)
+                }
+            }
             SafetyMonitorService.start(context)
         }
 
@@ -218,6 +229,26 @@ class MainActivity : ComponentActivity() {
                 permissionFeedback = null
             } else if (!audioPermissionGranted) {
                 permissionFeedback = "Permiso de microfono denegado. La activacion por voz sigue desactivada."
+            }
+        }
+
+        val onVoiceKeywordsGateChange: (Boolean) -> Unit = { enabled ->
+            if (!SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
+                when {
+                    !enabled -> {
+                        voiceKeywordsGate = false
+                        SafetyMonitorService.saveVoiceKeywordsGate(context, false)
+                        SafetyMonitorService.notifyConfigChanged(context)
+                    }
+                    !audioPermissionGranted -> {
+                        voicePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                    else -> {
+                        voiceKeywordsGate = true
+                        SafetyMonitorService.saveVoiceKeywordsGate(context, true)
+                        SafetyMonitorService.notifyConfigChanged(context)
+                    }
+                }
             }
         }
 
@@ -294,11 +325,25 @@ class MainActivity : ComponentActivity() {
         }
 
         fun startMonitoring() {
-            val permissions = permissionsNeededForConfiguredFeatures()
+            pendingVoiceEnable = !voiceKeywordsGate
+            val permissions = buildSet {
+                addAll(permissionsNeededForConfiguredFeatures())
+                if (pendingVoiceEnable && !hasAudioPermission(context)) {
+                    add(Manifest.permission.RECORD_AUDIO)
+                }
+            }.toTypedArray()
 
             when {
                 permissions.isNotEmpty() -> permissionLauncher.launch(permissions)
                 else -> {
+                    if (pendingVoiceEnable) {
+                        pendingVoiceEnable = false
+                        if (hasAudioPermission(context)) {
+                            audioPermissionGranted = true
+                            voiceKeywordsGate = true
+                            SafetyMonitorService.saveVoiceKeywordsGate(context, true)
+                        }
+                    }
                     showGpsOffWarning = !SafetyMonitorService.isGpsProviderEnabled(context)
                     SafetyMonitorService.start(context)
                 }
@@ -322,6 +367,38 @@ class MainActivity : ComponentActivity() {
             }
         }.distinct()
         val criticalSettingsLocked = snapshot.phase.locksCriticalSettings()
+        val onFallOrientationGateChange: (Boolean) -> Unit = { enabled ->
+            if (!SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
+                fallOrientationGate = enabled
+                SafetyMonitorService.saveFallOrientationGate(context, enabled)
+                SafetyMonitorService.notifyConfigChanged(context)
+            }
+        }
+        val onVehicleChange: (VehicleProfile) -> Boolean = { vehicle ->
+            if (SafetyMonitorService.setVehicleProfile(context, vehicle)) {
+                SafetyStateStore.update { it.copy(vehicleProfile = vehicle) }
+                sensitivityG = SafetyMonitorService.loadSensitivity(context)
+                voiceKeywordsGate = SafetyMonitorService.loadVoiceKeywordsGate(context)
+                fallOrientationGate = SafetyMonitorService.loadFallOrientationGate(context)
+                homeMountProfile = SafetyMonitorService.loadMountProfile(context)
+                SafetyMonitorService.notifyConfigChanged(context)
+                true
+            } else {
+                SafetyStateStore.log("Deten el monitor antes de cambiar de vehiculo")
+                false
+            }
+        }
+        fun applyQuickMode(mode: QuickMode) {
+            if (!onVehicleChange(mode.vehicle)) return
+            if (SafetyMonitorService.setMountProfile(context, mode.mount)) {
+                homeMountProfile = mode.mount
+                if (mode.mount.autoEnablesFallGate) onFallOrientationGateChange(true)
+                SafetyStateStore.log("Modo: ${mode.label}")
+            } else {
+                SafetyStateStore.log("Deten el monitor antes de cambiar de modo")
+            }
+        }
+        val quickMode = QuickMode.from(snapshot.vehicleProfile, homeMountProfile)
 
         BackHandler(enabled = screen != AppScreen.HOME) { screen = AppScreen.HOME }
 
@@ -371,6 +448,9 @@ class MainActivity : ComponentActivity() {
                         onHitTest = onHitTest,
                         sosActionsEnabled = sosActionsEnabled,
                         onSosActionsEnabledChange = onSosActionsEnabledChange,
+                        voiceKeywordsGate = voiceKeywordsGate,
+                        voicePermissionGranted = audioPermissionGranted,
+                        onVoiceKeywordsGateChange = onVoiceKeywordsGateChange,
                         intercomState = installation.state,
                         onStart = { startMonitoring() },
                         onStop = { SafetyMonitorService.stop(context) }
@@ -400,6 +480,26 @@ class MainActivity : ComponentActivity() {
                 }
                 item {
                     SosPanel(onSos = { SafetyMonitorService.confirm(context) })
+                }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Spacer(Modifier.weight(0.5f))
+                        StateToggleButton(
+                            label = "- M O D O -",
+                            stateLabel = quickMode.label,
+                            on = true,
+                            onColor = StateOnInk,
+                            offColor = StateOnInk,
+                            modifier = Modifier.weight(1f),
+                            enabled = snapshot.phase == SafetyPhase.STOPPED && !criticalSettingsLocked,
+                            accessibilityLabel = "Modo ${quickMode.label}; tocar para cambiar",
+                            onClick = { applyQuickMode(QuickMode.next(quickMode)) }
+                        )
+                        Spacer(Modifier.weight(0.5f))
+                    }
                 }
                 if (sosActionsEnabled.not() && snapshot.phase != SafetyPhase.STOPPED) {
                     item {
@@ -435,49 +535,12 @@ class MainActivity : ComponentActivity() {
                     onWindowChange = onWindowChange,
                     onHitTest = onHitTest,
                     fallOrientationGate = fallOrientationGate,
-                    onFallOrientationGateChange = { enabled ->
-                        if (!SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
-                            fallOrientationGate = enabled
-                            SafetyMonitorService.saveFallOrientationGate(context, enabled)
-                            SafetyMonitorService.notifyConfigChanged(context)
-                        }
-                    },
-                    onVehicleChange = { vehicle ->
-                        // Cambiar de vehiculo cambia nivel, ventana e interruptores: se
-                        // hace con el monitor detenido y se recargan los ajustes del perfil.
-                        if (SafetyMonitorService.setVehicleProfile(context, vehicle)) {
-                            SafetyStateStore.update { it.copy(vehicleProfile = vehicle) }
-                            sensitivityG = SafetyMonitorService.loadSensitivity(context)
-                            voiceKeywordsGate = SafetyMonitorService.loadVoiceKeywordsGate(context)
-                            fallOrientationGate = SafetyMonitorService.loadFallOrientationGate(context)
-                            SafetyMonitorService.notifyConfigChanged(context)
-                            true
-                        } else {
-                            SafetyStateStore.log("Deten el monitor antes de cambiar de vehiculo")
-                            false
-                        }
-                    },
+                    onFallOrientationGateChange = onFallOrientationGateChange,
+                    onVehicleChange = onVehicleChange,
                     sosActionsEnabled = sosActionsEnabled,
                     voiceKeywordsGate = voiceKeywordsGate,
                     audioPermissionGranted = audioPermissionGranted,
-                    onVoiceKeywordsGateChange = { enabled ->
-                        if (!SafetyStateStore.snapshot.value.phase.locksCriticalSettings()) {
-                            when {
-                                !enabled -> {
-                                    voiceKeywordsGate = false
-                                    SafetyMonitorService.saveVoiceKeywordsGate(context, false)
-                                    SafetyMonitorService.notifyConfigChanged(context)
-                                }
-                                hasAudioPermission(context) -> {
-                                    audioPermissionGranted = true
-                                    voiceKeywordsGate = true
-                                    SafetyMonitorService.saveVoiceKeywordsGate(context, true)
-                                    SafetyMonitorService.notifyConfigChanged(context)
-                                }
-                                else -> voicePermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                            }
-                        }
-                    },
+                    onVoiceKeywordsGateChange = onVoiceKeywordsGateChange,
                     callPermissionRequired = callPermissionRequired,
                     callPermissionGranted = callPermissionGranted,
                     whatsappAutoSend = whatsappAutoSend,
@@ -546,6 +609,28 @@ private enum class AppScreen {
     SENSORS,
     SETTINGS,
     INSTRUCTIONS
+}
+
+private enum class QuickMode(
+    val label: String,
+    val vehicle: VehicleProfile,
+    val mount: MountProfile
+) {
+    BOLSILLO("Bolsillo", VehicleProfile.PHONE, MountProfile.POCKET),
+    MOTO("Moto", VehicleProfile.MOTO, MountProfile.HANDLEBAR),
+    COCHE("Coche", VehicleProfile.CAR, MountProfile.GLOVEBOX);
+
+    companion object {
+        fun from(vehicle: VehicleProfile, mount: MountProfile): QuickMode = when {
+            vehicle == VehicleProfile.CAR -> COCHE
+            vehicle == VehicleProfile.MOTO -> MOTO
+            mount == MountProfile.POCKET -> BOLSILLO
+            else -> BOLSILLO
+        }
+
+        fun next(current: QuickMode): QuickMode =
+            entries[(current.ordinal + 1) % entries.size]
+    }
 }
 
 /** Version that the package manager reports, so the UI never drifts from build.gradle. */
@@ -3150,15 +3235,19 @@ private fun StateToggleButton(
     onColor: Color,
     offColor: Color,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    accessibilityLabel: String? = null,
     onClick: () -> Unit
 ) {
     val ink = if (on) onColor else offColor
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier
             .height(52.dp)
             .semantics {
-                contentDescription = "$label $stateLabel: ${if (on) "activado" else "desactivado"}"
+                contentDescription = accessibilityLabel
+                    ?: "$label $stateLabel: ${if (on) "activado" else "desactivado"}"
             },
         shape = RoundedCornerShape(14.dp),
         border = BorderStroke(2.dp, ink),
@@ -3195,6 +3284,9 @@ private fun PhaseHeroCard(
     onHitTest: () -> Unit,
     sosActionsEnabled: Boolean,
     onSosActionsEnabledChange: (Boolean) -> Unit,
+    voiceKeywordsGate: Boolean,
+    voicePermissionGranted: Boolean,
+    onVoiceKeywordsGateChange: (Boolean) -> Unit,
     intercomState: IntercomState,
     onStart: () -> Unit,
     onStop: () -> Unit
@@ -3231,14 +3323,6 @@ private fun PhaseHeroCard(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "VEHICULO: ${snapshot.vehicleProfile.badge}",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
             val monitoring = phase != SafetyPhase.STOPPED
             // La fase solo se anuncia cuando aporta algo: "APAGADO" y "OK" ya los
             // indica el color del boton del monitor.
@@ -3328,8 +3412,12 @@ private fun PhaseHeroCard(
                 snapshot = snapshot,
                 intercomState = intercomState
             )
-            AudioLevelLine(audioLevel)
-            MovementLevelLine(snapshot.movementLevel)
+            AudioLevelLine(
+                audioLevel = audioLevel,
+                voiceActive = voiceKeywordsGate && voicePermissionGranted &&
+                    snapshot.phase != SafetyPhase.STOPPED,
+                onToggle = { onVoiceKeywordsGateChange(!voiceKeywordsGate) }
+            )
             // Etiqueta y T. PROMEDIO van juntas: menos aire entre ellas que entre el
             // resto de bloques de la tarjeta.
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -3445,9 +3533,36 @@ private fun intercomStateLabel(state: IntercomState): String = when (state) {
     IntercomState.MISSING -> "no instalado"
 }
 
+@androidx.compose.runtime.Composable
+private fun StatusRingOrDot(active: Boolean) {
+    if (active) {
+        Box(
+            Modifier
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(StrongGreen)
+        )
+    } else {
+        Box(
+            Modifier
+                .size(20.dp)
+                .border(2.dp, StateOffInk, CircleShape)
+        )
+    }
+}
+
 /** Linea de nivel de audio; va justo debajo de las luces de los sensores. */
 @androidx.compose.runtime.Composable
-private fun AudioLevelLine(audioLevel: AudioLevelReading) {
+private fun AudioLevelLine(
+    audioLevel: AudioLevelReading,
+    voiceActive: Boolean,
+    onToggle: () -> Unit
+) {
+    val circleAction = if (voiceActive) {
+        "Voz activa; tocar para desactivar"
+    } else {
+        "Voz disponible; tocar para activar"
+    }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -3458,33 +3573,40 @@ private fun AudioLevelLine(audioLevel: AudioLevelReading) {
             Spacer(Modifier.weight(1f))
             Text(
                 audioLevel.label,
-                color = if (audioLevel.active || audioLevel.fromVoice) StrongGreen else Color(0xFF6B7280),
+                color = when {
+                    audioLevel.label.equals("Voz desactivada", ignoreCase = true) -> StateOffInk
+                    audioLevel.active || audioLevel.fromVoice -> StrongGreen
+                    else -> Color(0xFF6B7280)
+                },
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold
             )
         }
-        LevelBar(audioLevel.progress)
-    }
-}
-
-/** Linea de movimiento del movil; va justo debajo de la linea de audio. */
-@androidx.compose.runtime.Composable
-private fun MovementLevelLine(movementLevel: Float) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            "MOVIMIENTO DEL MOVIL",
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold
-        )
-        LevelBar(movementLevel)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onToggle)
+                    .semantics {
+                        contentDescription = circleAction
+                        role = Role.Switch
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                StatusRingOrDot(active = voiceActive)
+            }
+            Spacer(Modifier.size(8.dp))
+            LevelBar(audioLevel.progress, Modifier.weight(1f))
+        }
     }
 }
 
 /** Barra de nivel; mismo grosor y redondeo que la barra del ajuste de golpes. */
 @androidx.compose.runtime.Composable
-private fun LevelBar(progress: Float) {
+private fun LevelBar(progress: Float, modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(SENSITIVITY_TRACK_HEIGHT)
             .clip(RoundedCornerShape(SENSITIVITY_TRACK_HEIGHT / 2))
