@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.83s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.84s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -7,6 +7,14 @@ contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
 ESTE APK HACE COSAS REALES: llama, envia mensajes y abre WhatsApp. Antes de
 poner S O S en ON revisa los contactos. Para probar sensores,
 desactivala: la cuenta atras se ejecuta sin avisar a nadie.
+
+--------------------------------------------------------------------------
+NOVEDADES 1.84s
+--------------------------------------------------------------------------
+- Barra superior centrada: iconos, nombre y version forman un solo bloque.
+- Sensores mas limpio: SENSORES centrado y sin la seccion de grabacion opcional.
+- COCHE puede confirmar vuelcos con CAIDA / ORIENTACION, activada por defecto.
+- Elegir el soporte Bolsillo activa CAIDA / ORIENTACION; los demas no la cambian.
 
 --------------------------------------------------------------------------
 NOVEDADES 1.83s
@@ -32,8 +40,8 @@ NOVEDADES 1.70s
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.83s.apk        <- version actual
-La 1.82s se conserva como historico.
+    Segu-Luky-1.84s.apk        <- version actual
+La 1.82s y la 1.83s se conservan como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -158,12 +166,13 @@ resumen de su estado (por ejemplo "4 ACTIVOS" o "FALTAN 2") antes de entrar.
       guarda sus propios ajustes (nivel, ADAPT., voz y caida). Se cambia con el
       monitor parado.
       MOVIL: todo lo de siempre.
-      COCHE: nivel recomendado 4,5 g, sin caida/orientacion, y la tarjeta
+      COCHE: nivel recomendado 4,5 g, caida/orientacion para vuelcos, y la tarjeta
       ENLACE CON EL COCHE: adaptador ELM327 por Bluetooth con velocidad, RPM,`n      acelerador, refrigerante, tension y codigos. Solo lectura.
       MOTO: MODO MOTO y voz activados, mas la tarjeta BUS CAN (pendiente del
       cable; el analisis esta en docs/MOTO-CAN.md).
     - SOPORTE DEL MOVIL: bolsillo, manillar, deposito, mochila o personalizado.
-      El aprendizaje se guarda por separado para cada soporte.
+      El aprendizaje se guarda por separado para cada soporte. Elegir Bolsillo
+      activa CAIDA / ORIENTACION; los demas soportes no la cambian.
     - SENSIBILIDAD A LOS GOLPES (titulo de la tarjeta); dentro, la linea
       NIVEL DE GOLPE: deslizador 0,5-7 g, escala 0..7, PICO / EFECTIVO /
       SUGERIDO y PRUEBA DE GOLPE.
@@ -305,4 +314,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.83s (versionCode 70) - paquete com.intercom.segluky.
+Version: V-1.84s (versionCode 71) - paquete com.intercom.segluky.

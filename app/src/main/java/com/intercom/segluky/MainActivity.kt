@@ -577,7 +577,8 @@ private fun SeguTopBar(
                         .fillMaxWidth()
                         .statusBarsPadding()
                         .height(60.dp)
-                        .padding(horizontal = 4.dp),
+                        .padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -615,7 +616,7 @@ private fun SeguTopBar(
                             )
                         }
                     }
-                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.width(10.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.Bottom
@@ -625,17 +626,18 @@ private fun SeguTopBar(
                             modifier = Modifier.alignByBaseline(),
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 26.sp,
-                            lineHeight = 30.sp
+                            fontSize = 24.sp,
+                            lineHeight = 28.sp,
+                            maxLines = 1
                         )
                         Text(
                             appVersionLabel(),
                             modifier = Modifier.alignByBaseline(),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1
                         )
                     }
-                    Spacer(Modifier.width(6.dp))
                 }
                 Box(
                     Modifier
@@ -1419,7 +1421,6 @@ private fun EmergencySettingsScreen(
     onTestIntercomNotice: () -> Unit
 ) {
     val context = LocalContext.current
-    val calibrationScope = androidx.compose.runtime.rememberCoroutineScope()
     val automationLifecycle = LocalLifecycleOwner.current
     var automationRefresh by remember { mutableStateOf(0) }
     DisposableEffect(automationLifecycle) {
@@ -1719,7 +1720,7 @@ private fun EmergencySettingsScreen(
         }
         if (section == SettingsSection.SENSORS) {
             item {
-                SectionHeader("SENSORES")
+                SectionHeader("SENSORES", centered = true)
             }
             item {
                 val monitorStopped = snapshot.phase == SafetyPhase.STOPPED
@@ -1794,6 +1795,12 @@ private fun EmergencySettingsScreen(
                                         onClick = {
                                             if (SafetyMonitorService.setMountProfile(context, profile)) {
                                                 mountProfile = profile
+                                                if (profile.autoEnablesFallGate) {
+                                                    onFallOrientationGateChange(true)
+                                                    SafetyStateStore.log(
+                                                        "Soporte Bolsillo: CAIDA / ORIENTACION activada"
+                                                    )
+                                                }
                                             } else {
                                                 SafetyStateStore.log("Deten el monitor antes de cambiar el soporte")
                                             }
@@ -1871,7 +1878,11 @@ private fun EmergencySettingsScreen(
                 item {
                     SeguCard(
                         title = "CAIDA / ORIENTACION",
-                    status = if (fallOrientationGate) "MODO MOTO" else "GOLPE DIRECTO",
+                    status = when {
+                        !fallOrientationGate -> "GOLPE DIRECTO"
+                        vehicleProfile == VehicleProfile.CAR -> "VOLCADO"
+                        else -> "MODO MOTO"
+                    },
                     tone = if (fallOrientationGate) Tone.OK else Tone.OFF,
                     trailing = {
                         Switch(
@@ -1884,8 +1895,14 @@ private fun EmergencySettingsScreen(
                 ) {
                     Text(
                         if (fallOrientationGate) {
-                            "Un golpe fuerte abre un aviso en espera de 15 s: si el movil queda inclinado 55 grados o mas " +
-                                "durante 4 s, salta el SOS. Un bache no tumba la moto y no avisa; la sacudida y los botones son inmediatos."
+                            if (vehicleProfile == VehicleProfile.CAR) {
+                                "Un golpe fuerte abre un aviso en espera de 15 s: si el coche vuelca o el movil queda " +
+                                    "inclinado 55 grados o mas durante 4 s, salta el SOS. Un bache no vuelca el coche y " +
+                                    "no avisa; la sacudida y los botones son inmediatos."
+                            } else {
+                                "Un golpe fuerte abre un aviso en espera de 15 s: si el movil queda inclinado 55 grados o mas " +
+                                    "durante 4 s, salta el SOS. Un bache no tumba la moto y no avisa; la sacudida y los botones son inmediatos."
+                            }
                         } else {
                             "Cualquier golpe al nivel elegido inicia la cuenta atras al momento, aunque muevas el movil a mano: " +
                                 "no se comprueba la inclinacion."
@@ -2162,225 +2179,6 @@ private fun EmergencySettingsScreen(
                     description = "Envia el enlace de Maps por SMS a TODOS los contactos, sin confirmacion y con la " +
                         "pantalla bloqueada. Puede tener coste de operador."
                 )
-            }
-        }
-        if (section == SettingsSection.SENSORS) {
-            item {
-                SectionHeader("DIAGNOSTICO")
-            }
-            item {
-                val calibration by CalibrationStateStore.state.collectAsStateWithLifecycle()
-                var calibrationActivity by remember { mutableStateOf(CalibrationRepository.loadLastActivity(context)) }
-                LaunchedEffect(calibration.recording) {
-                    CalibrationStateStore.update {
-                        it.copy(files = CalibrationRepository.listFiles(context))
-                    }
-                }
-                Card(
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text("GRABACION DE SENSORES (OPCIONAL)", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        Text(
-                            "La app ya se ajusta sola con el uso: aprende el ruido y el traqueteo de este " +
-                                "movil, y con PRUEBA DE GOLPE (arriba) compruebas en 15 s que detecta un " +
-                                "golpe. Grabar solo sirve para diagnostico: adjuntar datos a una incidencia " +
-                                "o comparar dos moviles.",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            "Dispositivo: ${CalibrationRepository.deviceModel()}",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        val deviceProfile = remember(mountProfile) {
-                            SafetyMonitorService.loadDeviceProfile(context)
-                        }
-                        Text(
-                            "Aprendizaje (${mountProfile.label}): ${deviceProfile.usageMs / 60_000L} min · ruido " +
-                                "${String.format(Locale.US, "%.2f", deviceProfile.noiseG)} g · traqueteo " +
-                                "${String.format(Locale.US, "%.2f", deviceProfile.p99G)} g · " +
-                                "${String.format(Locale.US, "%.0f", deviceProfile.deliveredHz)} medidas/s",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        TextButton(
-                            onClick = {
-                                SafetyMonitorService.resetDeviceProfile(context)
-                                SafetyStateStore.log("Aprendizaje de ${mountProfile.label} reiniciado")
-                            },
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
-                        ) {
-                            Text("REINICIAR APRENDIZAJE", style = MaterialTheme.typography.labelSmall)
-                        }
-                        CalibrationActivity.entries.chunked(3).forEach { rowItems ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                rowItems.forEach { act ->
-                                    val selected = calibrationActivity == act
-                                    Button(
-                                        onClick = {
-                                            calibrationActivity = act
-                                            CalibrationRepository.saveLastActivity(context, act)
-                                        },
-                                        modifier = Modifier.weight(1f).height(46.dp),
-                                        enabled = !calibration.recording,
-                                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                            containerColor = if (selected) StrongGreen else Color(0xFFE0E0E0),
-                                            contentColor = if (selected) Color.White else StatusTextColor
-                                        ),
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp, vertical = 6.dp)
-                                    ) {
-                                        Text(
-                                            act.label,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            maxLines = 2,
-                                            textAlign = TextAlign.Center
-                                        )
-                                    }
-                                }
-                                repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
-                            }
-                        }
-                        if (calibration.recording) {
-                            Button(
-                                onClick = { SensorCalibrationService.stop(context) },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFC62828),
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                Text("DETENER REGISTRO", fontWeight = FontWeight.Bold)
-                            }
-                            Text(
-                                "Grabando ${calibration.activity.label} (${calibration.mount.label}): " +
-                                    "${calibration.samples} lecturas, ${calibration.elapsedMs / 1000}s, " +
-                                    "${calibration.rateHz} Hz\nArchivo: ${calibration.fileName}",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        } else {
-                            Button(
-                                onClick = { SensorCalibrationService.start(context, calibrationActivity) },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("INICIAR REGISTRO", fontWeight = FontWeight.Bold)
-                            }
-                        }
-                        Text("ARCHIVOS DE CALIBRACION", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-                        val bloque = remember(calibrationAnyRecording.samples) {
-                            CalibrationRepository.bestBlock(context)
-                        }
-                        val tamano = remember(calibrationAnyRecording.samples) {
-                            CalibrationRepository.bestBlockBytes(context)
-                        }
-                        Text(
-                            when {
-                                bloque == null ->
-                                    "Aun no hay bloque guardado. Se queda el mejor de 15 minutos y el " +
-                                        "tope de grabacion es de 4 h."
-                                tamano != null ->
-                                    "Guardado el mejor bloque de 15 min: ${bloque.second} puntos, " +
-                                        String.format(Locale.US, "%.1f", tamano / (1024f * 1024f)) + " MB."
-                                else -> "Guardado el mejor bloque de 15 min: ${bloque.second} puntos."
-                            },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (bloque != null) {
-                            OutlinedButton(
-                                onClick = {
-                                    if (CalibrationRepository.clearBestBlock(context)) {
-                                        SafetyStateStore.log("Calibracion: bloque guardado borrado")
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                contentPadding = CompactButtonPadding
-                            ) { TightButtonLabel("BORRAR GRABACION") }
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
-                                onClick = {
-                                    calibrationScope.launch {
-                                        val zip = withContext(Dispatchers.IO) {
-                                            CalibrationRepository.exportAll(context)
-                                        }
-                                        if (zip == null) {
-                                            SafetyStateStore.log("Calibracion: no hay archivos para exportar")
-                                        } else {
-                                            val path = withContext(Dispatchers.IO) {
-                                                CalibrationRepository.exportToDownloads(context, zip)
-                                            }
-                                            if (path != null) {
-                                                SafetyStateStore.log("Calibracion exportada: $path")
-                                                android.widget.Toast.makeText(
-                                                    context, "Exportado en $path", android.widget.Toast.LENGTH_LONG
-                                                ).show()
-                                            } else {
-                                                CalibrationRepository.shareExport(context, zip, viaWhatsApp = false)
-                                            }
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                contentPadding = CompactButtonPadding
-                            ) {
-                                TightButtonLabel("EXPORTAR")
-                            }
-                            Button(
-                                onClick = {
-                                    calibrationScope.launch {
-                                        val zip = withContext(Dispatchers.IO) {
-                                            CalibrationRepository.exportAll(context)
-                                        }
-                                        if (zip == null) {
-                                            SafetyStateStore.log("Calibracion: no hay archivos para enviar")
-                                        } else {
-                                            withContext(Dispatchers.IO) {
-                                                CalibrationRepository.exportToDownloads(context, zip)
-                                            }
-                                            CalibrationRepository.shareExport(context, zip, viaWhatsApp = true)
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                contentPadding = CompactButtonPadding,
-                                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF25D366),
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                TightButtonLabel("WHATSAPP")
-                            }
-                        }
-                        if (calibration.files.isEmpty()) {
-                            Text("Sin archivos todavia.", style = MaterialTheme.typography.bodySmall)
-                        } else {
-                            calibration.files.forEach { f ->
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    Column(Modifier.weight(1f)) {
-                                        Text(f.name, style = MaterialTheme.typography.bodySmall, maxLines = 2)
-                                        Text("${f.sizeBytes / 1024} KB", style = MaterialTheme.typography.labelSmall)
-                                    }
-                                    TextButton(
-                                        onClick = {
-                                            CalibrationRepository.delete(context, f.name)
-                                            CalibrationStateStore.update {
-                                                it.copy(files = CalibrationRepository.listFiles(context))
-                                            }
-                                        }
-                                    ) {
-                                        Text("BORRAR")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
         if (section == SettingsSection.CHANNELS) {
@@ -3071,12 +2869,15 @@ private fun StatusPill(text: String, tone: Tone) {
 }
 
 @androidx.compose.runtime.Composable
-private fun SectionHeader(text: String) {
+private fun SectionHeader(text: String, centered: Boolean = false) {
     Text(
         text,
-        modifier = Modifier.fillMaxWidth().padding(start = 4.dp, top = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = if (centered) 0.dp else 4.dp, top = 4.dp),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelSmall
+        style = MaterialTheme.typography.labelSmall,
+        textAlign = if (centered) TextAlign.Center else TextAlign.Start
     )
 }
 

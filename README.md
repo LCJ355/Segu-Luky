@@ -1,4 +1,4 @@
-# Segu-Luky V-1.83s
+# Segu-Luky V-1.84s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -53,9 +53,11 @@ button goes up one level, not straight to the home screen).
 
 - **Sensores**: starts with **TIPO DE VEHICULO** (`MOVIL` / `COCHE` / `MOTO`). Each profile keeps
   its own level, averaging window, voice and fall switches, and shows only its own cards: `MOVIL`
-  everything as before; `COCHE` hides fall/orientation (a car does not tip over), starts at 4,5 g and
-  carries the `ENLACE CON EL COCHE` card for the OBDII link; `MOTO` adds the `BUS CAN` card and keeps
-  `MODO MOTO` and voice. Switching needs the monitor stopped. Then the sensitivity slider with its
+  everything as before; `COCHE` starts at 4,5 g, keeps fall/orientation for rollovers and carries the
+  `ENLACE CON EL COCHE` card for the OBDII link; `MOTO` adds the `BUS CAN` card and keeps
+  `MODO MOTO` and voice. Choosing `Bolsillo` turns `CAIDA / ORIENTACION` on automatically; the other
+  mounts leave the current value untouched, and the switch remains editable. Switching needs the
+  monitor stopped. Then the sensitivity slider with its
   0..7 scale, the `ADAPT.` averaging window, `PICO/EFECTIVO/SUGERIDO`, `PROBAR GOLPE`, fall/orientation
   confirmation, voice trigger and diagnostics
   (device profile, reset learning, optional CSV/ZIP recording). On the home card only the
@@ -111,14 +113,14 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every released version is published in `APK´s/` as
-`Segu-Luky-<version>.apk`. The current release is `Segu-Luky-1.83s.apk`.
+`Segu-Luky-<version>.apk`. The current release is `Segu-Luky-1.84s.apk`.
 
-The latest GitHub release is `V-1.83s` with `Segu-Luky-1.83s.apk` attached; the
-previous `V-1.82s` release remains available. **Buscar actualizacion** reads the
-GitHub API and compares against the highest published release/tag:
+The latest GitHub release is `V-1.84s` with `Segu-Luky-1.84s.apk` attached; the
+previous `V-1.83s` and `V-1.82s` releases remain available. **Buscar actualizacion**
+reads the GitHub API and compares against the highest published release/tag:
 
 ```text
-gh release create V-1.83s "APK´s/Segu-Luky-1.83s.apk" --title "Segu-Luky V-1.83s" --notes "..."
+gh release create V-1.84s "APK´s/Segu-Luky-1.84s.apk" --title "Segu-Luky V-1.84s" --notes "..."
 ```
 
 The published APK carries **no personal data**: contacts, phone numbers, the bot
@@ -126,7 +128,7 @@ key and the position live only in the phone's `SharedPreferences` (the app
 declares `allowBackup="false"`). Before uploading, check the file itself:
 
 ```text
-powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-1.83s.apk"
+powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-1.84s.apk"
 ```
 
 It fails if the package contains anything that is not code, resources or

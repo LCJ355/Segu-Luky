@@ -27,4 +27,12 @@ class MountProfileTest {
             .filterNot { it == MountProfile.UNDEFINED }
             .forEach { assertTrue(it.isDefined) }
     }
+
+    @Test
+    fun onlyThePocketActivatesFallOrientationAutomatically() {
+        assertTrue(MountProfile.POCKET.autoEnablesFallGate)
+        MountProfile.entries
+            .filterNot { it == MountProfile.POCKET }
+            .forEach { assertFalse(it.autoEnablesFallGate) }
+    }
 }

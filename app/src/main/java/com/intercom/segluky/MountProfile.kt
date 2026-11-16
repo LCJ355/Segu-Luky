@@ -18,6 +18,9 @@ enum class MountProfile(
 
     val isDefined: Boolean get() = this != UNDEFINED
 
+    /** El bolsillo puede girar con el cuerpo; el resto de soportes no la activan solos. */
+    val autoEnablesFallGate: Boolean get() = this == POCKET
+
     companion object {
         fun fromId(id: String?): MountProfile =
             entries.firstOrNull { it.id == id?.trim() } ?: UNDEFINED

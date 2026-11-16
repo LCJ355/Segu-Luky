@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.84s (versionCode 71)
+
+### Ajustes de interfaz y vuelco en coche
+
+- **Barra superior centrada.** Los tres iconos, `Segu-Luky` y la version forman un
+  bloque centrado; el nombre baja a 24 sp y el espaciado queda ajustado.
+- **Sensores mas limpio.** El encabezado `SENSORES` va centrado y se elimina la
+  seccion `GRABACION DE SENSORES (OPCIONAL)` con sus controles de grabacion,
+  archivos y exportacion.
+- **Vuelco en coche.** `COCHE` vuelve a mostrar `CAIDA / ORIENTACION` y la activa
+  por defecto; el texto y el estado (`VOLCADO`) hablan de vuelco, no solo de moto.
+- **Bolsillo.** Elegir el soporte `Bolsillo` activa automaticamente
+  `CAIDA / ORIENTACION`; los demas soportes no la cambian y el interruptor sigue
+  siendo modificable.
+- 248 pruebas, `lintDebug` sin errores y `assembleRelease` correcto.
+
 ## 1.83s (versionCode 70)
 
 ### Revision de fiabilidad del despacho y GPS

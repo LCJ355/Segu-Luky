@@ -2331,6 +2331,32 @@ Pendientes: probar en el movil que un golpe con el telefono en el bolsillo a
 mas de 20 km/h abre la validacion, y que un golpe aparcado ya no la abre.
 
 ======================================================================
+V-1.84s (versionCode 71)
+======================================================================
+
+Fecha: 16/11/2026
+Version: 1.84s (versionCode 71)
+
+Cambio:
+- Barra superior: los tres iconos, Segu-Luky y la version forman un bloque
+  centrado; el nombre pasa a 24 sp y el espaciado queda ajustado.
+- Sensores: encabezado SENSORES centrado y eliminada la seccion GRABACION DE
+  SENSORES (OPCIONAL) con sus controles, archivos y exportacion.
+- Coche: CAIDA / ORIENTACION vuelve a mostrarse y se activa por defecto para
+  detectar vuelcos; el estado se muestra como VOLCADO.
+- Bolsillo: elegir ese soporte activa CAIDA / ORIENTACION; los demas soportes
+  no la cambian y el interruptor sigue siendo modificable.
+
+Motivo: ajustes de interfaz y correccion de la suposicion de que un coche no
+puede volcar.
+Prueba realizada: testDebugUnitTest (248 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease.
+Resultado: compila y verifica; pendiente prueba controlada de vuelco en coche.
+APK generado: APK´s/Segu-Luky-1.84s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.84s-mapping.txt.gz
+Pendientes: validar en carretera el vuelco y el soporte Bolsillo con datos reales.
+
+======================================================================
 V-1.83s (versionCode 70)
 ======================================================================
 

@@ -39,11 +39,11 @@ class VehicleProfileTest {
     }
 
     @Test
-    fun `el coche no usa la compuerta de inclinacion`() {
-        assertFalse(VehicleProfile.CAR.showsFallGate)
+    fun `el coche tambien puede confirmar un vuelco`() {
+        assertTrue(VehicleProfile.CAR.showsFallGate)
         assertTrue(VehicleProfile.PHONE.showsFallGate)
         assertTrue(VehicleProfile.MOTO.showsFallGate)
-        assertFalse(VehicleProfile.CAR.defaultFallGate)
+        assertTrue(VehicleProfile.CAR.defaultFallGate)
         assertTrue(VehicleProfile.MOTO.defaultFallGate)
     }
 

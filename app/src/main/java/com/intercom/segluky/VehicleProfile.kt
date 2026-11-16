@@ -39,12 +39,12 @@ enum class VehicleProfile(
         label = "Coche",
         badge = "COCHE",
         defaultSensitivityG = 4.5f,
-        defaultFallGate = false,
+        defaultFallGate = true,
         defaultVoiceGate = false,
-        showsFallGate = false,
+        showsFallGate = true,
         usesVehicleLink = true,
         description = "El telefono va en el coche. La velocidad del coche y el enlace OBDII " +
-            "mandan sobre el GPS, y el golpe se confirma con la caida de velocidad.",
+            "mandan sobre el GPS; el golpe se confirma con la caida de velocidad o con el vuelco.",
         allowedMounts = listOf(MountProfile.UNDEFINED, MountProfile.POCKET, MountProfile.GLOVEBOX, MountProfile.CUSTOM),
         defaultMount = MountProfile.GLOVEBOX
     ),
