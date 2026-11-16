@@ -1981,27 +1981,27 @@ private fun EmergencySettingsScreen(
                             whatsappLifecycle.lifecycle.addObserver(observer)
                             onDispose { whatsappLifecycle.lifecycle.removeObserver(observer) }
                         }
-                        val accessibilityReady = remember(whatsappRefresh) {
+                        val autoAccessibilityReady = remember(whatsappRefresh) {
                             AutomationPermissions.isAccessibilityEnabled(context)
                         }
-                        val overlayReady = remember(whatsappRefresh) {
+                        val autoOverlayReady = remember(whatsappRefresh) {
                             AutomationPermissions.canDrawOverlays(context)
                         }
                         PermissionRow(
                             label = "Accesibilidad",
-                            status = if (accessibilityReady) "ACTIVADA" else "DESACTIVADA",
-                            tone = if (accessibilityReady) Tone.OK else Tone.BAD,
-                            actionLabel = if (accessibilityReady) null else "ABRIR",
+                            status = if (autoAccessibilityReady) "ACTIVADA" else "DESACTIVADA",
+                            tone = if (autoAccessibilityReady) Tone.OK else Tone.BAD,
+                            actionLabel = if (autoAccessibilityReady) null else "ABRIR",
                             onAction = { AutomationPermissions.openAccessibilitySettings(context) }
                         )
                         PermissionRow(
                             label = "Abrir sobre otras apps",
-                            status = if (overlayReady) "PERMITIDO" else "DENEGADO",
-                            tone = if (overlayReady) Tone.OK else Tone.BAD,
-                            actionLabel = if (overlayReady) null else "PERMITIR",
+                            status = if (autoOverlayReady) "PERMITIDO" else "DENEGADO",
+                            tone = if (autoOverlayReady) Tone.OK else Tone.BAD,
+                            actionLabel = if (autoOverlayReady) null else "PERMITIR",
                             onAction = { AutomationPermissions.openOverlaySettings(context) }
                         )
-                        if (!accessibilityReady || !overlayReady) {
+                        if (!autoAccessibilityReady || !autoOverlayReady) {
                             Text(
                                 "Sin los dos permisos no puede enviarse solo: la app te dejara el mensaje escrito para que lo envies tu.",
                                 color = Tone.BAD.text,
@@ -4249,9 +4249,6 @@ private fun SensitivityControl(
     valueLabel: String = "SENSIBILIDAD A LOS GOLPES ="
 ) {
     val context = LocalContext.current
-    val storedMode = remember(windowAuto, activeWindowMinutes) {
-        SafetyMonitorService.loadAdaptationWindowMode(context)
-    }
     // Con el monitor detenido se enseña el pico del ultimo viaje guardado; mientras
     // corre, el pico en vivo que publica el servicio.
     val storedPeak = remember(enabled, livePeakG) {

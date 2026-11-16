@@ -6,6 +6,7 @@ import org.json.JSONArray
 internal enum class DispatchStep {
     WHATSAPP,
     CALLS,
+    TELEGRAM,
     DONE
 }
 

@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.82s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.83s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -7,6 +7,15 @@ contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
 ESTE APK HACE COSAS REALES: llama, envia mensajes y abre WhatsApp. Antes de
 poner S O S en ON revisa los contactos. Para probar sensores,
 desactivala: la cuenta atras se ejecuta sin avisar a nadie.
+
+--------------------------------------------------------------------------
+NOVEDADES 1.83s
+--------------------------------------------------------------------------
+- Telegram: los avisos del bot ya no se descartan al cerrar el protocolo; se
+  reintentan hasta entregarlos o agotar la ventana.
+- GPS: si se desactiva el GPS, se mantienen las actualizaciones de red para
+  conservar velocidad y ultima posicion cuando sea posible.
+- Limpieza interna sin cambios de interfaz ni de umbrales.
 
 --------------------------------------------------------------------------
 NOVEDADES 1.70s
@@ -23,8 +32,8 @@ NOVEDADES 1.70s
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.82s.apk        <- version actual
-Las anteriores (1.44s a 1.81s) se conservan solo como historico.
+    Segu-Luky-1.83s.apk        <- version actual
+La 1.82s se conserva como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -296,4 +305,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.82s (versionCode 69) - paquete com.intercom.segluky.
+Version: V-1.83s (versionCode 70) - paquete com.intercom.segluky.

@@ -2331,6 +2331,32 @@ Pendientes: probar en el movil que un golpe con el telefono en el bolsillo a
 mas de 20 km/h abre la validacion, y que un golpe aparcado ya no la abre.
 
 ======================================================================
+V-1.83s (versionCode 70)
+======================================================================
+
+Fecha: 16/11/2026
+Version: 1.83s (versionCode 70)
+
+Cambio:
+- Telegram: el protocolo espera y reintenta los avisos del bot que sigan
+  pendientes en vez de cerrar su cola al terminar las llamadas. Se anade
+  DispatchStep.TELEGRAM, watchdog propio y limpieza de la escalada al cambiar
+  de fase.
+- GPS: al desactivarse el GPS se vuelven a solicitar las actualizaciones del
+  proveedor de red para no perder velocidad ni la ultima posicion util.
+- Limpieza interna: variables/parametros sin uso y avisos de compilacion.
+
+Motivo: incorporar a la linea publicada las correcciones de la revision de
+fiabilidad del despacho.
+Prueba realizada: testDebugUnitTest (247 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease, comprobar-apk.ps1 (firma y datos
+personales correctos).
+Resultado: compila y verifica; pendiente prueba controlada de Telegram y red.
+APK generado: APK´s/Segu-Luky-1.83s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.83s-mapping.txt.gz
+Pendientes: probar el envio de Telegram con red lenta y contactos de prueba.
+
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

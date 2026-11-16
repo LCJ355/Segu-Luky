@@ -9,33 +9,17 @@ Sin el, las trazas de fallo de la app publicada muestran nombres como
 
 Aqui se guarda uno comprimido por cada version publicada:
 
-    Segu-Luky-1.82s-mapping.txt.gz   <- version actual (versionCode 69)
-    Segu-Luky-1.80s-mapping.txt.gz   <- historico (versionCode 67)
-    Segu-Luky-1.79s-mapping.txt.gz   <- historico (versionCode 66)
-    Segu-Luky-1.64s-mapping.txt.gz   <- historico (versionCode 56)
-    Segu-Luky-1.60s-mapping.txt.gz   <- historico (versionCode 52)
-    Segu-Luky-1.59s-mapping.txt.gz   <- historico (versionCode 51)
-    Segu-Luky-1.58s-mapping.txt.gz   <- historico (versionCode 50)
-    Segu-Luky-1.57s-mapping.txt.gz   <- historico (versionCode 49)
-    Segu-Luky-1.56s-mapping.txt.gz   <- historico (versionCode 48)
-    Segu-Luky-1.55s-mapping.txt.gz   <- historico (versionCode 47)
-    Segu-Luky-1.54s-mapping.txt.gz   <- historico (versionCode 46)
-    Segu-Luky-1.53s-mapping.txt.gz   <- historico (versionCode 45)
-    Segu-Luky-1.52s-mapping.txt.gz   <- historico (versionCode 44)
-    Segu-Luky-1.51s-mapping.txt.gz   <- historico (versionCode 43)
-    Segu-Luky-1.50s-mapping.txt.gz   <- historico (versionCode 42)
-    Segu-Luky-1.49s-mapping.txt.gz   <- historico (versionCode 41)
-    Segu-Luky-1.48s-mapping.txt.gz   <- historico (versionCode 40)
-    Segu-Luky-1.47s-mapping.txt.gz   <- historico (versionCode 39)
+    Segu-Luky-1.83s-mapping.txt.gz   <- version actual (versionCode 70)
+    Segu-Luky-1.82s-mapping.txt.gz   <- historico (versionCode 69)
 
 Cada archivo solo sirve para las trazas del codigo con el que se genero.
 
-Procedencia de la 1.70s (actual)
+Procedencia de la 1.83s (actual)
 --------------------------------
-- Generado con `gradlew assembleRelease` sobre `dev/1.7s`, que declara
-  `versionCode = 57` / `versionName = "1.70s"`.
+- Generado con `gradlew assembleRelease` sobre `main`, que declara
+  `versionCode = 70` / `versionName = "1.83s"`.
 - Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 13/11/2026.
+- Compilado el 16/11/2026.
 
 Procedencia de la 1.61s
 -----------------------

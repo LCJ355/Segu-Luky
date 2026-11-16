@@ -645,7 +645,13 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         lastSpeed = null
         detector.clearLocation()
         removeLocationUpdates()
-        if (monitoringEnabled) startSpecialForeground("Monitor activo; GPS desactivado")
+        if (monitoringEnabled) {
+            startSpecialForeground("Monitor activo; GPS desactivado")
+            // The network provider may still be enabled; dropping every location
+            // callback just because GPS was turned off also loses speed and the
+            // last useful map fix.
+            if (hasPreciseLocationPermission(this)) requestLocationUpdates()
+        }
         SafetyStateStore.update {
             it.copy(
                 gpsAvailable = false,
@@ -1389,6 +1395,31 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             }
         }
 
+        if (hasPendingTelegramJobs(completedEventId)) {
+            if (EmergencyDispatchRepository(this).save(
+                    PendingEmergencyDispatch(
+                        eventId = completedEventId,
+                        callPhones = emptyList(),
+                        callIndex = 0,
+                        answered = false,
+                        step = DispatchStep.TELEGRAM
+                    )
+                )
+            ) {
+                activeEventId = completedEventId
+                dispatchInProgress = true
+                SafetyStateStore.update {
+                    it.copy(dispatchInProgress = true, detail = "Esperando avisos de Telegram")
+                }
+                persistRuntime()
+                startEmergencyForeground("Cerrando avisos de Telegram")
+                scheduleDispatchWatchdog(DISPATCH_WATCHDOG_INITIAL_MS)
+                processTelegramBotOutbox()
+                return
+            }
+            SafetyStateStore.log("No se pudo guardar la espera de Telegram")
+        }
+
         SafetyStateStore.log(
             if (whatsappContacts.isEmpty()) "SOS sin contactos configurados" else "WhatsApp manual disponible en notificacion"
         )
@@ -1462,6 +1493,14 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 startCallEscalation()
             }
             DispatchStep.CALLS -> startCallEscalation()
+            DispatchStep.TELEGRAM -> {
+                processTelegramBotOutbox()
+                if (hasPendingTelegramJobs(dispatch.eventId)) {
+                    scheduleDispatchWatchdog(DISPATCH_WATCHDOG_RETRY_MS)
+                    return
+                }
+                finishEscalation(dispatch, dispatch.answered, "avisos de Telegram cerrados")
+            }
             DispatchStep.DONE -> finishEscalation(dispatch, dispatch.answered, "protocolo completado")
         }
     }
@@ -1473,11 +1512,11 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             return
         }
         if (dispatch.callPhones.isEmpty()) {
-            finishEscalation(dispatch, answered = false, detail = "sin contactos de llamada")
+            finishCallsOrWaitForTelegram(dispatch, answered = false, detail = "sin contactos de llamada")
             return
         }
         if (dispatch.answered) {
-            finishEscalation(dispatch, answered = true, detail = "un contacto respondio la llamada")
+            finishCallsOrWaitForTelegram(dispatch, answered = true, detail = "un contacto respondio la llamada")
             return
         }
         registerTelephonyListener()
@@ -1489,7 +1528,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         escalationActive = true
         val index = dispatch.callIndex
         if (index >= dispatch.callPhones.size) {
-            finishEscalation(dispatch, answered = false, detail = "sin respuesta de todos los contactos")
+            finishCallsOrWaitForTelegram(dispatch, answered = false, detail = "sin respuesta de todos los contactos")
             return
         }
         currentCallOffhookAt = null
@@ -1528,7 +1567,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             }
             if (EscalationPolicy.answeredByLongCall(offhookAt, now)) {
                 SafetyStateStore.log("Llamada ${dispatch.callIndex + 1} larga: se da por atendida")
-                finishEscalation(dispatch, answered = true, detail = "llamada larga en curso")
+                finishCallsOrWaitForTelegram(dispatch, answered = true, detail = "llamada larga en curso")
                 return
             }
             return
@@ -1583,7 +1622,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         val next = dispatch.callIndex + 1
         if (next >= dispatch.callPhones.size) {
             EmergencyDispatchRepository(this).save(dispatch.copy(callIndex = next))
-            finishEscalation(dispatch, answered = false, detail = "sin respuesta de todos los contactos")
+            finishCallsOrWaitForTelegram(dispatch, answered = false, detail = "sin respuesta de todos los contactos")
             return
         }
         val updated = dispatch.copy(callIndex = next)
@@ -1591,6 +1630,44 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             SafetyStateStore.log("No se pudo guardar el avance de llamada")
         }
         escalateCurrent(updated)
+    }
+
+    /**
+     * A completed call round must not close the Telegram queue while a bot
+     * message is still waiting for a retry or an in-flight HTTP request. The
+     * Telegram worker is independent from the call escalation, so the dispatch
+     * stays alive in [DispatchStep.TELEGRAM] until the outbox has no pending jobs.
+     */
+    private fun finishCallsOrWaitForTelegram(
+        dispatch: PendingEmergencyDispatch,
+        answered: Boolean,
+        detail: String
+    ) {
+        if (hasPendingTelegramJobs(dispatch.eventId)) {
+            // Leave the call round completely before handing the dispatch to the
+            // Telegram phase: a stale escalation flag would hide the Telegram
+            // branch from the watchdog and a late alarm could dial another contact.
+            escalationActive = false
+            clearCallTracking()
+            unregisterTelephonyListener()
+            cancelEscalationAlarm()
+            val telegram = dispatch.copy(step = DispatchStep.TELEGRAM, answered = answered)
+            if (EmergencyDispatchRepository(this).save(telegram)) {
+                dispatchInProgress = true
+                SafetyStateStore.update {
+                    it.copy(dispatchInProgress = true, detail = "Esperando avisos de Telegram")
+                }
+                // The call round may already have consumed most of the watchdog
+                // window. Telegram gets its own bounded window instead of being
+                // closed on the first tick after a long call escalation.
+                dispatchWatchdogStartedAt = SystemClock.elapsedRealtime()
+                scheduleDispatchWatchdog(DISPATCH_WATCHDOG_RETRY_MS)
+                processTelegramBotOutbox()
+                return
+            }
+            SafetyStateStore.log("No se pudo guardar la espera de Telegram")
+        }
+        finishEscalation(dispatch, answered, detail)
     }
 
     private fun finishEscalation(dispatch: PendingEmergencyDispatch, answered: Boolean, detail: String) {
@@ -1604,7 +1681,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         WhatsAppAutoSend.disarmAll(this)
         dispatchInProgress = false
         SafetyStateStore.update { it.copy(dispatchInProgress = false) }
-        SafetyStateStore.log("SOS: ${if (answered) "contacto atendio la llamada" else "llamadas sin respuesta: $detail"}")
+        SafetyStateStore.log("SOS: ${if (answered) "contacto atendio la llamada" else "ronda cerrada: $detail"}")
         if (!runtimeRepository.markEventCompleted(dispatch.eventId)) {
             SafetyStateStore.log("No se pudo marcar el evento SOS como completado")
         }
@@ -1767,7 +1844,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         if (!startEmergencyForeground("Continuando llamadas SOS")) return
         escalationActive = true
         if (dispatch.answered) {
-            finishEscalation(dispatch, answered = true, detail = "un contacto respondio la llamada")
+            finishCallsOrWaitForTelegram(dispatch, answered = true, detail = "un contacto respondio la llamada")
             return
         }
         onEscalationTimeout(dispatch)
@@ -2019,6 +2096,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         TelegramBotOutbox(this).enqueue(eventId, targets)
         processTelegramBotOutbox()
     }
+
+    private fun hasPendingTelegramJobs(eventId: String): Boolean =
+        TelegramBotOutbox(this).status(eventId).pending > 0
 
     /**
      * Entrega lo que toca ahora y programa el siguiente reintento. Idempotente y
@@ -2308,6 +2388,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         cancelEscalationAlarm()
         cancelDispatchWatchdog()
         WhatsAppAutoSend.disarmAll(this)
+        TelegramBotOutbox(this).clear()
         EmergencyDispatchRepository(this).clear()
         unregisterTelephonyListener()
         SafetyStateStore.reset()
@@ -3087,6 +3168,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 setMonitoringRequested(false)
                 clearActiveState()
             }
+            WhatsAppAutoSend.disarmAll(context)
+            TelegramBotOutbox(context).clear()
+            EmergencyDispatchRepository(context).clear()
             context.stopService(Intent(context, SafetyMonitorService::class.java))
             SafetyStateStore.reset()
         }

@@ -161,7 +161,7 @@ object ObdLinkController {
         this.device = device
         wanted = true
         publish(ObdStatus.CONNECTING, "Conectando con ${device.label}...")
-        val thread = Thread({ runLoop(context.applicationContext) }, "obd-link")
+        val thread = Thread({ runLoop() }, "obd-link")
         thread.isDaemon = true
         worker = thread
         thread.start()
@@ -182,7 +182,7 @@ object ObdLinkController {
         _state.value = _state.value.copy(status = status, detail = detail, protocol = protocol)
     }
 
-    private fun runLoop(context: Context) {
+    private fun runLoop() {
         var attempts = 0
         while (wanted && attempts < 3) {
             attempts++

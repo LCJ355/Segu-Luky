@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.83s (versionCode 70)
+
+### Revision de fiabilidad del despacho y GPS
+
+- **Telegram ya no se descarta al cerrar el protocolo.** Cuando el bot tenia avisos
+  pendientes o estaba reintentando, `finishProtocolState()` cerraba su cola. Ahora
+  el despacho pasa por `DispatchStep.TELEGRAM`, espera al outbox con watchdog y
+  conserva el resultado de la ronda de llamadas. Tambien se limpia la escalada y
+  sus alarmas al cambiar de fase.
+- **GPS desactivado sin perder la red.** Al apagarse el proveedor GPS se dejaban de
+  pedir tambien las actualizaciones del proveedor de red. Ahora se vuelven a
+  solicitar, manteniendo velocidad y ultima posicion cuando sea posible.
+- **Limpieza interna:** se eliminan variables/parametros sin uso y avisos de
+  compilacion; sin cambios de UI, umbrales ni decision del SOS.
+- 247 pruebas, `lintDebug` sin errores, `assembleRelease` y comprobacion de firma
+  y datos personales correctas.
+
 ## 1.82s (versionCode 69)
 
 ### Los cuatro puntos de la revision de 1.81s
