@@ -9,19 +9,20 @@ Sin el, las trazas de fallo de la app publicada muestran nombres como
 
 Aqui se guarda uno comprimido por cada version publicada:
 
-    Segu-Luky-1.85s-mapping.txt.gz   <- version actual (versionCode 72)
+    Segu-Luky-1.86s-mapping.txt.gz   <- version actual (versionCode 73)
+    Segu-Luky-1.85s-mapping.txt.gz   <- historico (versionCode 72)
     Segu-Luky-1.84s-mapping.txt.gz   <- historico (versionCode 71)
     Segu-Luky-1.83s-mapping.txt.gz   <- historico (versionCode 70)
     Segu-Luky-1.82s-mapping.txt.gz   <- historico (versionCode 69)
 
 Cada archivo solo sirve para las trazas del codigo con el que se genero.
 
-Procedencia de la 1.85s (actual)
+Procedencia de la 1.86s (actual)
 --------------------------------
 - Generado con `gradlew assembleRelease` sobre `main`, que declara
-  `versionCode = 72` / `versionName = "1.85s"`.
+  `versionCode = 73` / `versionName = "1.86s"`.
 - Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 16/11/2026.
+- Compilado el 17/11/2026.
 
 Procedencia de la 1.61s
 -----------------------

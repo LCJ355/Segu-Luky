@@ -398,7 +398,10 @@ class MainActivity : ComponentActivity() {
                 SafetyStateStore.log("Deten el monitor antes de cambiar de modo")
             }
         }
-        val quickMode = QuickMode.from(snapshot.vehicleProfile, homeMountProfile)
+        val quickMode = QuickMode.from(
+            SafetyMonitorService.loadVehicleProfile(context),
+            homeMountProfile
+        )
 
         BackHandler(enabled = screen != AppScreen.HOME) { screen = AppScreen.HOME }
 
@@ -1346,7 +1349,7 @@ private fun openLink(context: Context, url: String) {
 
 private fun shareApp(context: Context) {
     val text = "Segu-Luky: monitor de seguridad y SOS para moto. Si el movil detecta un golpe fuerte avisa a tus " +
-        "contactos con tu posicion.\nhttps://github.com/${UpdateChecker.REPOSITORY}"
+        "contactos con tu posicion.\nUltima version: ${UpdateChecker.LATEST_RELEASE_PAGE}"
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_SUBJECT, "Segu-Luky")

@@ -18,6 +18,7 @@ object UpdateChecker {
 
     const val REPOSITORY = "LCJ355/Segu-Luky"
     const val RELEASES_PAGE = "https://github.com/LCJ355/Segu-Luky/releases"
+    const val LATEST_RELEASE_PAGE = "https://github.com/LCJ355/Segu-Luky/releases/latest"
     const val APK_FOLDER = "https://github.com/LCJ355/Segu-Luky/tree/main/APK%C2%B4s"
     const val ISSUES_PAGE = "https://github.com/LCJ355/Segu-Luky/issues/new"
     private const val API_ROOT = "https://api.github.com/repos/$REPOSITORY"

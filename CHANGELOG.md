@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.86s (versionCode 73)
+
+### Enlace de compartir y modo persistente
+
+- **Compartir apunta a la ultima version.** El texto de Informacion > Compartir
+  usa `releases/latest`, que GitHub redirige siempre a la release mas reciente.
+- **MODO ya no vuelve a Bolsillo al parar.** El boton lee el perfil guardado en
+  preferencias en vez del estado temporal del monitor, que se reseteaba al pasar
+  a `MONITOR OFF`.
+- 248 pruebas y `lintDebug` sin errores.
+
 ## 1.85s (versionCode 72)
 
 ### Acceso rapido a modo y audio

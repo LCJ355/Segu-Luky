@@ -2331,6 +2331,27 @@ Pendientes: probar en el movil que un golpe con el telefono en el bolsillo a
 mas de 20 km/h abre la validacion, y que un golpe aparcado ya no la abre.
 
 ======================================================================
+V-1.86s (versionCode 73)
+======================================================================
+
+Fecha: 17/11/2026
+Version: 1.86s (versionCode 73)
+
+Cambio:
+- Informacion > Compartir usa el enlace automatico a la ultima release:
+  https://github.com/LCJ355/Segu-Luky/releases/latest
+- MODO lee el perfil guardado en preferencias, no el estado temporal del monitor;
+  al pasar a MONITOR OFF ya no vuelve a Bolsillo.
+
+Motivo: corregir los dos puntos pendientes de la revision de interfaz.
+Prueba realizada: testDebugUnitTest (248 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease.
+Resultado: compila y verifica.
+APK generado: APK´s/Segu-Luky-1.86s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.86s-mapping.txt.gz
+Pendientes: confirmar en dispositivo el enlace compartido y la persistencia de MODO.
+
+======================================================================
 V-1.85s (versionCode 72)
 ======================================================================
 
