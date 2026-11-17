@@ -386,8 +386,9 @@ internal class AdaptiveSensitivity(
         return true
     }
 
-    fun onTierApplied(timestamp: Long) {
-        tier = pendingTier
+    fun onTierApplied(timestamp: Long, appliedTier: SamplingTier = pendingTier) {
+        tier = appliedTier
+        pendingTier = appliedTier
         tierSince = timestamp
     }
 

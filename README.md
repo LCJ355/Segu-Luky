@@ -1,4 +1,4 @@
-# Segu-Luky V-1.86s
+# Segu-Luky V-1.87s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -113,15 +113,15 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every released version is published in `APK´s/` as
-`Segu-Luky-<version>.apk`. The current release is `Segu-Luky-1.86s.apk`.
+`Segu-Luky-<version>.apk`. The current release is `Segu-Luky-1.87s.apk`.
 
-The latest GitHub release is `V-1.86s` with `Segu-Luky-1.86s.apk` attached; the
-previous `V-1.85s`, `V-1.84s`, `V-1.83s` and `V-1.82s` releases remain available.
-**Buscar actualizacion** reads the GitHub API and compares against the highest
-published release/tag:
+The latest GitHub release is `V-1.87s` with `Segu-Luky-1.87s.apk` attached; the
+previous `V-1.86s`, `V-1.85s`, `V-1.84s`, `V-1.83s` and `V-1.82s` releases remain
+available. **Buscar actualizacion** reads the GitHub API and compares against the
+highest published release/tag:
 
 ```text
-gh release create V-1.86s "APK´s/Segu-Luky-1.86s.apk" --title "Segu-Luky V-1.86s" --notes "..."
+gh release create V-1.87s "APK´s/Segu-Luky-1.87s.apk" --title "Segu-Luky V-1.87s" --notes "..."
 ```
 
 The published APK carries **no personal data**: contacts, phone numbers, the bot
@@ -129,7 +129,7 @@ key and the position live only in the phone's `SharedPreferences` (the app
 declares `allowBackup="false"`). Before uploading, check the file itself:
 
 ```text
-powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-1.86s.apk"
+powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-1.87s.apk"
 ```
 
 It fails if the package contains anything that is not code, resources or
@@ -165,6 +165,8 @@ shake sensor and the voice keyword.
   change; the location wall clock is coalesced into 15 s buckets.
 - The monitoring heartbeat is 5 s; the countdown heartbeat is 100 ms.
 - The gyroscope is only registered during candidate/validation.
+- Speed only caps high-rate sampling: at <=10 km/h or without a fresh speed the
+  sample rate stays at 50 Hz or below; detection is never turned off.
 - Calibration flushes the CSV every 5 s.
 
 ## InterCOM bridge

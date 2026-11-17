@@ -13,6 +13,7 @@ a6a72a7be4d7c0421005b0dd4eb5e10b775fee5f8e6e8802d4899361073ba2c9  Segu-Luky-1.82
 1b1db8cedc20d3a2c2ae367b3d89666a2ef78b0c3a43301c4970a8381a07fa38  Segu-Luky-1.84s.apk  (5606187 bytes)
 32e2c17630fc792b925df575d2f41ed47afcf81acb75e01edae3f350641c9ab2  Segu-Luky-1.85s.apk  (5612835 bytes)
 0a312675de190bd48f105b34279469e8437f4d9345f16548f23c430f9e728e7d  Segu-Luky-1.86s.apk  (5612859 bytes)
+99bd00a959a7e4cb641394bec8c31ffcf4aed0a3307f941406d4b2eae7e4bb7a  Segu-Luky-1.87s.apk  (5613967 bytes)
 
 Detalle de permisos, destinos de red y por que avisa Play Protect:
   docs/SEGURIDAD.md

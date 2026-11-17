@@ -2331,6 +2331,30 @@ Pendientes: probar en el movil que un golpe con el telefono en el bolsillo a
 mas de 20 km/h abre la validacion, y que un golpe aparcado ya no la abre.
 
 ======================================================================
+V-1.87s (versionCode 74)
+======================================================================
+
+Fecha: 17/11/2026
+Version: 1.87s (versionCode 74)
+
+Cambio:
+- La velocidad no apaga sensores: el acelerometro y la deteccion siguen
+  siempre activos. La velocidad solo limita el muestreo maximo.
+- En marcha (>15 km/h) se permite el nivel que pida el aprendizaje, incluido
+  100 Hz. Parado, lento o sin velocidad se limita como maximo a 50 Hz.
+- Histeresis 15/10 km/h con 5 s de permanencia; sin velocidad se usa el modo
+  intermedio seguro.
+- Giroscopio solo en candidato/validacion.
+
+Motivo: ahorro de bateria sin crear un apagado por velocidad.
+Prueba realizada: testDebugUnitTest (253 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease.
+Resultado: compila y verifica.
+APK generado: APK´s/Segu-Luky-1.87s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.87s-mapping.txt.gz
+Pendientes: medir consumo real en el Redmi y validar el cambio de frecuencia.
+
+======================================================================
 V-1.86s (versionCode 73)
 ======================================================================
 

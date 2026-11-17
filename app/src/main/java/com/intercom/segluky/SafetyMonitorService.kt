@@ -145,6 +145,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private var lastPublishedMovementG = Int.MIN_VALUE
     /** Perfil aprendido de este movil: umbral efectivo y frecuencia de muestreo. */
     private lateinit var adaptive: AdaptiveSensitivity
+    private val speedSamplingPolicy = SpeedSamplingPolicy()
     private var lastAdaptiveMergeAt = 0L
     private var lastAdaptivePublishAt = 0L
     private var lastAdaptivePublishKey = Int.MIN_VALUE
@@ -2504,6 +2505,10 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
         val obdState = ObdLinkController.state.value
         val obdSpeed = obdState.freshSpeed(System.currentTimeMillis())
+        val policySpeed = obdSpeed ?: lastSpeed.takeIf {
+            speedAge != null && speedAge <= SPEED_POLICY_MAX_AGE_MS
+        }
+        speedSamplingPolicy.update(policySpeed, now)
         SafetyStateStore.update {
             it.copy(
                 vehicleProfile = vehicleProfile,
@@ -2750,7 +2755,10 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         if (!sensorsRegistered) return
         if (detector.currentPhase != SafetyPhase.MONITORING) return
         if (!adaptive.shouldRebind(timestamp)) return
-        val tier = adaptive.desiredTier(timestamp)
+        val tier = speedSamplingPolicy.cap(
+            adaptive.desiredTier(timestamp),
+            detector.currentPhase
+        )
         sensorManager.unregisterListener(this, sensor)
         val registered = sensorManager.registerListener(
             this,
@@ -2773,7 +2781,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             SafetyStateStore.log("No se pudo cambiar el muestreo a ${tier.hz} Hz; se mantiene 50 Hz")
             return
         }
-        adaptive.onTierApplied(timestamp)
+        adaptive.onTierApplied(timestamp, tier)
         SafetyStateStore.log("Muestreo del sensor: ${tier.hz} Hz (${tier.label})")
     }
 
@@ -3102,6 +3110,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         private const val LOCATION_INTERVAL_INITIAL_MS = 2_000L
         private const val LOCATION_INTERVAL_ROUTINE_MS = 20_000L
         private const val LOCATION_INTERVAL_VALIDATION_MS = 2_000L
+        private const val SPEED_POLICY_MAX_AGE_MS = 30_000L
         private const val LOCATION_MIN_DISTANCE_ROUTINE_M = 25f
         /** Keeps a stationary last fix usable for the map link after routine GPS slows down. */
         private const val MAP_LINK_LOCATION_WINDOW_MS = 5 * 60_000L

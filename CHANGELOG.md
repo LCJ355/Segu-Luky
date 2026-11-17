@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.87s (versionCode 74)
+
+### Ahorro de bateria sin apagar la deteccion
+
+- **La velocidad no apaga los sensores.** El acelerometro y la deteccion de
+  impactos siguen activos siempre; la velocidad solo limita la frecuencia maxima
+  de muestreo.
+- **En marcha (>15 km/h)** se permite el nivel que pida el aprendizaje, incluido
+  100 Hz.
+- **Parado, lento o sin velocidad** se limita como maximo a 50 Hz. Sin dato de
+  velocidad se usa ese modo intermedio seguro, nunca se desactiva la deteccion.
+- **Histeresis:** entra en marcha a >=15 km/h y sale a <=10 km/h, con 5 s de
+  permanencia, para que el GPS no cambie de nivel constantemente.
+- El giroscopio sigue activandose solo durante candidato/validacion.
+- 253 pruebas y `lintDebug` sin errores.
+
 ## 1.86s (versionCode 73)
 
 ### Enlace de compartir y modo persistente
