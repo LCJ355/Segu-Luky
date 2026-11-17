@@ -2331,6 +2331,79 @@ Pendientes: probar en el movil que un golpe con el telefono en el bolsillo a
 mas de 20 km/h abre la validacion, y que un golpe aparcado ya no la abre.
 
 ======================================================================
+V-1.90s (versionCode 77)
+======================================================================
+
+Fecha: 17/11/2026
+Version: 1.90s (versionCode 77)
+
+Cambio:
+- En modo Coche, la fila del selector MODO incluye dos cuadros de velocidad:
+  GPS a la izquierda y OBD2 a la derecha.
+- GPS usa `snapshot.speedKmh`; OBD2 usa `ObdState.freshSpeed()` (2 s maximo).
+- Los tres elementos quedan en la misma linea y se reparten el ancho.
+- Sin dato se muestra `-- km/h`; Bolsillo y Moto conservan el MODO centrado.
+
+Motivo: tener las dos velocidades del coche visibles sin entrar en Sensores.
+Prueba realizada: testDebugUnitTest (253 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease, instalacion en Redmi y captura en modo
+Coche.
+Resultado: compila, verifica y muestra GPS / MODO / OBD2 en una linea.
+APK generado: APK��s/Segu-Luky-1.90s.apk
+Mapping archivado: APK��s/mapping/Segu-Luky-1.90s-mapping.txt.gz
+Pendientes: probar con GPS y adaptador OBD2 reales para ver valores en vivo.
+
+======================================================================
+V-1.89s (versionCode 76)
+======================================================================
+
+Fecha: 17/11/2026
+Version: 1.89s (versionCode 76)
+
+Cambio:
+- El control del tema sale de Configuracion: ahora se alterna tocando el
+  titulo "Segu-Luky" de la barra superior.
+- El titulo conserva la version al lado, tiene area tactil y etiqueta
+  accesible para lectores de pantalla.
+- La preferencia sigue en `segu_theme`; el modo claro sigue siendo el inicial.
+
+Motivo: dejar el cambio visual a un toque desde la pantalla principal, sin
+entrar en ajustes.
+Prueba realizada: testDebugUnitTest (253 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease, instalacion en Redmi.
+Resultado: compila, verifica y arranca en 1.89s.
+APK generado: APK��s/Segu-Luky-1.89s.apk
+Mapping archivado: APK��s/mapping/Segu-Luky-1.89s-mapping.txt.gz
+Pendientes: confirmar en el Redmi el toque sobre el titulo; MIUI bloquea la
+inyeccion de taps por ADB en este equipo.
+
+======================================================================
+V-1.88s (versionCode 75)
+======================================================================
+
+Fecha: 17/11/2026
+Version: 1.88s (versionCode 75)
+
+Cambio:
+- Nuevo ajuste TEMA VISUAL en Configuracion: claro (actual) u oscuro.
+- El modo oscuro adapta fondo, tarjetas, textos, bordes, tarjeta de estado,
+  nivel de audio, barras de SOS y barras de estado/navegacion.
+- La preferencia se guarda en `segu_theme` y se conserva al reiniciar.
+- El modo claro sigue siendo el valor inicial.
+
+Motivo: ofrecer un modo de menos luz y menor consumo en pantallas AMOLED sin
+tocar la deteccion ni los umbrales.
+Prueba realizada: testDebugUnitTest (253 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease, instalacion en Redmi y captura de ambos
+temas.
+Resultado: compila, verifica y arranca en claro; el modo oscuro se comprobo
+visualmente con un build temporal y se restauro el claro para la release.
+APK generado: APK��s/Segu-Luky-1.88s.apk
+Mapping archivado: APK��s/mapping/Segu-Luky-1.88s-mapping.txt.gz
+Pendientes: probar la alternancia tactil desde Configuracion en el Redmi y
+medir consumo real con el tema oscuro.
+
+======================================================================
 V-1.87s (versionCode 74)
 ======================================================================
 

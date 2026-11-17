@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.90s (versionCode 77)
+
+### Velocidades GPS y OBD2 en modo Coche
+
+- En **modo Coche**, la fila del selector `MODO` muestra dos cuadros de
+  velocidad: `GPS` a la izquierda y `OBD2` a la derecha.
+- Los tres elementos comparten linea y ancho de pantalla; el selector queda en
+  el centro y los indicadores a sus lados.
+- `GPS` usa la velocidad del telefono; `OBD2` usa la velocidad fresca del
+  adaptador (maximo 2 s de antiguedad). Sin dato muestran `-- km/h`.
+- Los indicadores solo aparecen en modo Coche; Bolsillo y Moto conservan el
+  selector centrado.
+- 253 pruebas y `lintDebug` sin errores.
+
+## 1.89s (versionCode 76)
+
+### El tema se cambia desde el titulo
+
+- **Tocar `Segu-Luky` en la barra superior** alterna entre modo claro y oscuro;
+  ya no hay una entrada `TEMA VISUAL` dentro de Configuracion.
+- El titulo mantiene la version a su lado y ahora tiene area tactil y etiqueta
+  accesible para lectores de pantalla.
+- La preferencia sigue guardandose en `segu_theme` y se mantiene al reiniciar.
+- 253 pruebas y `lintDebug` sin errores.
+
+## 1.88s (versionCode 75)
+
+### Modo claro y modo oscuro
+
+- **Nuevo ajuste `TEMA VISUAL`** en Configuracion: alterna entre el modo claro
+  actual y un modo oscuro pensado para reducir consumo en pantallas AMOLED.
+- **La eleccion se guarda** en preferencias y se mantiene al cerrar o reiniciar
+  la app; el modo claro sigue siendo el valor inicial.
+- El modo oscuro ajusta fondo, tarjetas, textos, bordes y barras de estado y
+  navegacion, manteniendo visibles los avisos rojos, verdes y naranjas.
+- La tarjeta de estado, las barras de nivel y de pulsacion del SOS adaptan su
+  contraste al tema activo.
+- 253 pruebas y `lintDebug` sin errores.
+
 ## 1.87s (versionCode 74)
 
 ### Ahorro de bateria sin apagar la deteccion

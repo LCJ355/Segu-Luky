@@ -78,6 +78,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -89,6 +90,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -109,7 +111,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import com.intercom.segluky.ui.InterSegTheme
+import com.intercom.segluky.ui.ThemePreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -120,18 +124,40 @@ import java.security.MessageDigest
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+    @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val activity = this
         setContent {
-            InterSegTheme {
-                InterSegScreen()
+            var darkTheme by remember { mutableStateOf(ThemePreference.isDark(activity)) }
+            SideEffect {
+                activity.window.statusBarColor =
+                    if (darkTheme) 0xFF12100E.toInt() else 0xFFF4F1EA.toInt()
+                activity.window.navigationBarColor =
+                    if (darkTheme) 0xFF12100E.toInt() else 0xFFF4F1EA.toInt()
+                WindowCompat.getInsetsController(activity.window, activity.window.decorView).apply {
+                    isAppearanceLightStatusBars = !darkTheme
+                    isAppearanceLightNavigationBars = !darkTheme
+                }
+            }
+            InterSegTheme(darkTheme = darkTheme) {
+                InterSegScreen(
+                    darkTheme = darkTheme,
+                    onDarkThemeChange = { enabled ->
+                        darkTheme = enabled
+                        ThemePreference.setDark(activity, enabled)
+                    }
+                )
             }
         }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @androidx.compose.runtime.Composable
-    private fun InterSegScreen() {
+    private fun InterSegScreen(
+        darkTheme: Boolean,
+        onDarkThemeChange: (Boolean) -> Unit
+    ) {
         val snapshot by SafetyStateStore.snapshot.collectAsStateWithLifecycle()
         val context = this
         val repository = remember { ContactsRepository(context) }
@@ -413,6 +439,7 @@ class MainActivity : ComponentActivity() {
                     onSettings = { screen = AppScreen.SETTINGS },
                     onSensors = { screen = AppScreen.SENSORS },
                     onAbout = { showAbout = true },
+                    onThemeToggle = { onDarkThemeChange(!darkTheme) },
                     onBack = { screen = AppScreen.HOME }
                 )
             },
@@ -485,13 +512,22 @@ class MainActivity : ComponentActivity() {
                     SosPanel(onSos = { SafetyMonitorService.confirm(context) })
                 }
                 item {
+                    val obd by ObdLinkController.state.collectAsStateWithLifecycle()
+                    val obdSpeedKmh = obd.freshSpeed(System.currentTimeMillis())
                     Row(
                         modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Spacer(Modifier.weight(0.5f))
+                        if (quickMode == QuickMode.COCHE) {
+                            SpeedSourceCard(
+                                label = "GPS",
+                                speedKmh = snapshot.speedKmh,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                         StateToggleButton(
-                            label = "- M O D O -",
+                            label = if (quickMode == QuickMode.COCHE) "MODO" else "- M O D O -",
                             stateLabel = quickMode.label,
                             on = true,
                             onColor = StateOnInk,
@@ -501,7 +537,13 @@ class MainActivity : ComponentActivity() {
                             accessibilityLabel = "Modo ${quickMode.label}; tocar para cambiar",
                             onClick = { applyQuickMode(QuickMode.next(quickMode)) }
                         )
-                        Spacer(Modifier.weight(0.5f))
+                        if (quickMode == QuickMode.COCHE) {
+                            SpeedSourceCard(
+                                label = "OBD2",
+                                speedKmh = obdSpeedKmh,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
                 if (sosActionsEnabled.not() && snapshot.phase != SafetyPhase.STOPPED) {
@@ -655,6 +697,7 @@ private fun SeguTopBar(
     onSettings: () -> Unit,
     onSensors: () -> Unit,
     onAbout: () -> Unit,
+    onThemeToggle: () -> Unit,
     onBack: () -> Unit
 ) {
     when (screen) {
@@ -706,6 +749,14 @@ private fun SeguTopBar(
                     }
                     Spacer(Modifier.width(10.dp))
                     Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable(onClick = onThemeToggle)
+                            .semantics {
+                                contentDescription = "Cambiar tema claro u oscuro"
+                                role = Role.Button
+                            }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.Bottom
                     ) {
@@ -3277,6 +3328,67 @@ private fun StateToggleButton(
     }
 }
 
+/** Velocidad de una fuente concreta, junto al selector de modo en el coche. */
+@androidx.compose.runtime.Composable
+private fun SpeedSourceCard(
+    label: String,
+    speedKmh: Float?,
+    modifier: Modifier = Modifier
+) {
+    val available = speedKmh != null
+    val value = speedKmh?.let { String.format(Locale.US, "%.0f", it) } ?: "--"
+    val accent = MaterialTheme.colorScheme.tertiary
+    val ink = if (available) accent else MaterialTheme.colorScheme.onSurfaceVariant
+    Surface(
+        modifier = modifier
+            .height(52.dp)
+            .semantics {
+                contentDescription = if (available) {
+                    "$label $value kilometros por hora"
+                } else {
+                    "$label sin dato de velocidad"
+                }
+            },
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            2.dp,
+            if (available) accent.copy(alpha = 0.65f) else MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    value,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = ink,
+                    maxLines = 1
+                )
+                Text(
+                    "km/h",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ink,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
 @androidx.compose.runtime.Composable
 private fun PhaseHeroCard(
     snapshot: SafetySnapshot,
@@ -3296,6 +3408,9 @@ private fun PhaseHeroCard(
 ) {
     val visual = phaseVisual(snapshot.phase)
     val tone = toneOf(visual.state)
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val cardColor = if (isDark) MaterialTheme.colorScheme.surface else visual.background
+    val dangerInk = if (isDark) MaterialTheme.colorScheme.error else Tone.BAD.text
     val phase = snapshot.phase
     val countdownEndsAt = snapshot.countdownEndsAt
     var seconds by remember(countdownEndsAt) {
@@ -3318,9 +3433,12 @@ private fun PhaseHeroCard(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = visual.background,
+        color = cardColor,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        border = BorderStroke(1.dp, tone.line)
+        border = BorderStroke(
+            1.dp,
+            if (isDark) MaterialTheme.colorScheme.outlineVariant else tone.line
+        )
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -3354,7 +3472,7 @@ private fun PhaseHeroCard(
             if (snapshot.dispatchInProgress) {
                 Text(
                     "AVISOS SOS EN CURSO",
-                    color = Tone.BAD.text,
+                    color = dangerInk,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -3369,13 +3487,13 @@ private fun PhaseHeroCard(
                         fontSize = 62.sp,
                         lineHeight = 62.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Tone.BAD.text
+                        color = dangerInk
                     )
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             "SEGUNDOS",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Tone.BAD.text
+                            color = dangerInk
                         )
                         Text(
                             "para cancelar el SOS. Cancela abajo.",
@@ -3608,12 +3726,17 @@ private fun AudioLevelLine(
 /** Barra de nivel; mismo grosor y redondeo que la barra del ajuste de golpes. */
 @androidx.compose.runtime.Composable
 private fun LevelBar(progress: Float, modifier: Modifier = Modifier) {
+    val trackColor = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
+        MaterialTheme.colorScheme.surfaceVariant
+    } else {
+        Color(0xFFB9F6CA)
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(SENSITIVITY_TRACK_HEIGHT)
             .clip(RoundedCornerShape(SENSITIVITY_TRACK_HEIGHT / 2))
-            .background(Color(0xFFB9F6CA))
+            .background(trackColor)
     ) {
         Box(
             modifier = Modifier
@@ -3628,6 +3751,8 @@ private fun LevelBar(progress: Float, modifier: Modifier = Modifier) {
 @androidx.compose.runtime.Composable
 private fun SosPanel(onSos: () -> Unit) {
     var holdProgress by remember { mutableStateOf(0f) }
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val sosHalo = if (isDark) MaterialTheme.colorScheme.errorContainer else Tone.BAD.soft
     val fill by animateFloatAsState(
         targetValue = holdProgress,
         animationSpec = tween(durationMillis = 90, easing = LinearEasing)
@@ -3647,7 +3772,7 @@ private fun SosPanel(onSos: () -> Unit) {
                     Modifier
                         .size((SOS_BUTTON_SIZE + 24).dp)
                         .clip(CircleShape)
-                        .background(Tone.BAD.soft)
+                        .background(sosHalo)
                 )
                 RoundActionButton(
                     mainText = SOS_HARD,
@@ -3672,12 +3797,17 @@ private fun SosPanel(onSos: () -> Unit) {
 /** Columna lateral del SOS: se rellena de abajo arriba con los 5 segundos de pulsacion. */
 @androidx.compose.runtime.Composable
 private fun HoldProgressColumn(fill: Float) {
+    val trackColor = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
+        MaterialTheme.colorScheme.surfaceVariant
+    } else {
+        HoldTrackGreen
+    }
     Box(
         modifier = Modifier
             .width(HOLD_COLUMN_WIDTH)
             .height(HOLD_COLUMN_HEIGHT)
             .clip(RoundedCornerShape(HOLD_COLUMN_WIDTH / 2))
-            .background(HoldTrackGreen),
+            .background(trackColor),
         contentAlignment = Alignment.BottomCenter
     ) {
         Box(

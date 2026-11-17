@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.87s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.90s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -7,6 +7,31 @@ contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
 ESTE APK HACE COSAS REALES: llama, envia mensajes y abre WhatsApp. Antes de
 poner S O S en ON revisa los contactos. Para probar sensores,
 desactivala: la cuenta atras se ejecuta sin avisar a nadie.
+
+--------------------------------------------------------------------------
+NOVEDADES 1.90s
+--------------------------------------------------------------------------
+- En modo Coche aparecen dos cuadros de velocidad junto al selector MODO:
+  GPS a la izquierda y OBD2 a la derecha.
+- Los tres quedan en la misma linea, ajustados al ancho de la pantalla.
+- Sin velocidad muestran -- km/h; OBD2 solo usa datos frescos del adaptador.
+- En Bolsillo y Moto el selector sigue centrado, sin cuadros laterales.
+
+--------------------------------------------------------------------------
+NOVEDADES 1.89s
+--------------------------------------------------------------------------
+- El tema se cambia tocando el titulo Segu-Luky en la barra superior.
+- Ya no se entra a Configuracion para cambiar claro/oscuro.
+- La version sigue visible al lado del titulo y el cambio se guarda.
+
+--------------------------------------------------------------------------
+NOVEDADES 1.88s
+--------------------------------------------------------------------------
+- Nuevo ajuste TEMA VISUAL en Configuracion: modo claro (actual) o modo oscuro.
+- El modo oscuro reduce el brillo de fondo y tarjetas; en pantallas AMOLED
+  tambien ayuda a consumir menos bateria.
+- La eleccion se guarda y se mantiene al cerrar o reiniciar la app.
+- Se adaptan barras del sistema, tarjeta de estado, nivel de audio y SOS.
 
 --------------------------------------------------------------------------
 NOVEDADES 1.87s
@@ -61,8 +86,8 @@ NOVEDADES 1.70s
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.87s.apk        <- version actual
-La 1.82s a 1.86s se conservan como historico.
+    Segu-Luky-1.90s.apk        <- version actual
+La 1.82s a 1.89s se conservan como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -335,4 +360,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.87s (versionCode 74) - paquete com.intercom.segluky.
+Version: V-1.90s (versionCode 77) - paquete com.intercom.segluky.
