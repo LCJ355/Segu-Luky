@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.93s (versionCode 80)
+
+### Sensores en oscuro y barra en horizontal
+
+- Las filas de `Sensores` usan fondo y texto adaptados al modo oscuro; ya no
+  quedan textos claros sobre fondo claro.
+- La fila `SENSOR` separa etiqueta y valor y usa `0.00 g / 2.5 g` para no
+  partir la unidad en otra linea.
+- La barra superior respeta los laterales seguros del sistema: en horizontal,
+  Informacion deja de quedar debajo de los botones del telefono.
+- La barra de Sensores/Configuracion tambien respeta esos laterales.
+- Verificado en OPPO CPH2695 en vertical y horizontal.
+- 253 pruebas y `lintDebug` sin errores.
+
+## 1.92s (versionCode 79)
+
+### Distribucion de la barra superior
+
+- Los botones de configuracion y sensores dejan de estar pegados: ahora tienen
+  separacion entre si y quedan mas cerca del titulo.
+- El titulo y la version siguen centrados; Informacion permanece a la derecha.
+- Los iconos recuperan un area tactil de 48 dp (circulo visible de 38 dp).
+- Verificado en el OPPO CPH2695.
+- 253 pruebas y `lintDebug` sin errores.
+
+## 1.91s (versionCode 78)
+
+### Barra superior centrada y sin recortes
+
+- El titulo `Segu-Luky` queda centrado en la barra; la version pasa debajo.
+- `Informacion` se mueve al extremo derecho; engranaje y sensores quedan a la
+  izquierda.
+- En pantallas estrechas el titulo y la version reducen su tamano para no
+  solaparse con los iconos ni recortar texto.
+- Los iconos de la barra usan un area tactil de 40 dp, manteniendo el circulo
+  visible de 38 dp.
+- Verificado en el OPPO CPH2695 (720x1604, 320 dpi).
+- 253 pruebas y `lintDebug` sin errores.
+
 ## 1.90s (versionCode 77)
 
 ### Velocidades GPS y OBD2 en modo Coche

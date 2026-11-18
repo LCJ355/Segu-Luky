@@ -33,10 +33,16 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,6 +53,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -703,39 +710,50 @@ private fun SeguTopBar(
     when (screen) {
         AppScreen.HOME -> Surface(color = MaterialTheme.colorScheme.surface) {
             Column {
-                Row(
+                BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
+                        .windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+                        )
                         .height(60.dp)
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 8.dp)
                 ) {
-                    IconButton(
-                        onClick = onSettings,
-                        modifier = Modifier.semantics { contentDescription = "Abrir configuracion" }
+                    val compact = maxWidth < 390.dp
+                    val titleSize = if (compact) 20.sp else 22.sp
+                    val versionSize = if (compact) 9.sp else 10.sp
+                    Row(
+                        modifier = Modifier.align(Alignment.CenterStart),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CircleIconFrame(tint = MaterialTheme.colorScheme.primary) {
-                            Text(
-                                "\u2699",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 22.sp,
-                                lineHeight = 22.sp
-                            )
+                        TopBarIcon(
+                            contentDescription = "Abrir configuracion",
+                            onClick = onSettings
+                        ) {
+                            CircleIconFrame(tint = MaterialTheme.colorScheme.primary) {
+                                Text(
+                                    "\u2699",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 22.sp,
+                                    lineHeight = 22.sp
+                                )
+                            }
+                        }
+                        TopBarIcon(
+                            contentDescription = "Abrir sensores",
+                            onClick = onSensors
+                        ) {
+                            CircleIconFrame(tint = MaterialTheme.colorScheme.primary) {
+                                SensorGlyph(tint = MaterialTheme.colorScheme.primary)
+                            }
                         }
                     }
-                    IconButton(
-                        onClick = onSensors,
-                        modifier = Modifier.semantics { contentDescription = "Abrir sensores" }
-                    ) {
-                        CircleIconFrame(tint = MaterialTheme.colorScheme.primary) {
-                            SensorGlyph(tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                    IconButton(
+                    TopBarIcon(
+                        contentDescription = "Informacion de Segu-Luky",
                         onClick = onAbout,
-                        modifier = Modifier.semantics { contentDescription = "Informacion de Segu-Luky" }
+                        modifier = Modifier.align(Alignment.CenterEnd)
                     ) {
                         CircleIconFrame(tint = MaterialTheme.colorScheme.primary) {
                             Text(
@@ -747,33 +765,33 @@ private fun SeguTopBar(
                             )
                         }
                     }
-                    Spacer(Modifier.width(10.dp))
-                    Row(
+                    Column(
                         modifier = Modifier
+                            .align(Alignment.Center)
                             .clip(RoundedCornerShape(12.dp))
                             .clickable(onClick = onThemeToggle)
                             .semantics {
                                 contentDescription = "Cambiar tema claro u oscuro"
                                 role = Role.Button
                             }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.Bottom
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
                             "Segu-Luky",
-                            modifier = Modifier.alignByBaseline(),
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
-                            lineHeight = 28.sp,
+                            fontSize = titleSize,
+                            lineHeight = titleSize * 1.15f,
                             maxLines = 1
                         )
                         Text(
                             appVersionLabel(),
-                            modifier = Modifier.alignByBaseline(),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = versionSize,
+                                lineHeight = versionSize * 1.2f
+                            ),
                             maxLines = 1
                         )
                     }
@@ -815,7 +833,11 @@ private fun CenteredSeguTopBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+                    )
                     .height(60.dp)
+                    .padding(horizontal = 8.dp)
             ) {
                 Text(
                     text = title,
@@ -838,6 +860,27 @@ private fun CenteredSeguTopBar(
             )
         }
     }
+}
+
+@androidx.compose.runtime.Composable
+private fun TopBarIcon(
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @androidx.compose.runtime.Composable androidx.compose.foundation.layout.BoxScope.() -> Unit
+) {
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onClick)
+            .semantics {
+                this.contentDescription = contentDescription
+                role = Role.Button
+            },
+        contentAlignment = Alignment.Center,
+        content = content
+    )
 }
 
 /** Circulo naranja comun que enmarca los iconos de la barra superior. */
@@ -870,7 +913,7 @@ private sealed class UpdateState {
     data class Done(val status: UpdateChecker.Status) : UpdateState()
 }
 
-/** Menu de informacion abierto desde el icono a la izquierda de la version. */
+/** Menu de informacion abierto desde el icono de la derecha. */
 @androidx.compose.runtime.Composable
 private fun AboutDialog(
     versionLabel: String,
@@ -3907,7 +3950,7 @@ private fun MonitorCard(
         ServiceRow(
             "SENSOR",
             "${snapshot.movementG?.let { String.format(Locale.US, "%.2f g", it) } ?: "--"} / " +
-                "efectivo ${String.format(Locale.US, "%.1f g", effectiveSensitivity)}",
+                String.format(Locale.US, "%.1f g", effectiveSensitivity),
             if (snapshot.sensorAvailable) IndicatorState.GOOD else IndicatorState.PENDING,
             buildString {
                 append("Lectura actual / nivel aplicado (tu ajuste: ")
@@ -4058,18 +4101,35 @@ private fun phaseVisual(phase: SafetyPhase): PhaseVisual = when (phase) {
 
 @androidx.compose.runtime.Composable
 private fun ServiceRow(label: String, value: String, state: IndicatorState, note: String = "") {
+    val rowColor = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
+        MaterialTheme.colorScheme.surfaceVariant
+    } else {
+        Color(0xFFF8F5F1)
+    }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
-        color = Color(0xFFF8F5F1),
+        color = rowColor,
         contentColor = MaterialTheme.colorScheme.onSurface
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(14.dp).clip(CircleShape).background(state.color))
                 Spacer(Modifier.size(8.dp))
-                Text(label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                Text(value, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.widthIn(min = 56.dp),
+                    maxLines = 1
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    value,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.End
+                )
             }
             if (note.isNotBlank()) {
                 Text(

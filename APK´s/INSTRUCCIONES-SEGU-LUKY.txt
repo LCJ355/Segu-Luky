@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.90s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.93s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -7,6 +7,29 @@ contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
 ESTE APK HACE COSAS REALES: llama, envia mensajes y abre WhatsApp. Antes de
 poner S O S en ON revisa los contactos. Para probar sensores,
 desactivala: la cuenta atras se ejecuta sin avisar a nadie.
+
+--------------------------------------------------------------------------
+NOVEDADES 1.93s
+--------------------------------------------------------------------------
+- Sensores en modo oscuro: filas con fondo y texto legibles.
+- La fila SENSOR separa etiqueta y valor; muestra 0.00 g / 2.5 g sin cortes.
+- En horizontal, Informacion ya no queda bajo los botones del telefono.
+- La barra de Sensores/Configuracion respeta los laterales seguros.
+
+--------------------------------------------------------------------------
+NOVEDADES 1.92s
+--------------------------------------------------------------------------
+- Configuracion y sensores quedan separados entre si y mas cerca del titulo.
+- El titulo sigue centrado con la version debajo; Informacion a la derecha.
+- Iconos con area tactil de 48 dp y circulo visible de 38 dp.
+
+--------------------------------------------------------------------------
+NOVEDADES 1.91s
+--------------------------------------------------------------------------
+- Barra superior: el titulo Segu-Luky queda centrado y la version debajo.
+- Informacion pasa al extremo derecho; engranaje y sensores a la izquierda.
+- En pantallas estrechas se ajusta el tamano para no recortar ni solapar.
+- Verificado en el OPPO CPH2695.
 
 --------------------------------------------------------------------------
 NOVEDADES 1.90s
@@ -86,8 +109,8 @@ NOVEDADES 1.70s
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.90s.apk        <- version actual
-La 1.82s a 1.89s se conservan como historico.
+    Segu-Luky-1.93s.apk        <- version actual
+La 1.82s a 1.92s se conservan como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -360,4 +383,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.90s (versionCode 77) - paquete com.intercom.segluky.
+Version: V-1.93s (versionCode 80) - paquete com.intercom.segluky.

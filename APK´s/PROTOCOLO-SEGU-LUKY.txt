@@ -1,8 +1,8 @@
-﻿SEGU-LUKY V-1.90s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.93s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 77). Los valores entre parentesis son los del codigo.
+archivo (versionCode 80). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -213,7 +213,7 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
 - (corregido en 1.50s) El bot de Telegram tiene cola durable y reintentos con
   espera creciente; antes era un unico POST y un fallo de datos en el punto del
   accidente perdia el aviso para siempre.
-- (corregido en 1.49s) Â«Buscar actualizacionÂ» lee releases y etiquetas y elige la
+- (corregido en 1.49s) «Buscar actualizacion» lee releases y etiquetas y elige la
   mas alta, asi una version etiquetada sin release tambien se ofrece.
 - (corregido en 1.51s) Si el telefono esta bloqueado y el usuario cancela el
   desbloqueo, la app ya no abre WhatsApp encima del bloqueo: cierra ese aviso en
@@ -276,5 +276,5 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.90s (versionCode 77) - 17/11/2026
+Version: V-1.93s (versionCode 80) - 17/11/2026
 

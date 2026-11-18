@@ -2331,6 +2331,72 @@ Pendientes: probar en el movil que un golpe con el telefono en el bolsillo a
 mas de 20 km/h abre la validacion, y que un golpe aparcado ya no la abre.
 
 ======================================================================
+V-1.93s (versionCode 80)
+======================================================================
+
+Fecha: 17/11/2026
+Version: 1.93s (versionCode 80)
+
+Cambio:
+- Sensores en oscuro: las filas usan surfaceVariant y texto del tema.
+- La fila SENSOR separa etiqueta y valor; valor corto 0.00 g / 2.5 g.
+- La barra superior aplica insets horizontales seguros en horizontal.
+- La barra de Sensores/Configuracion tambien respeta esos insets.
+
+Motivo: corregir contraste en oscuro y botones tapados por la barra del sistema
+al girar el telefono.
+Prueba realizada: testDebugUnitTest (253 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease e instalacion en OPPO CPH2695 vertical y
+horizontal.
+Resultado: compila, verifica y ambas pantallas quedan legibles y accesibles.
+APK generado: APK��s/Segu-Luky-1.93s.apk
+Mapping archivado: APK��s/mapping/Segu-Luky-1.93s-mapping.txt.gz
+Pendientes: confirmar en Redmi al reconectarlo.
+
+======================================================================
+V-1.92s (versionCode 79)
+======================================================================
+
+Fecha: 17/11/2026
+Version: 1.92s (versionCode 79)
+
+Cambio:
+- Configuracion y sensores quedan separados entre si con 8 dp.
+- El grupo izquierdo se acerca al titulo; el titulo sigue centrado.
+- Los iconos recuperan area tactil de 48 dp con circulo visible de 38 dp.
+- Informacion permanece en el extremo derecho.
+
+Motivo: distribuir mejor la barra superior en pantallas estrechas.
+Prueba realizada: testDebugUnitTest (253 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease e instalacion en OPPO CPH2695.
+Resultado: compila, verifica y los iconos quedan separados y cercanos al titulo.
+APK generado: APK��s/Segu-Luky-1.92s.apk
+Mapping archivado: APK��s/mapping/Segu-Luky-1.92s-mapping.txt.gz
+Pendientes: confirmar la misma distribucion en el Redmi.
+
+======================================================================
+V-1.91s (versionCode 78)
+======================================================================
+
+Fecha: 17/11/2026
+Version: 1.91s (versionCode 78)
+
+Cambio:
+- Barra superior: titulo Segu-Luky centrado y version debajo.
+- Informacion al extremo derecho; engranaje y sensores a la izquierda.
+- Titulo/version adaptan tamano en pantallas estrechas para no recortarse.
+- Iconos de barra con area tactil de 40 dp y circulo visible de 38 dp.
+
+Motivo: corregir el recorte y el desequilibrio vistos en el OPPO.
+Prueba realizada: testDebugUnitTest (253 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease e instalacion en OPPO CPH2695 (720x1604,
+320 dpi).
+Resultado: compila, verifica y la barra queda centrada sin solapamientos.
+APK generado: APK��s/Segu-Luky-1.91s.apk
+Mapping archivado: APK��s/mapping/Segu-Luky-1.91s-mapping.txt.gz
+Pendientes: confirmar la misma barra en el Redmi al reconectarlo.
+
+======================================================================
 V-1.90s (versionCode 77)
 ======================================================================
 
