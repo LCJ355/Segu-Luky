@@ -188,5 +188,5 @@ SOS notice reaches the other riders; in orange or grey it does not sound
 anywhere. The SOS countdown triggers the same notice once it completes. Contract
 details live in `Instrucciones/INTEROPERABILIDAD-SEGU-INTERCOM.txt`.
 
-See `INFORME-ANALISIS.md` for the earlier review and `CHANGELOG.md` for this
-version's changes. The package is `com.intercom.segluky`.
+See `CHANGELOG.md` for this version's changes and `Instrucciones/Estado.txt` for
+the full release log. The package is `com.intercom.segluky`.

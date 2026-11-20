@@ -58,6 +58,12 @@ object ImpactSequence {
     const val MAX_RELIABLE_INTERVAL_MS = 20f
     /** Menos de tres muestras por encima del umbral no describen un impacto. */
     const val MIN_SAMPLES_ABOVE = 3
+    /**
+     * Umbral de salida (60 % del de entrada). La misma histeresis vale para el
+     * ancho y para contar subidas: si no, una senal que respira alrededor del
+     * umbral se contaba como varios golpes y regalaba los 10 puntos de rebote.
+     */
+    const val EXIT_RATIO = 0.6f
 
     /**
      * Ancho del impacto medido con histeresis sobre una lista de muestras: entra
@@ -73,7 +79,7 @@ object ImpactSequence {
         toleranceMs: Long = MIN_WIDTH_TOLERANCE_MS
     ): Long {
         val enter = thresholdG.coerceAtLeast(0.1f)
-        val exit = (enter * 0.6f).coerceAtLeast(0.1f)
+        val exit = (enter * EXIT_RATIO).coerceAtLeast(0.1f)
         var startedAt = -1L
         var lastAbove = -1L
         var closed = false
@@ -250,12 +256,18 @@ object ImpactSequence {
      * temporal. Cada subida es un golpe; varios golpes seguidos son un rebote.
      */
     private fun countUpCrossings(impact: List<ImpactSample>, threshold: Float): Int {
+        val enter = threshold.coerceAtLeast(0.1f)
+        val exit = (enter * EXIT_RATIO).coerceAtLeast(0.1f)
         var crossings = 0
         var above = false
         for (sample in impact.sortedBy { it.atMs }) {
-            val nowAbove = magnitude(sample) >= threshold
-            if (nowAbove && !above) crossings++
-            above = nowAbove
+            val g = magnitude(sample)
+            if (!above && g >= enter) {
+                crossings++
+                above = true
+            } else if (above && g < exit) {
+                above = false
+            }
         }
         return crossings
     }

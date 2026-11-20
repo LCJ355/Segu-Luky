@@ -236,6 +236,35 @@ class ImpactSequenceTest {
         assertFalse(ImpactSequence.widthQuality(pocas, 3.5f, 1_000L).reliable)
     }
 
+    @Test
+    fun `una senal que respira dentro de la histeresis es un solo golpe`() {
+        // 3,8 y 2,5 g con umbral 3,5: el valle no baja del 60 % del umbral, asi
+        // que sigue siendo el mismo impacto. Contando con el umbral seco salian
+        // dos subidas y regalaba los 10 puntos de rebote.
+        val oscilante = listOf(3.8f, 2.5f, 3.8f, 2.5f, 3.8f).mapIndexed { index, g ->
+            ImpactSample(1_000L + index * 20L, g, 0f, 0f, 8f)
+        }
+        val verdict = ImpactSequence.evaluate(
+            samples = oscilante,
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000
+        )
+        assertFalse(verdict.reasons.any { it.contains("cruces") })
+    }
+
+    @Test
+    fun `un valle por debajo de la salida si es un segundo golpe`() {
+        val rebote = listOf(3.8f, 1f, 3.8f, 1f).mapIndexed { index, g ->
+            ImpactSample(1_000L + index * 20L, g, 0f, 0f, 8f)
+        }
+        val verdict = ImpactSequence.evaluate(
+            samples = rebote,
+            hitAtMs = 1_000L, thresholdG = 3.5f,
+            speedBeforeKmh = 60f, speedAfterKmh = 60f, rpmAfter = 2_000
+        )
+        assertTrue(verdict.reasons.any { it.contains("2 cruces") })
+    }
+
     private fun tren(spacingMs: Long, count: Int, g: Float, dipAt: Int = -1, dipG: Float = 1f):
         List<ImpactSample> {
         val list = ArrayList<ImpactSample>(count)

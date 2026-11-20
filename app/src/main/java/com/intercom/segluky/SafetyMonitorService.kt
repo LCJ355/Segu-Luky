@@ -2544,7 +2544,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private fun assessImpact(trigger: Long) {
         val obdSnapshot = ObdLinkController.state.value
         val now = System.currentTimeMillis()
-        val speed = obdSnapshot.freshSpeed(now) ?: lastSpeed
+        val speed = impactSpeed(obdSnapshot, now)
         // Una sola foto del buffer: ancho y secuencia tienen que mirar lo mismo.
         val windowSamples = ImpactSampleRecorder.snapshot()
         val hitAtMs = trigger
@@ -2614,7 +2614,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         // un bache de una colision. Tambien solo se registra.
         window.postDelayed({
             val obdAfter = ObdLinkController.state.value
-            val after = obdAfter.freshSpeed(System.currentTimeMillis()) ?: lastSpeed
+            val after = impactSpeed(obdAfter, System.currentTimeMillis())
             // B3: a los 2 s la ventana de giro ya tiene datos de verdad. El
             // giroscopio solo se escucha durante la validacion, asi que la lectura
             // tomada justo en el golpe casi siempre llega sin giro; aqui si puede
@@ -2672,6 +2672,20 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     }
 
     /**
+     * Velocidad con la que se clasifica un golpe. El dato del OBD solo vale si
+     * es reciente; la ultima velocidad conocida, solo mientras siga
+     * representando la situacion actual. Sin ese limite, un dato de hace
+     * minutos servia de "antes" y de "despues" a la vez: la caida salia
+     * 0 km/h y restaba 6 puntos por "velocidad intacta".
+     */
+    private fun impactSpeed(snapshot: ObdState, now: Long): Float? {
+        snapshot.freshSpeed(now)?.let { return it }
+        val at = lastSpeedAt ?: return null
+        if (now < at) return null
+        return lastSpeed.takeIf { now - at <= IMPACT_SPEED_MAX_AGE_MS }
+    }
+
+    /**
      * Reevalua la secuencia en un hito (5 s o 15 s) y lo registra con la cobertura
      * real de la ventana, para no llamar "ventana de 15 s" a una lectura de 2 s.
      * Si mientras tanto ha habido otro golpe, el hito se descarta.
@@ -2688,7 +2702,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 hitAtMs = hitAtMs,
                 thresholdG = detector.effectiveSensitivityG,
                 speedBeforeKmh = speedBeforeKmh,
-                speedAfterKmh = obd.freshSpeed(System.currentTimeMillis()) ?: lastSpeed,
+                speedAfterKmh = impactSpeed(obd, System.currentTimeMillis()),
                 rpmAfter = obd.rpm,
                 orientationConfidence = ImpactSequence.orientationConfidence(
                     calibrated = orientationCalibrated,
@@ -3111,6 +3125,11 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         private const val LOCATION_INTERVAL_ROUTINE_MS = 20_000L
         private const val LOCATION_INTERVAL_VALIDATION_MS = 2_000L
         private const val SPEED_POLICY_MAX_AGE_MS = 30_000L
+        /**
+         * Edad maxima de la ultima velocidad conocida para clasificar un golpe.
+         * Con GPS a 1 Hz, cinco segundos ya no describen la maniobra.
+         */
+        private const val IMPACT_SPEED_MAX_AGE_MS = 5_000L
         private const val LOCATION_MIN_DISTANCE_ROUTINE_M = 25f
         /** Keeps a stationary last fix usable for the map link after routine GPS slows down. */
         private const val MAP_LINK_LOCATION_WINDOW_MS = 5 * 60_000L
