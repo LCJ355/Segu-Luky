@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.95s (versionCode 82)
+
+### El detector ya no se queda dormido
+
+- **Cuenta atras huerfana.** Si el proceso moria durante la cuenta atras y la
+  hora de fin guardada llegaba ya caducada, el detector se restauraba en fase
+  COUNTDOWN sin ningun servicio que cerrase esa cuenta: seguia diciendo
+  "monitor activo", ignoraba todos los golpes y no habria avisado de un
+  accidente real durante el resto de la sesion. Ahora `activateMonitoring`
+  detecta ese caso y llama a `abandonOrphanedCountdown()`, que devuelve el
+  detector a MONITORING.
+- **Veredicto de impacto viejo.** El diagnostico diferido de 2 s (`assessImpact`)
+  podia sobrescribir el veredicto de un impacto nuevo con el del anterior; ahora
+  comprueba que el instante evaluado sigue siendo el ultimo registrado y, si no,
+  descarta el resultado.
+- **Restauracion sin `!!`.** `restoreRuntime` calculaba `immobileSince` con una
+  asercion no nula sobre un valor que puede ser nulo; ahora el intervalo
+  restaurado se valida contra el inicio de la validacion y, si no encaja, arranca
+  en el instante actual.
+- **Historial dentro de la app** con la entrada 1.95s.
+
+Pruebas: 262 pruebas unitarias, 0 fallos. `lintDebug`: 0 errores, 9 avisos.
 ## 1.94s (versionCode 81)
 
 ### Configurar Telegram sin copiar numeros de chat

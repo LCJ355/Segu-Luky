@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.94s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.95s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 81). Los valores entre parentesis son los del codigo.
+archivo (versionCode 82). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -237,6 +237,14 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   explica cuando la lista sale vacia. Tampoco funciona si el bot tiene un webhook
   activo (Telegram no entrega las novedades a `getUpdates`).
 
+- (1.95s) La cuenta atras pertenece al servicio, no al detector: si el proceso
+  muere a mitad y al volver la hora de fin guardada ya caduco, el estado
+  restaurado en COUNTDOWN se descarta (abandonOrphanedCountdown) y el detector
+  vuelve a MONITORING. Sin eso el detector aceptaba el estado pero no procesaba
+  ningun golpe, porque solo actua en MONITORING/VALIDATING/FALL_CANDIDATE.
+- (1.95s) El diagnostico de impacto que se evalua 2 s despues solo se aplica si
+  el impacto medido sigue siendo el ultimo: un veredicto viejo no puede pisar al
+  de un golpe nuevo.
 9) DIAGRAMA DE FLUJO
 --------------------
                  INICIO MONITOR
@@ -280,5 +288,5 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.94s (versionCode 81)
+Version: V-1.95s (versionCode 82)
 

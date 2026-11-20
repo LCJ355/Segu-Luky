@@ -2632,6 +2632,40 @@ los avisos de impacto (assessImpact), la histeresis de countUpCrossings, la
 cache de UpdateChecker y el SHA256SUMS del mapping.
 
 ======================================================================
+V-1.95s (versionCode 82)
+======================================================================
+
+Fecha: 20/11/2026
+Version: 1.95s (versionCode 82)
+
+Cambio:
+- AccidentDetector.abandonOrphanedCountdown(): si el detector se restaura en
+  fase COUNTDOWN y no hay cuenta atras viva en el servicio, la descarta y vuelve
+  a MONITORING. Se llama desde activateMonitoring cuando countdownEndsAt es null.
+- AccidentDetector.restoreRuntime(): se quita el `!!` sobre la validacion
+  restaurada; immobileSince se valida contra el inicio de la validacion y, si
+  cae fuera, arranca en el instante actual.
+- SafetyMonitorService.assessImpact(): el diagnostico diferido de 2 s comprueba
+  que hitAtMs sigue siendo el ultimo impacto registrado antes de sobrescribir
+  lastImpact/impactAssessment.
+- Tres pruebas nuevas en AccidentDetectorTest (cuenta atras huerfana, no tocar
+  la validacion en curso, inmovilidad restaurada fuera de intervalo).
+- Historial dentro de la app con la entrada 1.95s.
+
+Motivo: la auditoria del algoritmo de deteccion SOS pedida por el usuario. El
+fallo de la cuenta atras huerfana dejaba el detector sordo para siempre tras
+matar el proceso a mitad de cuenta atras: decia "monitor activo" pero no habria
+avisado de ningun accidente.
+Prueba realizada: testDebugUnitTest (262 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease, comprobar-apk.ps1 (firma y datos
+personales correctos).
+Resultado: compila y verifica; firma SHA-256
+e0e5a8fd...08cfe2109e sin cambios.
+APK generado: APKÂ´s/Segu-Luky-1.95s.apk
+Mapping archivado: APKÂ´s/mapping/Segu-Luky-1.95s-mapping.txt.gz
+Pendientes: probar en el movil el arranque tras matar la app en cuenta atras y
+una PRUEBA DE GOLPE para confirmar que vuelve a avisar.
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

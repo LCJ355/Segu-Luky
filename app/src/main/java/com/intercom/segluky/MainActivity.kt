@@ -1349,6 +1349,9 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.95s - Arreglado un fallo grave del detector: si el telefono se reiniciaba en mitad de la " +
+        "cuenta atras, el detector se quedaba dormido para siempre y no volvia a avisar de un golpe. Ahora " +
+        "se despierta solo. Ademas, un veredicto viejo de impacto ya no puede pisar al nuevo.")
     appendLine("1.94s - Configurar Telegram ya no pide copiar numeros de chat a mano: cada contacto tiene " +
         "BUSCAR CHATS, que pregunta al bot quien le ha escrito y rellena el numero al tocar el chat. " +
         "ENVIAR PRUEBA manda a todos los contactos con bot y dice cual fallo. Instrucciones nuevas en " +

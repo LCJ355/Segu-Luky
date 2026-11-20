@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.94s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.95s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -8,6 +8,15 @@ ESTE APK HACE COSAS REALES: llama, envia mensajes y abre WhatsApp. Antes de
 poner S O S en ON revisa los contactos. Para probar sensores,
 desactivala: la cuenta atras se ejecuta sin avisar a nadie.
 
+--------------------------------------------------------------------------
+NOVEDADES 1.95s
+--------------------------------------------------------------------------
+- Arreglo grave del detector: si el telefono mataba la app en mitad de la
+  cuenta atras, el detector se quedaba dormido para siempre. Seguia diciendo
+  "monitor activo", pero no habria avisado de ningun golpe. Ahora se despierta
+  solo al arrancar el monitor.
+- Un veredicto viejo de impacto ya no puede pisar al de un golpe nuevo.
+- Historial dentro de la app con la entrada 1.95s.
 --------------------------------------------------------------------------
 NOVEDADES 1.94s
 --------------------------------------------------------------------------
@@ -121,8 +130,8 @@ NOVEDADES 1.70s
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.94s.apk        <- version actual
-La 1.82s a 1.93s se conservan como historico.
+    Segu-Luky-1.95s.apk        <- version actual
+La 1.82s a 1.94s se conservan como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -446,4 +455,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.94s (versionCode 81) - paquete com.intercom.segluky.
+Version: V-1.95s (versionCode 82) - paquete com.intercom.segluky.
