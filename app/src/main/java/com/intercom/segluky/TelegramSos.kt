@@ -117,6 +117,116 @@ object TelegramSos {
     internal fun encode(value: String): String =
         URLEncoder.encode(value, "UTF-8").replace("+", "%20")
 
+    /** Un chat que ya ha hablado con el bot: destino valido del Bot API. */
+    data class TelegramChat(val id: String, val title: String, val kind: String) {
+        val label: String get() = if (title == id) "$kind $id" else "$title ($kind $id)"
+    }
+
+    /** Resultado de pedir al bot los chats que le han escrito. */
+    sealed class ChatSearch {
+        /** Chats ya vistos por el bot; la lista puede venir vacia. */
+        data class Found(val chats: List<TelegramChat>) : ChatSearch()
+
+        data class Failed(val detail: String) : ChatSearch()
+    }
+
+    /**
+     * Chats que ya escribieron al bot, para no tener que copiar numeros a mano.
+     *
+     * Un bot no puede iniciar una conversacion: hasta que alguien no le escriba,
+     * `getUpdates` viene vacio. Se pide con `offset=-100` para recibir los ultimos
+     * 100 avisos aunque otra consulta los hubiera confirmado antes.
+     *
+     * Bloqueante: llamar siempre desde un hilo de trabajo.
+     */
+    fun discoverChats(token: String): ChatSearch {
+        val normalizedToken = normalizeBotToken(token)
+            ?: return ChatSearch.Failed("token del bot no valido")
+        return runCatching {
+            val connection = URL("$BOT_API_BASE/bot$normalizedToken/getUpdates?limit=100&offset=-100")
+                .openConnection() as HttpURLConnection
+            try {
+                connection.requestMethod = "GET"
+                connection.connectTimeout = TIMEOUT_MS
+                connection.readTimeout = TIMEOUT_MS
+                connection.setRequestProperty("Accept", "application/json")
+                val code = connection.responseCode
+                val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                val response = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                val json = runCatching { JSONObject(response) }.getOrNull()
+                val ok = code in 200..299 && json?.optBoolean("ok") == true
+                if (ok) {
+                    ChatSearch.Found(parseChats(response))
+                } else {
+                    ChatSearch.Failed(discoveryFailure(code, json))
+                }
+            } finally {
+                connection.disconnect()
+            }
+        }.getOrElse { ChatSearch.Failed(it.message.orEmpty().take(MAX_DETAIL_LENGTH)) }
+    }
+
+    /**
+     * Chats de la respuesta de `getUpdates`, del mas reciente al mas antiguo.
+     *
+     * Se miran los cuatro avisos que llevan chat: un mensaje normal, uno editado,
+     * una publicacion de canal y el aviso de que el bot entro o salio de un grupo.
+     * Ese ultimo es la unica forma de conocer un grupo en el que aun no se ha
+     * escrito nada.
+     */
+    internal fun parseChats(body: String): List<TelegramChat> {
+        val root = runCatching { JSONObject(body) }.getOrNull() ?: return emptyList()
+        val updates = root.optJSONArray("result") ?: return emptyList()
+        val chats = ArrayList<TelegramChat>()
+        for (index in 0 until updates.length()) {
+            val update = updates.optJSONObject(index) ?: continue
+            val event = update.optJSONObject("my_chat_member")
+                ?: update.optJSONObject("message")
+                ?: update.optJSONObject("edited_message")
+                ?: update.optJSONObject("channel_post")
+                ?: continue
+            val chat = event.optJSONObject("chat") ?: continue
+            if (!chat.has("id")) continue
+            val id = chat.optLong("id").toString()
+            if (normalizeChatId(id) == null) continue
+            val parsed = TelegramChat(id, chatTitle(chat, id), chatKind(chat.optString("type")))
+            val known = chats.indexOfFirst { it.id == parsed.id }
+            if (known >= 0) chats.removeAt(known)
+            chats.add(0, parsed)
+        }
+        return chats
+    }
+
+    private fun chatTitle(chat: JSONObject, fallback: String): String {
+        chat.optString("title").takeIf { it.isNotBlank() }?.let { return it }
+        val name = listOf("first_name", "last_name")
+            .map { chat.optString(it) }
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+        if (name.isNotBlank()) return name
+        return chat.optString("username").takeIf { it.isNotBlank() } ?: fallback
+    }
+
+    private fun chatKind(type: String): String = when (type) {
+        "private" -> "privado"
+        "group", "supergroup" -> "grupo"
+        "channel" -> "canal"
+        else -> "chat"
+    }
+
+    /** Traduce los fallos que dejan la busqueda en nada a algo accionable. */
+    private fun discoveryFailure(code: Int, json: JSONObject?): String {
+        val description = json?.optString("description").orEmpty()
+        return when {
+            description.contains("webhook", ignoreCase = true) ->
+                "el bot tiene un webhook: quitalo con /setwebhook en BotFather"
+            code == 401 || description.contains("Unauthorized", ignoreCase = true) ->
+                "clave del bot no valida (revisa la clave que te dio BotFather)"
+            description.isNotBlank() -> description.take(MAX_DETAIL_LENGTH)
+            else -> "HTTP $code"
+        }
+    }
+
     private fun Char.isUsernameChar(): Boolean =
         this in 'a'..'z' || this in 'A'..'Z' || this in '0'..'9' || this == '_'
 

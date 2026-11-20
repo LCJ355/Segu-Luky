@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.93s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.94s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -7,6 +7,18 @@ contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
 ESTE APK HACE COSAS REALES: llama, envia mensajes y abre WhatsApp. Antes de
 poner S O S en ON revisa los contactos. Para probar sensores,
 desactivala: la cuenta atras se ejecuta sin avisar a nadie.
+
+--------------------------------------------------------------------------
+NOVEDADES 1.94s
+--------------------------------------------------------------------------
+- Telegram ya no pide copiar numeros de chat a mano: cada contacto tiene el
+  boton BUSCAR CHATS, que pregunta al bot quien le ha escrito y rellena el
+  numero al tocar el chat.
+- ENVIAR PRUEBA manda el mensaje de prueba a todos los contactos con bot, no
+  solo al primero, y dice cual fallo y por que.
+- Instrucciones nuevas dentro de la app (menu i > Como usar, pasos 7 y 8) y en
+  la seccion 7 de este documento.
+- Historial dentro de la app al dia: se anaden las versiones 1.83s a 1.93s.
 
 --------------------------------------------------------------------------
 NOVEDADES 1.93s
@@ -109,8 +121,8 @@ NOVEDADES 1.70s
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.93s.apk        <- version actual
-La 1.82s a 1.92s se conservan como historico.
+    Segu-Luky-1.94s.apk        <- version actual
+La 1.82s a 1.93s se conservan como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -128,7 +140,7 @@ Nota: si tenias una version anterior, basta con instalar encima; contactos y
 ajustes se conservan. No hace falta desinstalar.
 
 --------------------------------------------------------------------------
-2b) SI PLAY PROTECT DICE QUE "PUEDE SER DAÃƒâ€˜INA"
+2b) SI PLAY PROTECT DICE QUE "PUEDE SER DA\u00D1INA"
 --------------------------------------------------------------------------
 Es normal y no significa que se haya encontrado un virus. Play Protect avisa
 de cualquier APK que no venga de Google Play y que combine permisos de riesgo
@@ -145,7 +157,7 @@ Como comprobar que es la app oficial y no una copia modificada:
    debe coincidir con la de docs/SEGURIDAD.md del repositorio.
 2. En el PC, con la APK descargada:
      certutil -hashfile "Segu-Luky-<version>.apk" SHA256
-   y compara con APKÃ‚Â´s/SHA256SUMS.txt.
+   y compara con APK\u00B4s/SHA256SUMS.txt.
 La huella de firma (E0:E5:A8:FD:...:E2:10:9E) es la misma desde la primera
 version publicada: si cambia, no instales ese archivo.
 El detalle de permisos, destinos de red y datos guardados esta en
@@ -263,7 +275,7 @@ resumen de su estado (por ejemplo "4 ACTIVOS" o "FALTAN 2") antes de entrar.
   CANALES DE SALIDA SOS
     El interruptor general S O S ON/OFF esta en la pantalla principal.
     - ENVIO AUTO MENSAJES (WhatsApp y enlace de Telegram) con sus dos permisos.
-    - TELEGRAM SOS (clave del bot y prueba).
+    - TELEGRAM SOS (clave del bot, BUSCAR CHATS y prueba).
     - SMS SOS AUTOMATICO.
     - INTERCOM-LUKY (aviso de voz al grupo).
 
@@ -346,7 +358,52 @@ Botones de la tarjeta:
   PROBAR AVISO   lanza el aviso ahora y dice a quien ha llegado.
 
 --------------------------------------------------------------------------
-7) MENU DE INFORMACION (ICONO i)
+7) TELEGRAM SOS (EL AVISO QUE SALE SOLO)
+--------------------------------------------------------------------------
+El bot de Telegram no necesita pantalla encendida ni Accesibilidad: manda el
+aviso aunque el movil este bloqueado. Prepara esto una sola vez.
+
+  PASO 1. Crea el bot.
+    Abre Telegram, busca @BotFather y envia /newbot. Elige un nombre visible y
+    un usuario que termine en "bot". BotFather te devuelve una clave larga con
+    esta forma: 123456789:AAAA...
+
+  PASO 2. Guarda la clave en la app.
+    Engranaje > TELEGRAM SOS > Clave del bot, pegala y pulsa GUARDAR. La tarjeta
+    contesta "Clave guardada" y el estado pasa a BOT LISTO.
+
+  PASO 3. Que cada contacto escriba al bot.
+    Cada contacto abre el chat del bot en Telegram y le envia /start (o INICIAR)
+    una vez. Telegram no deja que un bot escriba primero: si nadie le escribe,
+    el bot no puede avisarle.
+
+  PASO 4. Pulsa BUSCAR CHATS.
+    Configuracion > CONTACTOS SOS > abre el contacto > activa ENVIAR TELEGRAM >
+    pulsa BUSCAR CHATS. La app pregunta al bot quien le ha escrito y ensena la
+    lista con el nombre de cada chat.
+
+  PASO 5. Toca el chat de ese contacto.
+    El numero de chat se rellena solo (los grupos empiezan por -). Despues pulsa
+    GUARDAR. Repite los pasos 4 y 5 con cada contacto.
+
+  PASO 6. Pulsa ENVIAR PRUEBA.
+    Manda un mensaje de prueba a todos los contactos con bot y dice cuantos lo
+    recibieron; si alguno falla, indica cual y por que.
+
+Lo que conviene saber:
+- Si BUSCAR CHATS dice que el bot no ha recibido mensajes, todavia nadie ha
+  escrito al bot: repite el paso 3 y vuelve a buscar.
+- Los grupos aparecen en la lista solo si has anadido el bot al grupo.
+- El numero de chat no cambia nunca: se pone una vez y sirve para siempre.
+- Si dejas el numero vacio, el contacto usa su enlace de Telegram (eso si
+  necesita Accesibilidad y ENVIO AUTO MENSAJES).
+- Si cambias la clave del bot, los numeros de chat siguen valiendo, pero hay que
+  repetir los pasos 3 a 6 para comprobar la entrega.
+- Si un contacto bloquea el bot, ese aviso fallara siempre: la tarjeta lo dice
+  en ENVIAR PRUEBA.
+
+--------------------------------------------------------------------------
+8) MENU DE INFORMACION (ICONO i)
 --------------------------------------------------------------------------
 - Buscar actualizacion: comprueba la ultima version publicada en GitHub.
 - Como usar: estas mismas instrucciones, siempre actualizadas.
@@ -357,7 +414,7 @@ Botones de la tarjeta:
 - Creditos: idea original y autor.
 
 --------------------------------------------------------------------------
-8) PROBLEMAS HABITUALES
+9) PROBLEMAS HABITUALES
 --------------------------------------------------------------------------
 - "No llega el aviso": revisa que S O S este en ON, que haya contactos con el
   aviso marcado y los permisos de llamadas/SMS.
@@ -373,9 +430,15 @@ Botones de la tarjeta:
   pulsa ACTUALIZAR.
 - "Buscar actualizacion no encuentra nada": comprueba que hay conexion; si
   hay una version nueva, el aviso lleva a la release de GitHub.
+- "BUSCAR CHATS no ensena ningun chat": nadie ha escrito al bot todavia. Que
+  cada contacto le envie /start y vuelve a pulsar BUSCAR CHATS.
+- "BUSCAR CHATS dice que la clave no vale": vuelve a copiar la clave entera de
+  BotFather (incluye los numeros, dos puntos y el resto) y pulsa GUARDAR.
+- "BUSCAR CHATS dice que el bot tiene un webhook": ese bot esta conectado a otro
+  programa. Crea un bot nuevo con /newbot y repite los pasos 1 a 6.
 
 --------------------------------------------------------------------------
-9) AVISO
+10) AVISO
 --------------------------------------------------------------------------
 Segu-Luky es un proyecto personal en pruebas. No sustituye a un dispositivo
 homologado de emergencia (eCall) ni a los servicios de emergencia. Comprueba
@@ -383,4 +446,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.93s (versionCode 80) - paquete com.intercom.segluky.
+Version: V-1.94s (versionCode 81) - paquete com.intercom.segluky.

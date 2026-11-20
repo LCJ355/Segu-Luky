@@ -1349,6 +1349,29 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.94s - Configurar Telegram ya no pide copiar numeros de chat a mano: cada contacto tiene " +
+        "BUSCAR CHATS, que pregunta al bot quien le ha escrito y rellena el numero al tocar el chat. " +
+        "ENVIAR PRUEBA manda a todos los contactos con bot y dice cual fallo. Instrucciones nuevas en " +
+        "Como usar, pasos 7 y 8.")
+    appendLine("1.93s - En modo oscuro las filas de Sensores se leen bien y la barra superior ya no queda " +
+        "debajo de los botones del telefono al girarlo.")
+    appendLine("1.92s - Los botones de la barra superior se separan entre si y recuperan un area tactil de 48 dp.")
+    appendLine("1.91s - El titulo queda centrado con la version debajo e Informacion al extremo derecho; el " +
+        "texto se reduce antes de solaparse.")
+    appendLine("1.90s - En modo Coche la fila MODO ensena GPS a un lado y OBD2 al otro, con la velocidad de cada uno.")
+    appendLine("1.89s - El modo claro u oscuro se cambia tocando Segu-Luky en la barra; TEMA VISUAL sale de " +
+        "Configuracion.")
+    appendLine("1.88s - Modo visual claro u oscuro, pensado para pantallas AMOLED; la eleccion se guarda y " +
+        "aguanta al reiniciar.")
+    appendLine("1.87s - La velocidad ya no apaga los sensores: solo limita el muestreo (100 Hz en marcha, 50 Hz " +
+        "parado) con histeresis de 15 y 10 km/h.")
+    appendLine("1.86s - Compartir apunta siempre a la ultima version y MODO ya no vuelve a Bolsillo al parar el " +
+        "monitor.")
+    appendLine("1.85s - Boton - M O D O - debajo del SOS, nivel de audio seleccionable y menos lineas en la " +
+        "pantalla principal.")
+    appendLine("1.84s - Barra superior centrada, sensores mas limpio y el vuelco vuelve a mostrarse en Coche.")
+    appendLine("1.83s - Telegram y GPS mas fiables: el aviso del bot ya no se descarta al cerrar el protocolo y " +
+        "un GPS apagado ya no deja la app sin red.")
     appendLine("1.82s - Un golpe con el movil en el bolsillo solo cuenta si la velocidad es de los ultimos " +
         "5 segundos; el margen tras el golpe sube a 6 segundos y ya no lo cancela la vibracion del motor. " +
         "Los golpes ya no se clasifican dos veces ni con una caida de velocidad inventada.")
@@ -2279,27 +2302,35 @@ private fun EmergencySettingsScreen(
                             modifier = Modifier.weight(1f),
                             contentPadding = CompactButtonPadding,
                             onClick = {
-                                val target = botTargets.firstOrNull() ?: return@OutlinedButton
                                 val token = TelegramSos.normalizeBotToken(telegramToken)
                                 if (token == null) {
                                     telegramFeedback = "Guarda primero la clave del bot"
                                     return@OutlinedButton
                                 }
+                                val targets = botTargets.toList()
                                 telegramTesting = true
-                                telegramFeedback = "Enviando prueba..."
+                                telegramFeedback = "Enviando prueba a ${targets.size} contacto(s)..."
                                 telegramScope.launch {
-                                    val result = withContext(Dispatchers.IO) {
-                                        TelegramSos.sendViaBot(
-                                            token,
-                                            target.telegramChatId,
-                                            "Segu-Luky: mensaje de prueba para ${target.name}"
-                                        )
+                                    val results = withContext(Dispatchers.IO) {
+                                        targets.map { target ->
+                                            target.name to TelegramSos.sendViaBot(
+                                                token,
+                                                target.telegramChatId,
+                                                "Segu-Luky: mensaje de prueba para ${target.name}"
+                                            )
+                                        }
                                     }
                                     telegramTesting = false
-                                    telegramFeedback = if (result.ok) {
-                                        "Prueba enviada a ${target.name}"
-                                    } else {
-                                        "Fallo: ${result.detail}"
+                                    val sent = results.filter { it.second.ok }
+                                    val failed = results.filter { !it.second.ok }
+                                    telegramFeedback = when {
+                                        failed.isEmpty() ->
+                                            "Prueba enviada a ${sent.size} contacto(s)"
+                                        sent.isEmpty() ->
+                                            "Fallo: " + failed.joinToString("; ") { "${it.first} (${it.second.detail})" }
+                                        else ->
+                                            "Enviada a ${sent.size} de ${results.size}. Fallo: " +
+                                                failed.joinToString("; ") { "${it.first} (${it.second.detail})" }
                                     }
                                 }
                             }
@@ -2319,11 +2350,11 @@ private fun EmergencySettingsScreen(
                         Text(telegramFeedback, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                     }
                     Text(
-                        "1) Crea el bot en @BotFather y copia la clave que te da. " +
+                        "1) Crea el bot en @BotFather y copia la clave que te da (GUARDAR). " +
                             "2) Cada contacto debe escribir /start al bot. " +
-                            "3) Pega en el contacto el numero de chat que te da el bot (o su enlace de Telegram). " +
-                            "4) Pulsa ENVIAR PRUEBA para comprobar la entrega. " +
-                            "El detalle esta en INSTRUCCIONES DE USO, pasos 7 y 8.",
+                            "3) Abre el contacto, pulsa BUSCAR CHATS y toca su chat: el numero se pone solo. " +
+                            "4) Pulsa ENVIAR PRUEBA para comprobar la entrega a todos. " +
+                            "El detalle esta en el menu i > Como usar, pasos 7 y 8.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -2557,6 +2588,13 @@ private fun EmergencyContactEditor(
     var telegramChatId by remember(contact) { mutableStateOf(contact?.telegramChatId.orEmpty()) }
     var saveAttempted by remember(contact) { mutableStateOf(false) }
     var saveError by remember(contact) { mutableStateOf<String?>(null) }
+    var chatSearching by remember(contact) { mutableStateOf(false) }
+    var chatOptions by remember(contact) { mutableStateOf<List<TelegramSos.TelegramChat>>(emptyList()) }
+    var chatSearchNote by remember(contact) { mutableStateOf("") }
+    val editorScope = rememberCoroutineScope()
+    // La clave se lee al abrir el editor: es la que ya esta guardada en TELEGRAM SOS.
+    val editorContext = LocalContext.current
+    val botToken = remember(editorContext) { ContactsRepository(editorContext).telegramBotToken() }
     val phoneValid = isValidEmergencyPhone(phone)
     val telegramUsernameInvalid = telegramEnabled &&
         telegramUsername.isNotBlank() &&
@@ -2676,6 +2714,71 @@ private fun EmergencyContactEditor(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        enabled = editable && !chatSearching,
+                        contentPadding = CompactButtonPadding,
+                        onClick = {
+                            val token = TelegramSos.normalizeBotToken(botToken)
+                            if (token == null) {
+                                chatOptions = emptyList()
+                                chatSearchNote = "Primero guarda la clave del bot en Configuracion > TELEGRAM SOS."
+                            } else {
+                                chatSearching = true
+                                chatOptions = emptyList()
+                                chatSearchNote = "Buscando chats..."
+                                editorScope.launch {
+                                    val search = withContext(Dispatchers.IO) {
+                                        TelegramSos.discoverChats(token)
+                                    }
+                                    chatSearching = false
+                                    when (search) {
+                                        is TelegramSos.ChatSearch.Failed -> {
+                                            chatSearchNote = "No se pudo buscar: ${search.detail}"
+                                        }
+                                        is TelegramSos.ChatSearch.Found -> {
+                                            chatOptions = search.chats
+                                            chatSearchNote = if (search.chats.isEmpty()) {
+                                                "El bot no ha recibido ningun mensaje. Que cada contacto abra " +
+                                                    "el bot y pulse INICIAR/START, y vuelve a buscar."
+                                            } else {
+                                                "Toca el chat de este contacto para poner su numero."
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ) { TightButtonLabel(if (chatSearching) "BUSCANDO..." else "BUSCAR CHATS") }
+                    Text(
+                        "Pregunta al bot quien le ha escrito.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (chatSearchNote.isNotEmpty()) {
+                    Text(
+                        chatSearchNote,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                chatOptions.forEach { chat ->
+                    OutlinedButton(
+                        enabled = editable,
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = CompactButtonPadding,
+                        onClick = {
+                            telegramChatId = chat.id
+                            chatOptions = emptyList()
+                            chatSearchNote = "Numero puesto: ${chat.label}. Pulsa GUARDAR."
+                        }
+                    ) { TightButtonLabel(chat.label) }
+                }
             }
             if (saveAttempted && !actionSelected) {
                 Text("Activa llamada, WhatsApp, Telegram o una combinacion.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -2859,8 +2962,8 @@ private fun InstructionsScreen(
                     "2) Elige un nombre visible y un usuario que termine en bot. " +
                     "3) BotFather te devuelve una clave larga (el token), con forma 123456789:AAAA... Copiala entera. " +
                     "4) En Segu-Luky pulsa el engranaje, baja hasta la tarjeta TELEGRAM SOS y pegala en Clave del bot. " +
-                    "5) Pulsa GUARDAR CLAVE: la tarjeta confirmara Clave guardada. " +
-                    "6) En cuanto un contacto tenga su numero de chat, pulsa ENVIAR PRUEBA para comprobar que el mensaje llega. " +
+                    "5) Pulsa GUARDAR: la tarjeta confirmara Clave guardada y el estado pasa a BOT LISTO. " +
+                    "6) ENVIAR PRUEBA manda un mensaje a todos los contactos que ya tengan su numero de chat y dice cual fallo. " +
                     "Si la clave es incorrecta, la tarjeta mostrara el motivo que devuelve Telegram."
             )
         }
@@ -2868,8 +2971,10 @@ private fun InstructionsScreen(
             UsageInstruction(
                 title = "8. Telegram: numero de chat de cada contacto",
                 text = "Cada contacto debe abrir el bot y enviarle /start una vez; sin eso Telegram no deja escribirle. " +
-                    "Para ver su numero, abre en el navegador https://api.telegram.org/bot<TOKEN>/getUpdates y busca chat:{id:...}. " +
-                    "Pega ese numero en Numero de chat del bot (en grupos empieza por -). " +
+                    "Despues no hay que copiar numeros a mano: en Configuracion > CONTACTOS SOS abre el contacto, " +
+                    "activa ENVIAR TELEGRAM y pulsa BUSCAR CHATS. La app le pregunta al bot quien le ha escrito y ensena " +
+                    "la lista de chats; toca el de ese contacto y el numero se rellena solo (los grupos empiezan por -). " +
+                    "Si la lista sale vacia, nadie ha escrito al bot todavia. " +
                     "Si prefieres no usar bot, deja ese campo vacio y escribe solo el usuario (@nombre): se usara su enlace de Telegram, que necesita Accesibilidad y el interruptor ENVIO AUTO MENSAJES. " +
                     "La clave se guarda sin cifrar dentro de este movil: si prestas el telefono, pulsa BORRAR CLAVE y desactiva ENVIAR TELEGRAM en los contactos."
             )

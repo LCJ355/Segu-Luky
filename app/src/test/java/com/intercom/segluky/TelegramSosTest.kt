@@ -64,6 +64,64 @@ class TelegramSosTest {
     }
 
     @Test
+    fun discoverChatsRefusesInvalidTokenWithoutTouchingTheNetwork() {
+        val search = TelegramSos.discoverChats("no-valido")
+
+        assertEquals(true, search is TelegramSos.ChatSearch.Failed)
+        assertEquals(
+            "token del bot no valido",
+            (search as TelegramSos.ChatSearch.Failed).detail
+        )
+    }
+
+    @Test
+    fun parseChatsReadsEveryKindOfUpdateAndPutsTheNewestFirst() {
+        val body = """
+            {"ok":true,"result":[
+              {"update_id":1,"message":{"chat":{"id":111,"first_name":"Ana","last_name":"Sos","type":"private"}}},
+              {"update_id":2,"my_chat_member":{"chat":{"id":-1001234567890,"title":"Motos Madrid","type":"supergroup"}}},
+              {"update_id":3,"edited_message":{"chat":{"id":111,"first_name":"Ana","last_name":"Sos","type":"private"}}},
+              {"update_id":4,"channel_post":{"chat":{"id":-1009876543210,"title":"Avisos","type":"channel"}}},
+              {"update_id":5,"message":{"chat":{"type":"private"}}}
+            ]}
+        """.trimIndent()
+
+        val chats = TelegramSos.parseChats(body)
+
+        assertEquals(3, chats.size)
+        assertEquals("-1009876543210", chats[0].id)
+        assertEquals("Avisos (canal -1009876543210)", chats[0].label)
+        assertEquals("111", chats[1].id)
+        assertEquals("Ana Sos (privado 111)", chats[1].label)
+        assertEquals("-1001234567890", chats[2].id)
+        assertEquals("grupo", chats[2].kind)
+    }
+
+    @Test
+    fun parseChatsFallsBackToUsernameThenToTheNumber() {
+        val body = """
+            {"ok":true,"result":[
+              {"update_id":1,"message":{"chat":{"id":222,"username":"ana_sos","type":"private"}}},
+              {"update_id":2,"message":{"chat":{"id":333,"type":"private"}}}
+            ]}
+        """.trimIndent()
+
+        val chats = TelegramSos.parseChats(body)
+
+        assertEquals("ana_sos", chats[1].title)
+        assertEquals("333", chats[0].title)
+        assertEquals("privado 333", chats[0].label)
+    }
+
+    @Test
+    fun parseChatsReturnsNothingForAnEmptyOrBrokenAnswer() {
+        assertEquals(0, TelegramSos.parseChats("").size)
+        assertEquals(0, TelegramSos.parseChats("no es json").size)
+        assertEquals(0, TelegramSos.parseChats("""{"ok":false,"description":"Unauthorized"}""").size)
+        assertEquals(0, TelegramSos.parseChats("""{"ok":true,"result":[]}""").size)
+    }
+
+    @Test
     fun chatUrlPointsToTheUsername() {
         assertEquals("https://t.me/segluky_bot", TelegramSos.chatUrl("segluky_bot"))
     }

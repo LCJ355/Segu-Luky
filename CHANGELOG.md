@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.94s (versionCode 81)
+
+### Configurar Telegram sin copiar numeros de chat
+
+- **Boton `BUSCAR CHATS` en cada contacto.** Dentro del editor del contacto,
+  bajo `Numero de chat del bot`, la app pregunta al bot quien le ha escrito
+  (`getUpdates`) y muestra esos chats como botones. Al tocar uno, el numero se
+  rellena solo y solo queda pulsar `GUARDAR`.
+- **Se listan todos los tipos de chat:** privado, grupo y canal, con el nombre y
+  el numero a la vista (`-100...` en grupos). El mas reciente aparece primero y
+  no se repite ninguno.
+- **Avisos claros cuando no hay nada que elegir:** lista vacia (nadie ha escrito
+  al bot todavia), clave no valida, o bot con `webhook` configurado, que impide
+  leer los mensajes.
+- **`ENVIAR PRUEBA` prueba todos los contactos con bot**, no solo el primero, e
+  informa de cuantos recibieron el mensaje y cual fallo con su motivo.
+- Se mantiene el envio por enlace de Telegram cuando el contacto solo tiene
+  usuario `@nombre` (campo de numero vacio).
+- Instrucciones dentro de la app (`Como usar`, pasos 7 y 8) reescritas para el
+  flujo nuevo, sin mandar al navegador.
+- Historial dentro de la app al dia: se anaden las entradas de 1.83s a 1.93s,
+  que faltaban.
+- 257 pruebas y `lintDebug` sin errores.
+
 ## 1.93s (versionCode 80)
 
 ### Sensores en oscuro y barra en horizontal

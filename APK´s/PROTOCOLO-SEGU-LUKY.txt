@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.93s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.94s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 80). Los valores entre parentesis son los del codigo.
+archivo (versionCode 81). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -232,6 +232,10 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   sigue viendo (el vehiculo acelera durante decenas de ms, no 10 ms).
 - (1.54s) La grabacion de sensores (CSV/ZIP) ya no hace falta para ajustar: queda
   en DIAGNOSTICO para adjuntar datos a una incidencia o comparar dos moviles.
+- (1.94s) BUSCAR CHATS solo ve a quien ya haya escrito al bot al menos una vez:
+  el bot de Telegram no puede iniciar una conversacion. El propio boton lo
+  explica cuando la lista sale vacia. Tampoco funciona si el bot tiene un webhook
+  activo (Telegram no entrega las novedades a `getUpdates`).
 
 9) DIAGRAMA DE FLUJO
 --------------------
@@ -276,5 +280,5 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.93s (versionCode 80) - 17/11/2026
+Version: V-1.94s (versionCode 81)
 

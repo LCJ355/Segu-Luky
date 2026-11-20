@@ -2349,8 +2349,8 @@ Prueba realizada: testDebugUnitTest (253 pruebas, 0 fallos), lintDebug (0
 errores, 9 avisos), assembleRelease e instalacion en OPPO CPH2695 vertical y
 horizontal.
 Resultado: compila, verifica y ambas pantallas quedan legibles y accesibles.
-APK generado: APK��s/Segu-Luky-1.93s.apk
-Mapping archivado: APK��s/mapping/Segu-Luky-1.93s-mapping.txt.gz
+APK generado: APK\u00B4s/Segu-Luky-1.93s.apk
+Mapping archivado: APK\u00B4s/mapping/Segu-Luky-1.93s-mapping.txt.gz
 Pendientes: confirmar en Redmi al reconectarlo.
 
 ======================================================================
@@ -2370,8 +2370,8 @@ Motivo: distribuir mejor la barra superior en pantallas estrechas.
 Prueba realizada: testDebugUnitTest (253 pruebas, 0 fallos), lintDebug (0
 errores, 9 avisos), assembleRelease e instalacion en OPPO CPH2695.
 Resultado: compila, verifica y los iconos quedan separados y cercanos al titulo.
-APK generado: APK��s/Segu-Luky-1.92s.apk
-Mapping archivado: APK��s/mapping/Segu-Luky-1.92s-mapping.txt.gz
+APK generado: APK\u00B4s/Segu-Luky-1.92s.apk
+Mapping archivado: APK\u00B4s/mapping/Segu-Luky-1.92s-mapping.txt.gz
 Pendientes: confirmar la misma distribucion en el Redmi.
 
 ======================================================================
@@ -2392,8 +2392,8 @@ Prueba realizada: testDebugUnitTest (253 pruebas, 0 fallos), lintDebug (0
 errores, 9 avisos), assembleRelease e instalacion en OPPO CPH2695 (720x1604,
 320 dpi).
 Resultado: compila, verifica y la barra queda centrada sin solapamientos.
-APK generado: APK��s/Segu-Luky-1.91s.apk
-Mapping archivado: APK��s/mapping/Segu-Luky-1.91s-mapping.txt.gz
+APK generado: APK\u00B4s/Segu-Luky-1.91s.apk
+Mapping archivado: APK\u00B4s/mapping/Segu-Luky-1.91s-mapping.txt.gz
 Pendientes: confirmar la misma barra en el Redmi al reconectarlo.
 
 ======================================================================
@@ -2415,8 +2415,8 @@ Prueba realizada: testDebugUnitTest (253 pruebas, 0 fallos), lintDebug (0
 errores, 9 avisos), assembleRelease, instalacion en Redmi y captura en modo
 Coche.
 Resultado: compila, verifica y muestra GPS / MODO / OBD2 en una linea.
-APK generado: APK��s/Segu-Luky-1.90s.apk
-Mapping archivado: APK��s/mapping/Segu-Luky-1.90s-mapping.txt.gz
+APK generado: APK\u00B4s/Segu-Luky-1.90s.apk
+Mapping archivado: APK\u00B4s/mapping/Segu-Luky-1.90s-mapping.txt.gz
 Pendientes: probar con GPS y adaptador OBD2 reales para ver valores en vivo.
 
 ======================================================================
@@ -2438,8 +2438,8 @@ entrar en ajustes.
 Prueba realizada: testDebugUnitTest (253 pruebas, 0 fallos), lintDebug (0
 errores, 9 avisos), assembleRelease, instalacion en Redmi.
 Resultado: compila, verifica y arranca en 1.89s.
-APK generado: APK��s/Segu-Luky-1.89s.apk
-Mapping archivado: APK��s/mapping/Segu-Luky-1.89s-mapping.txt.gz
+APK generado: APK\u00B4s/Segu-Luky-1.89s.apk
+Mapping archivado: APK\u00B4s/mapping/Segu-Luky-1.89s-mapping.txt.gz
 Pendientes: confirmar en el Redmi el toque sobre el titulo; MIUI bloquea la
 inyeccion de taps por ADB en este equipo.
 
@@ -2464,8 +2464,8 @@ errores, 9 avisos), assembleRelease, instalacion en Redmi y captura de ambos
 temas.
 Resultado: compila, verifica y arranca en claro; el modo oscuro se comprobo
 visualmente con un build temporal y se restauro el claro para la release.
-APK generado: APK��s/Segu-Luky-1.88s.apk
-Mapping archivado: APK��s/mapping/Segu-Luky-1.88s-mapping.txt.gz
+APK generado: APK\u00B4s/Segu-Luky-1.88s.apk
+Mapping archivado: APK\u00B4s/mapping/Segu-Luky-1.88s-mapping.txt.gz
 Pendientes: probar la alternancia tactil desde Configuracion en el Redmi y
 medir consumo real con el tema oscuro.
 
@@ -2589,6 +2589,47 @@ Resultado: compila y verifica; pendiente prueba controlada de Telegram y red.
 APK generado: APK´s/Segu-Luky-1.83s.apk
 Mapping archivado: APK´s/mapping/Segu-Luky-1.83s-mapping.txt.gz
 Pendientes: probar el envio de Telegram con red lenta y contactos de prueba.
+
+======================================================================
+V-1.94s (versionCode 81)
+======================================================================
+
+Fecha: 20/11/2026
+Version: 1.94s (versionCode 81)
+
+Cambio:
+- Boton BUSCAR CHATS en el editor de cada contacto (TelegramSos.discoverChats):
+  pide getUpdates al bot con offset=-100 y lista los chats que ya le
+  escribieron, del mas reciente al mas antiguo, sin repetir.
+- TelegramChat/ChatSearch/parseChats: lee my_chat_member, message,
+  edited_message y channel_post; nombre desde title, first_name+last_name o
+  username; tipo privado/grupo/canal. Chats con numero no valido se descartan.
+- Mensajes de error concretos: lista vacia, clave no valida (401), webhook
+  configurado (que impide leer los mensajes) y descripcion de la API.
+- Tocar un chat rellena Numero de chat del bot; solo queda GUARDAR.
+- ENVIAR PRUEBA manda a todos los contactos con bot (antes solo al primero) e
+  informa de enviados y del motivo de cada fallo.
+- Instrucciones dentro de la app (pasos 7 y 8) reescritas para el flujo nuevo.
+- Historial dentro de la app: se anaden las entradas de 1.83s a 1.93s, que
+  faltaban, y la de 1.94s.
+
+Motivo: el usuario se atasco configurando Telegram porque no sabia que numero de
+chat ponerle a cada contacto; la app le mandaba a mirar getUpdates en el
+navegador y copiar el numero a mano.
+Prueba realizada: testDebugUnitTest (257 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease, comprobar-apk.ps1 (firma y datos
+personales correctos).
+Resultado: probado en el movil OPPO CPH2695 el 20/11/2026. Instalado con
+adb install -r sobre la 1.93s, la pantalla principal muestra V-1.94s, en
+Configuracion > CONTACTOS SOS > EDITAR > ENVIAR TELEGRAM aparece BUSCAR CHATS y
+al pulsarlo consulta de verdad al bot y contesta "El bot no ha recibido ningun
+mensaje. Que cada contacto abra el bot y pulse INICIAR/START, y vuelve a
+buscar." Falta que un contacto pulse /start para ver la lista con nombres.
+APK generado: APK´s/Segu-Luky-1.94s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.94s-mapping.txt.gz
+Pendientes: ver la lista real de chats cuando un contacto pulse /start; revisar
+los avisos de impacto (assessImpact), la histeresis de countUpCrossings, la
+cache de UpdateChecker y el SHA256SUMS del mapping.
 
 ======================================================================
 FORMATO PARA FUTURAS ENTRADAS
