@@ -567,6 +567,64 @@ class AccidentDetectorTest {
         assertTrue(events.manualReasons.isEmpty())
     }
 
+    @Test
+    fun unaCuentaAtrasHuerfanaDejaElDetectorSordoHastaDesarmarla() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        detector.setGolpeSensitivity(3f)
+        detector.setFallOrientationGateEnabled(true)
+        // Cuenta atras restaurada cuyo plazo ya no se puede recuperar.
+        detector.restoreRuntime(AccidentDetector.RuntimeState(SafetyPhase.COUNTDOWN, null, null))
+        assertEquals(SafetyPhase.COUNTDOWN, detector.runtimeState().phase)
+
+        // Sordo: una sacudida clara no dispara nada.
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_000L)
+        detector.onDynamicAcceleration(0f, 0f, 0f, timestamp = 1_150L)
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 1_300L)
+        assertTrue(events.manualReasons.isEmpty())
+
+        detector.abandonOrphanedCountdown()
+        assertEquals(SafetyPhase.MONITORING, detector.runtimeState().phase)
+
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 2_000L)
+        detector.onDynamicAcceleration(0f, 0f, 0f, timestamp = 2_150L)
+        detector.onDynamicAcceleration(g(4f), 0f, 0f, timestamp = 2_300L)
+
+        assertEquals(SafetyPhase.COUNTDOWN, detector.runtimeState().phase)
+        assertEquals(listOf("sacudida de emergencia"), events.manualReasons)
+    }
+
+    @Test
+    fun desarmarUnaCuentaAtrasNoTocaLaValidacionEnCurso() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+
+        assertTrue(detector.simulateImpact(timestamp = 1_000L))
+        detector.abandonOrphanedCountdown()
+
+        assertEquals(SafetyPhase.VALIDATING, detector.runtimeState().phase)
+        assertEquals(1_000L, detector.runtimeState().validationStartedAt)
+        assertEquals(1, events.validations)
+    }
+
+    @Test
+    fun unaInmovilidadRestauradaFueraDelIntervaloArrancaEnElInicio() {
+        val detector = AccidentDetector(RecordingListener(), now = { 100_000L })
+
+        detector.restoreRuntime(
+            AccidentDetector.RuntimeState(SafetyPhase.VALIDATING, 60_000L, 10_000L)
+        )
+        assertEquals(100_000L, detector.runtimeState().immobileSince)
+
+        detector.restoreRuntime(
+            AccidentDetector.RuntimeState(SafetyPhase.VALIDATING, 60_000L, 999_000L)
+        )
+        assertEquals(100_000L, detector.runtimeState().immobileSince)
+
+        detector.restoreRuntime(AccidentDetector.RuntimeState(SafetyPhase.VALIDATING, 60_000L, 70_000L))
+        assertEquals(70_000L, detector.runtimeState().immobileSince)
+    }
+
     private fun g(value: Float): Float = value * AccidentDetector.STANDARD_GRAVITY
 
     private class RecordingListener : AccidentDetector.Listener {

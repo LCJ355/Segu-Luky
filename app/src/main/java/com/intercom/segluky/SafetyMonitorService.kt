@@ -828,6 +828,13 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             }
         }
         val dispatchPending = EmergencyDispatchRepository(this).load() != null
+        if (countdownEndsAt == null) {
+            // Una cuenta atras persistida que ya no se puede recuperar dejaba el
+            // detector armado para siempre: el monitor seguia "activo" pero no
+            // volvia a vigilar ni a disparar el SOS.
+            detector.abandonOrphanedCountdown()
+            countdownEndsAtWallTime = null
+        }
         if (!preserveDetectorState ||
             (detector.runtimeState().phase == SafetyPhase.MONITORING && !dispatchPending)
         ) {
@@ -2613,6 +2620,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         // A los 2 s se mira cuanto ha caido la velocidad: es lo que separa de verdad
         // un bache de una colision. Tambien solo se registra.
         window.postDelayed({
+            // Si en estos 2 s ha entrado otro golpe, este veredicto ya es viejo:
+            // sobrescribirlo tapaba la medicion del golpe nuevo.
+            if (hitAtMs != sequenceHitAtMs) return@postDelayed
             val obdAfter = ObdLinkController.state.value
             val after = impactSpeed(obdAfter, System.currentTimeMillis())
             // B3: a los 2 s la ventana de giro ya tiene datos de verdad. El

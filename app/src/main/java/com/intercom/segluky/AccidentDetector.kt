@@ -414,6 +414,16 @@ class AccidentDetector(
         }
     }
 
+    /**
+     * El COUNTDOWN lo gobierna el servicio, no el detector. Si una cuenta atras
+     * restaurada ya no tiene plazo recuperable (proceso muerto y plazo caducado)
+     * hay que desarmarla: si no, el detector se queda en COUNTDOWN para siempre,
+     * el monitor se anuncia activo y no vuelve a detectar nada.
+     */
+    fun abandonOrphanedCountdown() {
+        if (phase == SafetyPhase.COUNTDOWN) resumeMonitoring()
+    }
+
     fun resumeMonitoring() {
         phase = SafetyPhase.MONITORING
         validationStartedAt = null
@@ -441,13 +451,12 @@ class AccidentDetector(
             canRestoreValidation -> SafetyPhase.VALIDATING
             else -> SafetyPhase.MONITORING
         }
-        validationStartedAt = restoredValidationStart.takeIf { phase == SafetyPhase.VALIDATING }
-        immobileSince = if (phase == SafetyPhase.VALIDATING) {
-            state.immobileSince?.takeIf {
-                it >= restoredValidationStart!! && it <= currentTime
-            } ?: currentTime
-        } else {
+        val restoredStart = restoredValidationStart.takeIf { phase == SafetyPhase.VALIDATING }
+        validationStartedAt = restoredStart
+        immobileSince = if (restoredStart == null) {
             null
+        } else {
+            state.immobileSince?.takeIf { it >= restoredStart && it <= currentTime } ?: currentTime
         }
         candidateDeadlineAt = null
         lastStrongHitAt = UNSET_TIME
