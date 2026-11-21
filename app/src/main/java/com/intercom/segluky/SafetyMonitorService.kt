@@ -74,6 +74,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private var lastQualifiedLocation: Location? = null
     private var lastQualifiedLocationAt: Long? = null
     private var lastQualifiedLocationWallTime: Long? = null
+    /** Seguimiento de ubicacion del ultimo SOS ([SosLocationFollowUp]). */
+    private var locationFollowUp: SosLocationFollowUpState? = null
+    private var locationFollowUpLoaded = false
     private var lastSensorEventAt: Long? = null
     private var sensorRegisteredAt: Long? = null
     private var sensorAccuracyReliable = true
@@ -619,6 +622,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 lastSpeed = speed
                 lastSpeedAt = eventTime
             }
+            maybeSendLocationFollowUp(location)
         }
         detector.onLocation(
             speedKmh = speed.takeIf { speedQualified },
@@ -1279,6 +1283,14 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         } else {
             null
         }
+        // Si el aviso sale sin mapa, el primer fix que llegue despues se reenvia
+        // solo ([SosLocationFollowUp]): quien recibio el SOS no puede quedarse sin
+        // saber nunca donde esta el motorista solo porque el GPS desperto tarde.
+        armLocationFollowUp(
+            eventId = completedEventId,
+            initialLinkSent = mapLink != null,
+            seed = if (mapLink != null) lastQualifiedLocation else null
+        )
         val callPhones = contacts.filter { it.callEnabled }.map { it.phone }
         val whatsappContacts = contacts.filter { it.whatsappEnabled }
         val whatsappPackage = whatsappPackageName()
@@ -2061,7 +2073,11 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private fun postManualWhatsAppAction(
         contact: EmergencyContact,
         message: String,
-        index: Int
+        index: Int,
+        title: String = "Segu-Luky: WhatsApp SOS para ${contact.name}",
+        body: String = "Pulsa para abrir y enviar el mensaje de emergencia",
+        requestCode: Int = MANUAL_WHATSAPP_REQUEST_CODE + index,
+        notificationId: Int = MANUAL_WHATSAPP_NOTIFICATION_ID + index
     ) {
         val pkg = whatsappPackageName() ?: return
         val number = contact.phone.filter(Char::isDigit)
@@ -2069,21 +2085,21 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         val intent = buildWhatsAppIntent(pkg, number, message) ?: return
         val pending = PendingIntent.getActivity(
             this,
-            MANUAL_WHATSAPP_REQUEST_CODE + index,
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification = NotificationCompat.Builder(this, EMERGENCY_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("Segu-Luky: WhatsApp SOS para ${contact.name}")
-            .setContentText("Pulsa para abrir y enviar el mensaje de emergencia")
+            .setContentTitle(title)
+            .setContentText(body)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pending)
             .addAction(android.R.drawable.ic_menu_send, "ABRIR WHATSAPP", pending)
             .build()
         getSystemService(NotificationManager::class.java)
-            .notify(MANUAL_WHATSAPP_NOTIFICATION_ID + index, notification)
+            .notify(notificationId, notification)
     }
 
     /**
@@ -2233,47 +2249,66 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
     private fun postManualTelegramActions(contacts: List<EmergencyContact>, mapLink: String?) {
         contacts.take(MAX_MANUAL_WHATSAPP_NOTIFICATIONS).forEachIndexed { index, contact ->
-            val intent = buildTelegramIntent(contact.telegramUsername, contact.sosMessageFor(mapLink))
-                ?: return@forEachIndexed
-            val pending = PendingIntent.getActivity(
-                this,
-                MANUAL_TELEGRAM_REQUEST_CODE + index,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            val notification = NotificationCompat.Builder(this, EMERGENCY_CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_dialog_alert)
-                .setContentTitle("Segu-Luky: Telegram SOS para ${contact.name}")
-                .setContentText("Pulsa para abrir el chat y enviar el mensaje de emergencia")
-                .setAutoCancel(true)
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setContentIntent(pending)
-                .addAction(android.R.drawable.ic_menu_send, "ABRIR TELEGRAM", pending)
-                .build()
-            getSystemService(NotificationManager::class.java)
-                .notify(MANUAL_TELEGRAM_NOTIFICATION_ID + index, notification)
+            postManualTelegramAction(contact, contact.sosMessageFor(mapLink), index)
         }
     }
 
+    private fun postManualTelegramAction(
+        contact: EmergencyContact,
+        message: String,
+        index: Int,
+        title: String = "Segu-Luky: Telegram SOS para ${contact.name}",
+        body: String = "Pulsa para abrir el chat y enviar el mensaje de emergencia",
+        requestCode: Int = MANUAL_TELEGRAM_REQUEST_CODE + index,
+        notificationId: Int = MANUAL_TELEGRAM_NOTIFICATION_ID + index
+    ) {
+        val intent = buildTelegramIntent(contact.telegramUsername, message) ?: return
+        val pending = PendingIntent.getActivity(
+            this,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(this, EMERGENCY_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pending)
+            .addAction(android.R.drawable.ic_menu_send, "ABRIR TELEGRAM", pending)
+            .build()
+        getSystemService(NotificationManager::class.java).notify(notificationId, notification)
+    }
+
     private fun sendSosSms(contacts: List<EmergencyContact>, mapLink: String?) {
-        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) ==
-            PackageManager.PERMISSION_GRANTED
-        if (!granted) {
+        if (contacts.isEmpty()) return
+        val sent = sendSms(contacts.map { it to it.whatsappMessageFor(mapLink) })
+        if (sent == null) {
             SafetyStateStore.log("SMS SOS activado pero falta el permiso de SMS")
             return
         }
-        if (contacts.isEmpty()) return
+        SafetyStateStore.log(
+            "SMS SOS enviados: $sent/${contacts.size}" +
+                if (mapLink != null) " (con enlace de mapa)" else " (sin GPS reciente)"
+        )
+    }
+
+    /** Envia un SMS a cada destinatario; null cuando falta permiso o SmsManager. */
+    private fun sendSms(recipients: List<Pair<EmergencyContact, String>>): Int? {
+        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!granted) return null
         val manager = if (Build.VERSION.SDK_INT >= 31) {
             getSystemService(SmsManager::class.java)
         } else {
             @Suppress("DEPRECATION")
             SmsManager.getDefault()
-        } ?: return
+        } ?: return null
         var sent = 0
-        contacts.forEach { contact ->
+        recipients.forEach { (contact, text) ->
             val number = contact.phone.filter { it.isDigit() || it == '+' }
             if (number.isEmpty()) return@forEach
-            val text = contact.whatsappMessageFor(mapLink)
             val parts = runCatching { manager.divideMessage(text) }.getOrNull() ?: return@forEach
             val ok = runCatching {
                 manager.sendMultipartTextMessage(number, null, parts, null, null)
@@ -2281,10 +2316,175 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             }.getOrDefault(false)
             if (ok) sent++
         }
-        SafetyStateStore.log(
-            "SMS SOS enviados: $sent/${contacts.size}" +
-                if (mapLink != null) " (con enlace de mapa)" else " (sin GPS reciente)"
+        return sent
+    }
+
+    /**
+     * Arranca el seguimiento de ubicacion del SOS que se acaba de enviar.
+     *
+     * Se guarda en disco porque el reenvio puede caer en otro proceso: Android
+     * puede matar el servicio entre el aviso y el momento en que el movil
+     * recupera posicion.
+     *
+     * [seed] es la posicion que ya llevaba el aviso original (null si salio sin
+     * mapa): sirve de referencia para no reenviar el mismo punto nada mas salir.
+     */
+    private fun armLocationFollowUp(
+        eventId: String,
+        initialLinkSent: Boolean,
+        seed: Location?
+    ) {
+        val nowWall = System.currentTimeMillis()
+        val state = SosLocationFollowUpState(
+            eventId = eventId,
+            armedAtWall = nowWall,
+            initialLinkSent = initialLinkSent,
+            lastSentAtWall = if (seed != null) nowWall else null,
+            lastLatitude = seed?.latitude,
+            lastLongitude = seed?.longitude
         )
+        locationFollowUp = state
+        locationFollowUpLoaded = true
+        if (!SosLocationFollowUpRepository(this).save(state)) {
+            SafetyStateStore.log("Seguimiento de ubicacion sin guardar: el reenvio no sobrevive a un reinicio")
+        }
+    }
+
+    private fun loadLocationFollowUp(): SosLocationFollowUpState? {
+        if (!locationFollowUpLoaded) {
+            locationFollowUpLoaded = true
+            locationFollowUp = SosLocationFollowUpRepository(this).load()
+        }
+        return locationFollowUp
+    }
+
+    private fun clearLocationFollowUp(expectedEventId: String? = null) {
+        val current = loadLocationFollowUp() ?: return
+        if (expectedEventId != null && current.eventId != expectedEventId) return
+        SosLocationFollowUpRepository(this).clear()
+        locationFollowUp = null
+        // La cola de Telegram es durable: sin este cierre los reenvios de este
+        // evento se quedarian en disco aunque el seguimiento ya termine.
+        SosLocationFollowUp.jobEventIds(current.eventId).forEach { jobEventId ->
+            reportTelegramBot(jobEventId)
+        }
+    }
+
+    /**
+     * Reenvia la posicion cuando el seguimiento esta pendiente. Se llama en cada
+     * fix valido, y no hace nada si no hay SOS reciente o si todavia no toca.
+     */
+    private fun maybeSendLocationFollowUp(location: Location) {
+        val state = loadLocationFollowUp() ?: return
+        val nowWall = System.currentTimeMillis()
+        if (SosLocationFollowUp.isExpired(state, nowWall)) {
+            clearLocationFollowUp(state.eventId)
+            if (state.sentCount > 0) {
+                SafetyStateStore.log("SOS: seguimiento de ubicacion cerrado (${state.sentCount} reenvios)")
+            }
+            return
+        }
+        if (!SosLocationFollowUp.shouldSend(state, nowWall, location.latitude, location.longitude)) {
+            return
+        }
+        sendLocationFollowUp(state, nowWall, location)
+    }
+
+    /**
+     * Un reenvio. Solo SMS y bot de Telegram salen solos: WhatsApp y el enlace
+     * t.me necesitan abrir la app y desbloquear la pantalla, asi que en esos
+     * canales se deja el aviso manual en la notificacion.
+     */
+    private fun sendLocationFollowUp(
+        state: SosLocationFollowUpState,
+        nowWall: Long,
+        location: Location
+    ) {
+        val repository = ContactsRepository(this)
+        if (!repository.areSosActionsEnabled()) {
+            clearLocationFollowUp(state.eventId)
+            return
+        }
+        val contacts = repository.load()
+        val mapLink = googleMapsLink(location.latitude, location.longitude)
+        val message = followUpSosMessage(mapLink)
+        var smsSent = 0
+        if (loadSmsAuto(this) && contacts.isNotEmpty()) {
+            smsSent = sendSms(contacts.map { it to message }) ?: 0
+        }
+        val botContacts = if (repository.isTelegramBotConfigured()) {
+            contacts.filter { it.telegramReadyForBot }
+        } else {
+            emptyList()
+        }
+        if (botContacts.isNotEmpty()) {
+            // Id propio: la cola deduplica por evento y el aviso original ya cerro
+            // el suyo, asi que reutilizarlo descartaria el reenvio como repetido.
+            TelegramBotOutbox(this).enqueue(
+                SosLocationFollowUp.jobEventId(state.eventId, state.sentCount),
+                botContacts.map { it.telegramChatId to message }
+            )
+            processTelegramBotOutbox()
+        }
+        // El aviso manual se ofrece una sola vez: repetirlo en cada reenvio serian
+        // decenas de notificaciones en el movil de quien ya va hacia el accidente.
+        val offeredManual = !state.manualOffered && postLocationFollowUpManualActions(contacts, mapLink)
+        if (smsSent == 0 && botContacts.isEmpty() && !offeredManual) return
+
+        val recorded = SosLocationFollowUp.recordSent(
+            state = state,
+            nowWall = nowWall,
+            latitude = location.latitude,
+            longitude = location.longitude,
+            manualOffered = offeredManual
+        )
+        locationFollowUp = recorded
+        SosLocationFollowUpRepository(this).save(recorded)
+        val detail = buildString {
+            if (smsSent > 0) append(" SMS $smsSent/${contacts.size}")
+            if (botContacts.isNotEmpty()) append(" Telegram ${botContacts.size}")
+            if (offeredManual) append(" aviso manual en la notificacion")
+        }
+        SafetyStateStore.log(
+            "SOS: ubicacion actualizada enviada (${recorded.sentCount}/${SosLocationFollowUp.MAX_UPDATES})$detail"
+        )
+    }
+
+    /** Devuelve true si dejo alguna notificacion para enviar a mano. */
+    private fun postLocationFollowUpManualActions(
+        contacts: List<EmergencyContact>,
+        mapLink: String
+    ): Boolean {
+        val whatsapp = contacts.filter { it.whatsappEnabled }
+        val telegram = contacts.filter {
+            it.telegramEnabled && !it.telegramReadyForBot && it.telegramUsername.isNotEmpty()
+        }
+        var posted = 0
+        whatsapp.take(MAX_MANUAL_WHATSAPP_NOTIFICATIONS).forEachIndexed { index, contact ->
+            postManualWhatsAppAction(
+                contact = contact,
+                message = followUpSosMessage(mapLink),
+                index = index,
+                title = "Segu-Luky: ubicacion actualizada del SOS",
+                body = "Pulsa para enviar la ubicacion de ${contact.name}",
+                requestCode = FOLLOW_UP_WHATSAPP_REQUEST_CODE + index,
+                notificationId = FOLLOW_UP_WHATSAPP_NOTIFICATION_ID + index
+            )
+            posted++
+        }
+        telegram.take(MAX_MANUAL_WHATSAPP_NOTIFICATIONS).forEachIndexed { index, contact ->
+            postManualTelegramAction(
+                contact = contact,
+                message = followUpSosMessage(mapLink),
+                index = index,
+                title = "Segu-Luky: ubicacion actualizada del SOS",
+                body = "Pulsa para enviar la ubicacion a ${contact.name}",
+                requestCode = FOLLOW_UP_TELEGRAM_REQUEST_CODE + index,
+                notificationId = FOLLOW_UP_TELEGRAM_NOTIFICATION_ID + index
+            )
+            posted++
+        }
+        return posted > 0
     }
 
     private fun whatsappPackageName(): String? {
@@ -2335,6 +2535,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         cancelSosAlarm()
         getSystemService(NotificationManager::class.java).cancel(EMERGENCY_ALERT_NOTIFICATION_ID)
         detector.cancel()
+        clearLocationFollowUp()
         SafetyStateStore.log("Evento cancelado por el usuario")
 
         // Restore the monitoring state from before the SOS was triggered. A
@@ -2398,6 +2599,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         WhatsAppAutoSend.disarmAll(this)
         TelegramBotOutbox(this).clear()
         EmergencyDispatchRepository(this).clear()
+        clearLocationFollowUp()
         unregisterTelephonyListener()
         SafetyStateStore.reset()
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
@@ -3163,6 +3365,12 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         private const val MANUAL_TELEGRAM_REQUEST_CODE = 2012
         private const val MANUAL_TELEGRAM_NOTIFICATION_ID = 1013
         private const val MAX_MANUAL_WHATSAPP_NOTIFICATIONS = 5
+        // Avisos manuales del reenvio de ubicacion: ids propios para no pisar los
+        // del SOS original.
+        private const val FOLLOW_UP_WHATSAPP_REQUEST_CODE = 2100
+        private const val FOLLOW_UP_WHATSAPP_NOTIFICATION_ID = 1100
+        private const val FOLLOW_UP_TELEGRAM_REQUEST_CODE = 2120
+        private const val FOLLOW_UP_TELEGRAM_NOTIFICATION_ID = 1120
         private const val ESCALATION_ALARM_REQUEST_CODE = 2003
         private const val CALL_ESCALATION_TIMEOUT_MS = 60_000L
         private const val DISPATCH_WATCHDOG_REQUEST_CODE = 2004

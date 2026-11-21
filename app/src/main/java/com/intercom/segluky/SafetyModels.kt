@@ -5,6 +5,16 @@ import java.util.Locale
 const val MAP_LINK_TOKEN = "{MAPA}"
 const val DEFAULT_WHATSAPP_MESSAGE = "Segu-Luky: posible accidente. Mi ubicacion: {MAPA}"
 
+/**
+ * Texto del reenvio de ubicacion ([SosLocationFollowUp]). Es corto a proposito:
+ * el contacto ya tiene el aviso completo y lo que necesita saber es solo donde
+ * esta el motorista ahora.
+ */
+const val FOLLOW_UP_MESSAGE_TEMPLATE = "Segu-Luky: ubicacion actualizada de mi SOS. Mi ubicacion: {MAPA}"
+
+fun followUpSosMessage(mapLink: String): String =
+    FOLLOW_UP_MESSAGE_TEMPLATE.replace(MAP_LINK_TOKEN, mapLink)
+
 enum class SafetyPhase {
     STOPPED,
     MONITORING,

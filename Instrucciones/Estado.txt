@@ -2661,10 +2661,45 @@ errores, 9 avisos), assembleRelease, comprobar-apk.ps1 (firma y datos
 personales correctos).
 Resultado: compila y verifica; firma SHA-256
 e0e5a8fd...08cfe2109e sin cambios.
-APK generado: APKÂ´s/Segu-Luky-1.95s.apk
-Mapping archivado: APKÂ´s/mapping/Segu-Luky-1.95s-mapping.txt.gz
+APK generado: APK´s/Segu-Luky-1.95s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.95s-mapping.txt.gz
 Pendientes: probar en el movil el arranque tras matar la app en cuenta atras y
 una PRUEBA DE GOLPE para confirmar que vuelve a avisar.
+======================================================================
+V-1.96s (versionCode 83)
+======================================================================
+
+Fecha: 21/11/2026
+Version: 1.96s (versionCode 83)
+
+Cambio:
+- SosLocationFollowUp / SosLocationFollowUpRepository (nuevos): seguimiento de
+  ubicacion posterior al SOS, guardado en disco (segu_sos_follow_up), ventana de
+  15 min, maximo 5 reenvios y minimo de 60 s y 50 m entre reenvios.
+- SafetyMonitorService: armLocationFollowUp() al terminar el protocolo y
+  maybeSendLocationFollowUp() desde onLocationChanged. El reenvio sale por SMS y
+  por el bot de Telegram; para WhatsApp y el enlace t.me queda un aviso con un
+  toque, una sola vez por aviso. Se limpia al cancelar el SOS y al detener el
+  monitor.
+- Ids de cola propios (<evento>#ubiN) para que el outbox de Telegram y WhatsApp
+  no descarte el reenvio como repetido.
+- SafetyModels.followUpSosMessage(): texto del reenvio.
+- Refactor sin cambio de comportamiento: sendSosSms delega en sendSms y los
+  avisos manuales aceptan titulo, cuerpo, requestCode y notificationId.
+- SosLocationFollowUpTest: 13 pruebas nuevas.
+- Historial dentro de la app con la entrada 1.96s.
+
+Motivo: pregunta del usuario sobre que ocurre si el SOS sale sin situacion GPS.
+Hasta ahora, si la posicion llegaba despues del envio, los contactos se quedaban
+con "ubicacion GPS no disponible" para siempre.
+Prueba realizada: testDebugUnitTest (275 pruebas, 0 fallos), lintDebug (0
+errores, 9 avisos), assembleRelease, comprobar-apk.ps1.
+Resultado: compila y verifica. Queda pendiente la prueba real en el movil, que
+tiene la ubicacion precisa denegada.
+APK generado: APK´s/Segu-Luky-1.96s.apk
+Mapping archivado: APK´s/mapping/Segu-Luky-1.96s-mapping.txt.gz
+Pendientes: probar en el movil el SOS sin GPS y comprobar que llega el reenvio
+cuando aparece la posicion; confirmar que WhatsApp y t.me solo avisan una vez.
 ======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================

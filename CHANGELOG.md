@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.96s (versionCode 83)
+
+### La ubicacion del SOS llega aunque el GPS despierte tarde
+
+- **El problema.** El aviso solo lleva enlace de mapa si en ese instante hay una
+  posicion de menos de cinco minutos. En un tunel, en un parking subterraneo o
+  con el GPS recien encendido, los contactos reciben "ubicacion GPS no
+  disponible" y no vuelven a saber nada: aunque el movil consiga la posicion
+  veinte segundos despues, nadie se la manda.
+- **Seguimiento de ubicacion** (`SosLocationFollowUp`). Al enviar el SOS se arma
+  un seguimiento de 15 minutos, guardado en disco, y si el movil recupera la
+  posicion el enlace se reenvia solo:
+  - si el SOS salio **sin** mapa, el primer aviso sale con la primera posicion;
+  - si el SOS ya llevaba el mapa, solo se reenvia cuando el motorista se ha
+    movido de verdad (50 m) y ha pasado al menos un minuto, para no inundar de
+    mensajes a quien ya va hacia el accidente;
+  - maximo cinco reenvios por aviso, y se cancela al cancelar el SOS o al
+    detener el monitor.
+- **Canales.** SMS y bot de Telegram salen solos (funcionan con la pantalla
+  bloqueada y sin abrir nada). WhatsApp y el enlace t.me necesitan abrir la app y
+  desbloquear la pantalla, asi que no se relanzan solos: el aviso con la
+  ubicacion nueva queda en la notificacion para enviarlo con un toque, una sola
+  vez por aviso.
+- **Persistencia.** El estado se guarda en su propio fichero
+  (`segu_sos_follow_up`) para que matar el proceso entre el SOS y el fix no
+  pierda el reenvio. Cada reenvio usa un id de cola propio (`<evento>#ubiN`) para
+  que las colas durables de Telegram y WhatsApp no lo descarten como repetido.
+- **Refactor sin cambio de comportamiento.** `sendSosSms` y los avisos manuales
+  se dividen en una parte reutilizable (envio de SMS y notificacion con titulo
+  propio) para que el reenvio no duplique codigo.
+- **Historial dentro de la app** con la entrada 1.96s.
+
+Pruebas: 275 pruebas unitarias, 0 fallos (`SosLocationFollowUpTest`, 13
+casos nuevos). `lintDebug`: 0 errores, 9 avisos (los mismos de la version anterior).
+
 ## 1.95s (versionCode 82)
 
 ### El detector ya no se queda dormido

@@ -1349,6 +1349,10 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.96s - Si el SOS sale sin GPS (tunel, parking, GPS apagado), la ubicacion se reenvia sola en " +
+        "cuanto el movil la consigue: SMS y Telegram salen automaticos, y en WhatsApp o enlace t.me queda el " +
+        "aviso en la notificacion para enviarlo con un toque. Se acabo el 'ubicacion GPS no disponible' para " +
+        "siempre.")
     appendLine("1.95s - Arreglado un fallo grave del detector: si el telefono se reiniciaba en mitad de la " +
         "cuenta atras, el detector se quedaba dormido para siempre y no volvia a avisar de un golpe. Ahora " +
         "se despierta solo. Ademas, un veredicto viejo de impacto ya no puede pisar al nuevo.")

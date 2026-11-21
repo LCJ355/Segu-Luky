@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.95s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.96s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -8,6 +8,20 @@ ESTE APK HACE COSAS REALES: llama, envia mensajes y abre WhatsApp. Antes de
 poner S O S en ON revisa los contactos. Para probar sensores,
 desactivala: la cuenta atras se ejecuta sin avisar a nadie.
 
+--------------------------------------------------------------------------
+NOVEDADES 1.96s
+--------------------------------------------------------------------------
+- Si el SOS sale sin situacion GPS (tunel, parking, GPS recien encendido), el
+aviso lleva el texto de siempre pero sin mapa. Ahora la app sigue buscando
+la posicion durante 15 minutos y, cuando la consigue, reenvia sola el enlace
+de Maps por SMS y por el bot de Telegram.
+- Si el SOS ya llevaba mapa, solo reenvia cuando el motorista se ha movido de
+verdad (50 m) y ha pasado al menos un minuto. Maximo cinco reenvios, y se
+cancela al cancelar el SOS o al detener el monitor.
+- WhatsApp y el enlace t.me necesitan abrir la app y desbloquear el telefono,
+asi que no se relanzan solos: el aviso con la ubicacion nueva queda en la
+notificacion para enviarlo con un toque, una sola vez por aviso.
+- Historial dentro de la app con la entrada 1.96s.
 --------------------------------------------------------------------------
 NOVEDADES 1.95s
 --------------------------------------------------------------------------

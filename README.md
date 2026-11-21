@@ -1,4 +1,4 @@
-# Segu-Luky V-1.95s
+# Segu-Luky V-1.96s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -35,6 +35,11 @@ key; InterCOM is a separate app reached only through its exported bridge (see
   bump no longer lights the display.
 - GPS speed and signal never gate a configured impact. They refine the report and
   the map link. Missing GPS is neutral and the last valid fix is retained.
+- A degraded SOS never stays without a location: if the alert goes out while no
+  fix is fresh, a 15-minute follow-up (`SosLocationFollowUp`) resends the new
+  map link on its own as soon as the phone gets a position through SMS and the
+  Telegram bot, and offers a one-tap WhatsApp/t.me notification. Repeat updates
+  need 50 m of movement and one minute, up to five per alert.
 - Long-press on the visible controls confirms a pending event. There is no
   two-finger gesture, in-app or global, in this build.
 - Optional voice trigger: saying AYUDA or SOCORRO starts the countdown while the
@@ -113,15 +118,15 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every released version is published in `APK´s/` as
-`Segu-Luky-<version>.apk`. The current build is `Segu-Luky-1.95s.apk`.
+`Segu-Luky-<version>.apk`. The current build is `Segu-Luky-1.96s.apk`.
 
-The latest GitHub release is `V-1.95s` with `Segu-Luky-1.95s.apk` attached; the
-previous `V-1.93s`, `V-1.90s`, `V-1.87s`, `V-1.86s`, `V-1.85s`, `V-1.84s`,
+The latest GitHub release is `V-1.96s` with `Segu-Luky-1.96s.apk` attached; the
+previous `V-1.95s`, `V-1.93s`, `V-1.90s`, `V-1.87s`, `V-1.86s`, `V-1.85s`, `V-1.84s`,
 `V-1.83s` and `V-1.82s` releases remain available. **Buscar actualizacion** reads
 the GitHub API and compares against the highest published release/tag:
 
 ```text
-gh release create V-1.95s "APK´s/Segu-Luky-1.95s.apk" --title "Segu-Luky V-1.95s" --notes "..."
+gh release create V-1.96s "APK´s/Segu-Luky-1.96s.apk" --title "Segu-Luky V-1.96s" --notes "..."
 ```
 
 The published APK carries **no personal data**: contacts, phone numbers, the bot
@@ -129,7 +134,7 @@ key and the position live only in the phone's `SharedPreferences` (the app
 declares `allowBackup="false"`). Before uploading, check the file itself:
 
 ```text
-powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-1.95s.apk"
+powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-1.96s.apk"
 ```
 
 It fails if the package contains anything that is not code, resources or
