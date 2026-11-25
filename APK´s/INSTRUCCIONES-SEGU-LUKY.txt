@@ -1,4 +1,4 @@
-SEGU-LUKY V-1.97s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-1.98s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -8,6 +8,15 @@ ESTE APK HACE COSAS REALES: llama, envia mensajes y abre WhatsApp. Antes de
 poner S O S en ON revisa los contactos. Para probar sensores,
 desactivala: la cuenta atras se ejecuta sin avisar a nadie.
 
+--------------------------------------------------------------------------
+NOVEDADES 1.98s
+--------------------------------------------------------------------------
+- El sensor de vuelco WT9011DCL-BT50 solo esta activo con TIPO DE VEHICULO en
+  MOTO. En MOVIL y COCHE su tarjeta desaparece y el enlace BLE se corta.
+- Al arrancar el monitor solo se conecta en MOTO; cambiar a otro perfil con el
+  monitor parado desconecta el sensor al momento.
+- En Android 14+ el servicio solo declara el tipo connectedDevice en MOTO.
+- El punto 4 de Como usar y la seccion 4 de este documento lo explican.
 --------------------------------------------------------------------------
 NOVEDADES 1.97s
 --------------------------------------------------------------------------
@@ -166,8 +175,8 @@ NOVEDADES 1.70s
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-1.97s.apk        <- version actual
-La 1.82s a 1.96s se conservan como historico.
+    Segu-Luky-1.98s.apk        <- version actual
+La 1.82s a 1.97s se conservan como historico.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.
@@ -349,8 +358,9 @@ Configuracion; VOLVER otra vez vuelve a la pantalla principal.
 - Arriba veras la fila de estado: GOLPE, INCLIN., GPS, VELOC., INTERCOM.
 - Boton S O S: mantenlo pulsado 5 segundos. A los lados hay dos columnas que
   se van llenando de verde; al completarse arranca la cuenta atras.
-- Sensor de vuelco WT9011DCL-BT50: se configura en Configuracion > Sensores.
-  Pulsa BUSCAR, elige el sensor que se anuncia como WT901BLE67 y CONECTAR. Con
+- Sensor de vuelco WT9011DCL-BT50: SOLO esta activo con TIPO DE VEHICULO en
+  MOTO. Se configura en Configuracion > Sensores. Pulsa BUSCAR, elige el sensor
+  que se anuncia como WT901BLE67 y CONECTAR. Con
   la moto VERTICAL y quieta aprende la referencia (boton CALIBRAR); si esta en
   la pata de cabra espera a enderezarla. El umbral es ajustable entre 50 y 60
   grados (55 por defecto) y la condicion exige 5 s seguidos.
@@ -369,9 +379,9 @@ QUE DISPARA UN SOS
   el telefono en el bolsillo): se vigila la inmovilidad durante 5 min.
 - Sacudida: dos picos fuertes separados por un valle, de 250 ms o mas y dentro
   de 1,2 s (el rebote de un solo golpe no cuenta).
-- Sensor externo WT9011DCL-BT50: inclinacion X/Y igual o mayor que el umbral
-  (50-60 grados; 55 por defecto) durante 5 s seguidos, si esta conectado y
-  calibrado. No necesita que el movil haya detectado un golpe.
+- Sensor externo WT9011DCL-BT50, solo en MODO MOTO: inclinacion X/Y igual o
+  mayor que el umbral (50-60 grados; 55 por defecto) durante 5 s seguidos, si
+  esta conectado y calibrado. No necesita que el movil haya detectado un golpe.
 - Boton S O S mantenido 5 s.
 - Decir AYUDA o SOCORRO (si VOZ AYUDA / SOCORRO esta activado).
 
@@ -508,4 +518,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-1.97s (versionCode 84) - paquete com.intercom.segluky.
+Version: V-1.98s (versionCode 85) - paquete com.intercom.segluky.

@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.98s (versionCode 85)
+
+### El sensor de vuelco solo existe en MODO MOTO
+
+- **Tarjeta solo en MOTO.** `SENSOR DE VUELCO (WT9011)` desaparece de
+  Configuracion > Sensores en MOVIL y COCHE; el sensor no se enlaza ni puede
+  abrir una cuenta atras en esos perfiles.
+- **Enlace controlado por perfil.** Al arrancar el monitor se conecta solo con
+  `TIPO DE VEHICULO` en MOTO; en los demas se desconecta. Cambiar a MOVIL o
+  COCHE con el monitor parado corta el BLE inmediatamente.
+- **Android 14+:** el tipo `connectedDevice` del servicio solo se declara en
+  MOTO, cuando el sensor esta activado y hay permiso de Bluetooth.
+- **Instrucciones y textos** aclaran que el sensor es exclusivo de MOTO; el
+  punto 4 de `Como usar` y la seccion 4 del TXT lo indican.
+- 298 pruebas y `lintDebug` sin errores.
+
 ## 1.97s (versionCode 84)
 
 ### Vuelco por sensor externo WT9011DCL-BT50

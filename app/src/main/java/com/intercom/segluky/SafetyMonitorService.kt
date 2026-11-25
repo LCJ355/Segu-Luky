@@ -859,9 +859,13 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
         monitoringEnabled = true
         runtimeRepository.setMonitoringRequested(true)
-        // El sensor de vuelco es una condicion independiente: si esta activado
-        // y tiene MAC guardada, se enlaza ahora y se calibra con la moto vertical.
-        Wt9011Controller.setMonitoring(this, true)
+        // El sensor de vuelco solo existe en MODO MOTO. En COCHE o MOVIL se
+        // desconecta para no gastar bateria ni dejar una condicion que no toca.
+        if (vehicleProfile == VehicleProfile.MOTO) {
+            Wt9011Controller.setMonitoring(this, true)
+        } else {
+            Wt9011Controller.setMonitoring(this, false)
+        }
         // En coche se intenta enlazar con el adaptador al arrancar el monitor; si no
         // hay adaptador o falla, la app sigue con el movil y el GPS (el fallo queda
         // en la tarjeta del coche, nunca en el camino del SOS).
@@ -3154,6 +3158,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
      */
     private fun withConnectedDeviceType(base: Int): Int {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return base
+        if (vehicleProfile != VehicleProfile.MOTO) return base
         if (!Wt9011Settings.loadEnabled(this)) return base
         if (!Wt9011Controller.hasConnectPermission(this) &&
             !Wt9011Controller.hasScanPermission(this)
@@ -3589,6 +3594,10 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 setMountProfile(context, vehicle.defaultMount)
             }
             preferences.edit().putString(KEY_VEHICLE_PROFILE, vehicle.id).apply()
+            // El sensor externo de vuelco es exclusivo de MOTO.
+            if (vehicle != VehicleProfile.MOTO) {
+                Wt9011Controller.setMonitoring(context, false)
+            }
             SafetyStateStore.log("Vehiculo: ${vehicle.label}")
             return true
         }

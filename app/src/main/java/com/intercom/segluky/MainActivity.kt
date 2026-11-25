@@ -1356,6 +1356,8 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.98s - El sensor externo WT9011DCL-BT50 solo se activa con TIPO DE VEHICULO en MOTO: " +
+        "la tarjeta desaparece en MOVIL y COCHE, y el enlace BLE se corta al cambiar de perfil.")
     appendLine("1.97s - Sensor externo WT9011DCL-BT50 por BLE para detectar vuelco por inclinacion X/Y: umbral " +
         "ajustable 50-60 grados (55 por defecto), 5 s sostenidos y condicion independiente del resto de avisos. " +
         "Flechas X e Y junto al boton SOS y tarjeta de diagnostico para comprobar el montaje.")
@@ -2170,7 +2172,9 @@ private fun EmergencySettingsScreen(
                     )
                 }
             }
-            item { Wt9011Card() }
+            if (vehicleProfile == VehicleProfile.MOTO) {
+                item { Wt9011Card() }
+            }
             if (vehicleProfile == VehicleProfile.CAR) {
                 item { ObdLinkCard() }
             }
@@ -2959,7 +2963,7 @@ private fun InstructionsScreen(
             UsageInstruction(
                 title = "4. Caida, orientacion y sensor de vuelco",
                 text = "Con MODO MOTO, un golpe fuerte deja el aviso en espera 15 s y la pantalla se enciende para que puedas cancelarlo. El SOS salta solo si el movil queda inclinado 55 grados o mas durante 4 s seguidos. Se cancela si vuelve a estar vertical, si el GPS marca 30 km/h o mas (sigues rodando) o si pasan esos 15 s. Si lo desactivas, cualquier golpe empieza la cuenta atras directamente. " +
-                    "Si tienes el sensor WT9011DCL-BT50 montado en la moto, entra en Configuracion > Sensores, pulsa BUSCAR, elige WT901BLE67 y CONECTAR. Con la moto vertical y quieta aprende la referencia (CALIBRAR); si esta en la pata de cabra espera a enderezarla. Cuando la inclinacion X/Y supera el umbral ajustable (50-60 grados; 55 por defecto) durante 5 s, abre la misma cuenta atras. Es una condicion independiente: no sustituye a la caida del movil, ni a la voz, ni al SOS manual. Las dos columnas junto al SOS llevan una flecha X a la izquierda y Y a la derecha; debajo, cada etiqueta muestra el eje y los grados. Verde: correcto; amarillo: faltan 15 grados o menos; rojo: umbral alcanzado."
+                    "El sensor WT9011DCL-BT50 solo aparece y funciona con TIPO DE VEHICULO en MOTO. Si lo tienes montado, entra en Configuracion > Sensores, pulsa BUSCAR, elige WT901BLE67 y CONECTAR. Con la moto vertical y quieta aprende la referencia (CALIBRAR); si esta en la pata de cabra espera a enderezarla. Cuando la inclinacion X/Y supera el umbral ajustable (50-60 grados; 55 por defecto) durante 5 s, abre la misma cuenta atras. Es una condicion independiente: no sustituye a la caida del movil, ni a la voz, ni al SOS manual. Las dos columnas junto al SOS llevan una flecha X a la izquierda y Y a la derecha; debajo, cada etiqueta muestra el eje y los grados. Verde: correcto; amarillo: faltan 15 grados o menos; rojo: umbral alcanzado."
             )
         }
         item {
@@ -3321,8 +3325,9 @@ private fun Wt9011Card() {
         title = "SENSOR DE VUELCO (WT9011)",
         status = if (state.enabled) statusLabel else "DESACTIVADO",
         tone = if (state.enabled) tone else Tone.OFF,
-        description = "Condicion independiente: no sustituye a CAIDA / ORIENTACION ni a los golpes del " +
-            "movil. Se monta en la moto con el eje Z hacia arriba; la inclinacion se mide con X e Y.",
+        description = "Solo se activa en MODO MOTO. Condicion independiente: no sustituye a " +
+            "CAIDA / ORIENTACION ni a los golpes del movil. Se monta en la moto con el eje Z hacia " +
+            "arriba; la inclinacion se mide con X e Y.",
         trailing = {
             Switch(
                 checked = state.enabled,

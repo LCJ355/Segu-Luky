@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.97s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.98s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 84). Los valores entre parentesis son los del codigo.
+archivo (versionCode 85). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -261,6 +261,11 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   curso. La calibracion automatica exige estar a menos de 10 grados de la
   vertical; CALIBRAR permite confirmar un montaje con pendiente. En Android 14+
   el servicio declara el tipo connectedDevice.
+- (1.98s) El sensor externo es exclusivo de MODO MOTO. activateMonitoring solo
+  llama a Wt9011Controller.setMonitoring(true) con vehicleProfile == MOTO; en
+  MOVIL o COCHE lo deja en false y desconecta. La tarjeta de Sensores se
+  compone solo en MOTO y setVehicleProfile corta el enlace al cambiar a otro
+  perfil. El tipo connectedDevice del servicio tambien se limita a MOTO.
 9) DIAGRAMA DE FLUJO
 --------------------
                  INICIO MONITOR
@@ -304,5 +309,5 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.97s (versionCode 84)
+Version: V-1.98s (versionCode 85)
 

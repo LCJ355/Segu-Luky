@@ -2748,6 +2748,35 @@ Pendientes: validar en la moto en marcha (curvas, pata de cabra, baches y
 consumo del BLE); comprobar que CAIDA / ORIENTACION y el SOS manual siguen
 funcionando.
 ======================================================================
+V-1.98s (versionCode 85)
+======================================================================
+
+Fecha: 25/11/2026
+Version: 1.98s (versionCode 85)
+
+Cambio:
+- La tarjeta SENSOR DE VUELCO (WT9011) solo aparece con TIPO DE VEHICULO en
+  MOTO. En MOVIL y COCHE no se muestra.
+- SafetyMonitorService: el sensor solo se enlaza al arrancar el monitor si el
+  perfil es MOTO; en los demas se desconecta. Cambiar de perfil con el monitor
+  parado corta el enlace BLE.
+- Android 14+: el tipo connectedDevice del servicio solo se declara en MOTO,
+  con el sensor activado y permiso de Bluetooth.
+- Instrucciones dentro de la app (punto 4) y TXT: el sensor es exclusivo de
+  MOTO.
+- Historial dentro de la app con la entrada 1.98s.
+
+Motivo: el sensor esta montado en la moto; no debe estar activo ni gastar BLE
+en COCHE o MOVIL.
+Prueba realizada: testDebugUnitTest (298 pruebas, 0 fallos), lintDebug (0
+errores), assembleDebug y assembleRelease; instalado en el OPPO. En COCHE la
+tarjeta desaparece y el sensor queda desconectado; al volver a MOTO aparece de
+nuevo.
+Resultado: compila, verifica y el sensor queda limitado a MOTO.
+APK generado: (ver entrada de publicacion).
+Mapping archivado: (ver entrada de publicacion).
+Pendientes: validar en la moto en marcha que el enlace se mantiene en MOTO.
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 
