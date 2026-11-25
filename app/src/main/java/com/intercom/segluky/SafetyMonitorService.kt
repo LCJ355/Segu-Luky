@@ -492,6 +492,13 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private fun onExternalFall(fall: Wt9011Fall) {
         if (!monitoringEnabled) return
         if (detector.currentPhase == SafetyPhase.COUNTDOWN) return
+        if (countdownEndsAt != null ||
+            dispatchInProgress ||
+            EmergencyDispatchRepository(this).load() != null
+        ) {
+            SafetyStateStore.log("Vuelco ignorado: SOS o envio en curso")
+            return
+        }
         val tilt = "${fall.tiltDegrees.toInt()} grados"
         val threshold = "${fall.thresholdDegrees.toInt()} grados"
         SafetyStateStore.log(

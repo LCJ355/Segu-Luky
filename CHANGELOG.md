@@ -21,8 +21,16 @@
   encima y sigue visible durante los 5 s.
 - **Calibracion con la moto vertical.** Se aprende la referencia al conectar y
   con el boton `CALIBRAR`; si la moto se mueve durante la ventana, la
-  calibracion se reinicia. Un pasa-bajos de la gravedad filtra la vibracion del
-  motor y los baches.
+  calibracion se reinicia. La calibracion automatica espera si la moto esta a
+  mas de 10 grados (por ejemplo, en la pata de cabra); `CALIBRAR` permite
+  confirmar un montaje con algo de pendiente. Un pasa-bajos de la gravedad
+  filtra la vibracion del motor y los baches.
+- **Un vuelco no se suma a un SOS en curso.** Si ya hay una cuenta atras o un
+  envio de avisos pendiente, la condicion externa se ignora y queda en el
+  registro, para no duplicar llamadas ni mensajes.
+- **Etiquetas X/Y.** Debajo de cada columna, la etiqueta indica el eje y los
+  grados con el mismo color del semaforo. El texto es mayor y queda centrado
+  con su barra, sin tapar el relleno de los 5 s.
 - **Tarjeta de diagnostico** en Sensores: `BUSCAR`, `CONECTAR`, `CORTAR`,
   `CALIBRAR`, valores `X` e `Y` en g, inclinacion, umbral, estado del enlace,
   frecuencia real y aviso de que el magnetometro no se usa. Se puede conectar
@@ -32,12 +40,13 @@
   mantiene en el servicio en primer plano y se reconecta solo.
 - **Android 14+:** se declara `FOREGROUND_SERVICE_CONNECTED_DEVICE` y el tipo
   `connectedDevice` cuando el sensor esta activado y hay permiso de Bluetooth.
-- 295 pruebas y `lintDebug` sin errores.
+- 298 pruebas y `lintDebug` sin errores.
 
-Prueba realizada: conectado el sensor real en el OPPO CPH2695 (`WT901BLE67`,
-`E8:B6:BE:8C:76:19`), tarjeta en `VIGILANDO`, `X/Y` en vivo e inclinacion 0-2
-grados con la moto vertical. Pendiente la prueba fisica de inclinacion y del
-disparo de la cuenta atras.
+Prueba realizada: sensor real en el OPPO CPH2695 (`WT901BLE67`,
+`E8:B6:BE:8C:76:19`): conexion, calibracion con la moto vertical, `X/Y` en vivo,
+flechas y etiquetas junto al SOS y disparo de la cuenta atras al inclinar.
+Pendiente validar en la moto en marcha: curvas, pata de cabra, baches y consumo
+del BLE.
 
 ## 1.96s (versionCode 83)
 

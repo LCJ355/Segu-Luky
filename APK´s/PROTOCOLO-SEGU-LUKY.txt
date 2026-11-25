@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.96s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-1.97s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 82). Los valores entre parentesis son los del codigo.
+archivo (versionCode 84). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -251,6 +251,16 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   bot de Telegram. Si el SOS ya llevaba mapa, el estado arranca con esa
   coordenada para no repetir el mismo punto. WhatsApp y t.me solo quedan como
   aviso de un toque, porque necesitan la app en primer plano.
+- (1.97s) Sensor externo WT9011DCL-BT50 (BLE): se configura a 6 ejes y 50 Hz
+  con mascara 0x07 y 130 ms entre ordenes. La trama 55 61 trae aceleracion,
+  giro y angulos; el vuelco usa solo X/Y de la gravedad frente a una referencia
+  aprendida con la moto vertical, con un pasa-bajos de 350 ms. Umbral 50-60
+  grados (55 por defecto), 5 s sostenidos, histeresis de 5 grados y rearme tras
+  3 s vertical. La condicion es independiente y no excluyente, usa la misma
+  cuenta atras y el protocolo completo, y se ignora si ya hay SOS o envio en
+  curso. La calibracion automatica exige estar a menos de 10 grados de la
+  vertical; CALIBRAR permite confirmar un montaje con pendiente. En Android 14+
+  el servicio declara el tipo connectedDevice.
 9) DIAGRAMA DE FLUJO
 --------------------
                  INICIO MONITOR
@@ -294,5 +304,5 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.96s (versionCode 83)
+Version: V-1.97s (versionCode 84)
 

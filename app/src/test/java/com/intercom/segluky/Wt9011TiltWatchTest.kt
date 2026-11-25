@@ -57,6 +57,30 @@ class Wt9011TiltWatchTest {
     }
 
     @Test
+    fun doesNotCalibrateWithTheBikeOnTheSideStand() {
+        val watch = Wt9011TiltWatch()
+        val reading = feed(watch, 15f, 0L, 4_000L)
+        assertFalse(reading.calibrated)
+    }
+
+    @Test
+    fun toleratesASmallMountingSlope() {
+        val watch = Wt9011TiltWatch()
+        val reading = feed(watch, 5f, 0L, 3_200L)
+        assertTrue(reading.calibrated)
+        assertEquals(0f, reading.tiltDegrees ?: -1f, 0.2f)
+    }
+
+    @Test
+    fun manualCalibrationAcceptsASteeperMount() {
+        val watch = Wt9011TiltWatch()
+        watch.calibrate(force = true)
+        val reading = feed(watch, 15f, 0L, 3_200L)
+        assertTrue(reading.calibrated)
+        assertEquals(0f, reading.tiltDegrees ?: -1f, 0.2f)
+    }
+
+    @Test
     fun doesNotCalibrateWithSensorOnItsSide() {
         val watch = Wt9011TiltWatch()
         var last = watch.feed(1f, 0f, 0f, 0f, 0f, 0f, 0L)

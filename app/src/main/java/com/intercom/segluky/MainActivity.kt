@@ -2957,8 +2957,9 @@ private fun InstructionsScreen(
         }
         item {
             UsageInstruction(
-                title = "4. Caida y orientacion",
-                text = "Con MODO MOTO, un golpe fuerte deja el aviso en espera 15 s y la pantalla se enciende para que puedas cancelarlo. El SOS salta solo si el movil queda inclinado 55 grados o mas durante 4 s seguidos. Se cancela si vuelve a estar vertical, si el GPS marca 30 km/h o mas (sigues rodando) o si pasan esos 15 s. Si lo desactivas, cualquier golpe empieza la cuenta atras directamente."
+                title = "4. Caida, orientacion y sensor de vuelco",
+                text = "Con MODO MOTO, un golpe fuerte deja el aviso en espera 15 s y la pantalla se enciende para que puedas cancelarlo. El SOS salta solo si el movil queda inclinado 55 grados o mas durante 4 s seguidos. Se cancela si vuelve a estar vertical, si el GPS marca 30 km/h o mas (sigues rodando) o si pasan esos 15 s. Si lo desactivas, cualquier golpe empieza la cuenta atras directamente. " +
+                    "Si tienes el sensor WT9011DCL-BT50 montado en la moto, entra en Configuracion > Sensores, pulsa BUSCAR, elige WT901BLE67 y CONECTAR. Con la moto vertical y quieta aprende la referencia (CALIBRAR); si esta en la pata de cabra espera a enderezarla. Cuando la inclinacion X/Y supera el umbral ajustable (50-60 grados; 55 por defecto) durante 5 s, abre la misma cuenta atras. Es una condicion independiente: no sustituye a la caida del movil, ni a la voz, ni al SOS manual. Las dos columnas junto al SOS llevan una flecha X a la izquierda y Y a la derecha; debajo, cada etiqueta muestra el eje y los grados. Verde: correcto; amarillo: faltan 15 grados o menos; rojo: umbral alcanzado."
             )
         }
         item {
@@ -3294,6 +3295,7 @@ private fun Wt9011Card() {
         Wt9011Status.NO_BLUETOOTH -> "SIN BLUETOOTH"
         Wt9011Status.NO_DEVICE -> "SIN SENSOR"
         Wt9011Status.SCANNING -> "BUSCANDO"
+        Wt9011Status.FOUND -> "ENCONTRADOS"
         Wt9011Status.CONNECTING -> "CONECTANDO"
         Wt9011Status.CALIBRATING -> "CALIBRANDO"
         Wt9011Status.READY -> if (state.monitoring) "VIGILANDO" else "LISTO"
@@ -3301,7 +3303,8 @@ private fun Wt9011Card() {
         Wt9011Status.ERROR -> "ERROR"
     }
     val tone = when (state.status) {
-        Wt9011Status.READY -> Tone.OK
+        Wt9011Status.READY,
+        Wt9011Status.FOUND -> Tone.OK
         Wt9011Status.CALIBRATING,
         Wt9011Status.CONNECTING,
         Wt9011Status.SCANNING,
@@ -3365,7 +3368,7 @@ private fun Wt9011Card() {
             }
             OutlinedButton(
                 onClick = {
-                    Wt9011Controller.calibrate()
+                    Wt9011Controller.calibrate(force = true)
                     SafetyStateStore.log("Calibrando sensor de vuelco: moto vertical y quieta")
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -3412,7 +3415,7 @@ private fun Wt9011Card() {
                 )
                 SensorMetric(
                     label = "UMBRAL",
-                    value = "${state.thresholdDegrees.toInt()}°",
+                    value = "${threshold.toInt()}°",
                     modifier = Modifier.weight(1f)
                 )
             }

@@ -56,6 +56,7 @@ class Wt9011TiltWatch(
     private var baselineY = 0f
     private var baselineZ = 0f
     private var calibrated = false
+    private var relaxedCalibration = false
 
     private var tiltedSince: Long? = null
     private var triggered = false
@@ -74,10 +75,20 @@ class Wt9011TiltWatch(
         )
     }
 
-    /** Vuelve a aprender la referencia y borra la condicion en curso. */
-    fun calibrate() = reset()
+    /**
+     * Vuelve a aprender la referencia y borra la condicion en curso.
+     * [force] lo usa el boton CALIBRAR: acepta cualquier montaje porque el
+     * usuario confirma que la moto esta vertical. La calibracion automatica
+     * sigue exigiendo estar a menos de 10 grados para no aprender la pata de
+     * cabra como si fuera la vertical.
+     */
+    fun calibrate(force: Boolean = false) {
+        reset()
+        relaxedCalibration = force
+    }
 
     fun reset() {
+        relaxedCalibration = false
         filteredValid = false
         filteredX = 0f
         filteredY = 0f
@@ -145,7 +156,12 @@ class Wt9011TiltWatch(
             // que estar razonablemente arriba. El giro descarta un movimiento
             // franco; la estabilidad de la media descarta una moto en marcha.
             val gyro = sqrt(gx * gx + gy * gy + gz * gz)
-            if (abs(unitZ) < MIN_CALIBRATION_UNIT_Z || gyro > MAX_CALIBRATION_GYRO_DPS) {
+            val minimumUnitZ = if (relaxedCalibration) {
+                RELAXED_MIN_CALIBRATION_UNIT_Z
+            } else {
+                MIN_CALIBRATION_UNIT_Z
+            }
+            if (abs(unitZ) < minimumUnitZ || gyro > MAX_CALIBRATION_GYRO_DPS) {
                 restartCalibration()
                 return currentReading()
             }
@@ -180,6 +196,7 @@ class Wt9011TiltWatch(
             baselineY = averageY / length
             baselineZ = averageZ / length
             calibrated = true
+            relaxedCalibration = false
             lastTilt = 0f
             lastAxisX = 0f
             lastAxisY = 0f
@@ -267,7 +284,11 @@ class Wt9011TiltWatch(
 
         private const val MIN_GRAVITY_G = 0.6f
         private const val MAX_GRAVITY_G = 1.4f
-        private const val MIN_CALIBRATION_UNIT_Z = 0.5f
+        // No se calibra con la moto en la pata de cabra: solo se acepta una
+        // vertical a menos de 10 grados. Si esta ladeada, la app espera a que
+        // se enderece y la mantenga quieta.
+        private const val MIN_CALIBRATION_UNIT_Z = 0.985f
+        private const val RELAXED_MIN_CALIBRATION_UNIT_Z = 0.5f
         private const val MAX_CALIBRATION_GYRO_DPS = 180f
         private const val MAX_CALIBRATION_DEVIATION = 0.10f
         private const val MIN_CALIBRATION_SAMPLES = 20

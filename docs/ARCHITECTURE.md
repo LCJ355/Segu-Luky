@@ -66,6 +66,23 @@ the normalized message matches exactly.
 - `SensorCalibrationService` escribe el CSV desde un hilo de sensores dedicado y
   protege el writer con un lock; el formato es aditivo para no romper CSV viejos.
 
+## Sensor externo de vuelco (1.97s)
+
+- `Wt9011Controller` es el dueno del enlace BLE con el WT9011DCL-BT50: escaneo,
+  GATT serializado, MTU 247, CCCD con respaldo, reconexion y publicacion del
+  estado a 5 Hz. La interfaz puede conectarlo con el monitor parado para
+  comprobar los ejes.
+- `Wt9011Protocol` y `Wt9011Config` son Kotlin puro y estan cubiertos por
+  pruebas JVM: tramas `55 61` de 20 bytes, variante clasica de 11 bytes y plan
+  de configuracion a 6 ejes / 50 Hz / mascara `0x07`.
+- `Wt9011TiltWatch` calcula la inclinacion X/Y contra una referencia aprendida
+  con la moto vertical, con pasa-bajos de gravedad, umbral 50-60 grados, 5 s
+  sostenidos, histeresis y rearme. No usa el magnetometro ni el rumbo.
+- `SafetyMonitorService` solo consume el evento de vuelco: comprueba que el
+  monitor este activo y que no haya SOS o envio en curso, y llama a
+  `AccidentDetector.confirmExternalFall`, que reutiliza la cuenta atras y el
+  protocolo completos. Es una condicion mas, nunca exclusiva.
+
 ## Testing
 
 - Pure detector, policy, contact and WhatsApp-contract tests run on the JVM.

@@ -2733,19 +2733,20 @@ Cambio:
 Motivo: el usuario quiere una condicion de vuelco con un IMU externo montado en
 el chasis/asiento, independiente de los avisos del movil. El sensor ofrece X/Y
 reales y el rumbo no aporta nada al vuelco.
-Prueba realizada: testDebugUnitTest (295 pruebas, 0 fallos), lintDebug (0
+Prueba realizada: testDebugUnitTest (298 pruebas, 0 fallos), lintDebug (0
 errores), assembleDebug y assembleRelease. Instalado sobre la 1.96s en el OPPO
-CPH2695 y conectado el sensor real WT901BLE67 · E8:B6:BE:8C:76:19: la tarjeta
-pasa a VIGILANDO, muestra X/Y en vivo y la inclinacion 0-2 grados con el sensor
-vertical.
-Resultado: compila, conecta, recibe tramas y calibra. Pendiente la prueba fisica
-de inclinacion sostenida y del disparo real de la cuenta atras.
-APK generado: pendiente de publicar (build local 1.97s).
-Mapping archivado: pendiente.
-Pendientes: inclinar el sensor 30, 50 y 60 grados y comprobar flechas/colores;
-mantener 60 grados 5 s y confirmar que abre una sola cuenta atras; comprobar que
-CAIDA / ORIENTACION y el SOS manual siguen funcionando; revisar consumo del BLE
-en un recorrido.
+CPH2695 y probado con el sensor real WT901BLE67 · E8:B6:BE:8C:76:19: conexion,
+calibracion con la moto vertical, X/Y en vivo, flechas y etiquetas X/Y junto al
+SOS y disparo de la cuenta atras al inclinar.
+Resultado: compila, conecta, recibe tramas, calibra y dispara la cuenta atras.
+La calibracion automatica espera si la moto esta a mas de 10 grados (pata de
+cabra); CALIBRAR permite confirmar un montaje con pendiente. Un vuelco durante
+un SOS o un envio en curso se ignora.
+APK generado: (ver entrada de publicacion).
+Mapping archivado: (ver entrada de publicacion).
+Pendientes: validar en la moto en marcha (curvas, pata de cabra, baches y
+consumo del BLE); comprobar que CAIDA / ORIENTACION y el SOS manual siguen
+funcionando.
 ======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================

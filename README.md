@@ -127,17 +127,16 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every released version is published in `APK´s/` as
-`Segu-Luky-<version>.apk`. The current development build is `1.97s` (external
-rollover sensor); it is installed for device testing and is not published yet.
-The latest published build is `Segu-Luky-1.96s.apk`.
+`Segu-Luky-<version>.apk`. The current build is `Segu-Luky-1.97s.apk`.
 
-The latest GitHub release is `V-1.96s` with `Segu-Luky-1.96s.apk` attached; the
-previous `V-1.95s`, `V-1.93s`, `V-1.90s`, `V-1.87s`, `V-1.86s`, `V-1.85s`, `V-1.84s`,
-`V-1.83s` and `V-1.82s` releases remain available. **Buscar actualizacion** reads
-the GitHub API and compares against the highest published release/tag:
+The latest GitHub release is `V-1.97s` with `Segu-Luky-1.97s.apk` attached; the
+previous `V-1.96s`, `V-1.95s`, `V-1.93s`, `V-1.90s`, `V-1.87s`, `V-1.86s`,
+`V-1.85s`, `V-1.84s`, `V-1.83s` and `V-1.82s` releases remain available.
+**Buscar actualizacion** reads the GitHub API and compares against the highest
+published release/tag:
 
 ```text
-gh release create V-1.96s "APK´s/Segu-Luky-1.96s.apk" --title "Segu-Luky V-1.96s" --notes "..."
+gh release create V-1.97s "APK´s/Segu-Luky-1.97s.apk" --title "Segu-Luky V-1.97s" --notes "..."
 ```
 
 The published APK carries **no personal data**: contacts, phone numbers, the bot
@@ -145,7 +144,7 @@ key and the position live only in the phone's `SharedPreferences` (the app
 declares `allowBackup="false"`). Before uploading, check the file itself:
 
 ```text
-powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-1.96s.apk"
+powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-1.97s.apk"
 ```
 
 It fails if the package contains anything that is not code, resources or
@@ -163,7 +162,11 @@ pairs or the names passed in `-Nombres`, or if the signature does not match
 4. Start monitoring and confirm the persistent notification appears.
 5. Long-press the `S O S` control to start the real 30-second countdown.
 6. Cancel the countdown and inspect the recent event log.
-7. Re-enable `FUNCIONALIDAD SOS` only when the contacts are verified. There is no
+7. With the WT9011 connected and calibrated upright, tilt it past the threshold
+   and hold it for 5 s. With `FUNCIONALIDAD SOS` still disabled, verify that the
+   countdown opens once, the X/Y arrows and labels turn amber/red, and cancel
+   it. Then set the bike upright for 3 s to re-arm.
+8. Re-enable `FUNCIONALIDAD SOS` only when the contacts are verified. There is no
    debug-only simulation of the contact protocol.
 
 The two-finger gesture (two fingers anywhere on screen) was removed: on some

@@ -34,6 +34,7 @@ enum class Wt9011Status {
     NO_BLUETOOTH,
     NO_DEVICE,
     SCANNING,
+    FOUND,
     CONNECTING,
     CALIBRATING,
     READY,
@@ -165,10 +166,13 @@ object Wt9011Controller {
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
+            if (!scanning) return
             val name = runCatching { result.device.name }.getOrNull()
                 ?: result.scanRecord?.deviceName
                 ?: ""
-            if (!name.startsWith("WT901", ignoreCase = true)) return
+            val advertisesService = result.scanRecord?.serviceUuids
+                ?.any { it.uuid == SERVICE_UUID } == true
+            if (!name.startsWith("WT901", ignoreCase = true) && !advertisesService) return
             val candidate = Wt9011Device(
                 name = name,
                 address = result.device.address,
@@ -303,7 +307,10 @@ object Wt9011Controller {
                     if (_scanResults.value.isEmpty()) {
                         publish(Wt9011Status.NO_DEVICE, "No se encontro ningun WT901. Enciende el sensor.")
                     } else {
-                        _state.value = _state.value.copy(detail = "Busqueda terminada")
+                        publish(
+                            Wt9011Status.FOUND,
+                            "${_scanResults.value.size} sensor(es) encontrado(s); elige uno"
+                        )
                     }
                 }
             }
@@ -312,6 +319,10 @@ object Wt9011Controller {
         } catch (error: SecurityException) {
             scanning = false
             publish(Wt9011Status.NO_PERMISSION, "Android denego el permiso de busqueda BLE.")
+            false
+        } catch (error: Exception) {
+            scanning = false
+            publish(Wt9011Status.ERROR, "No se pudo iniciar la busqueda BLE: ${error.message.orEmpty()}")
             false
         }
     }
@@ -423,8 +434,8 @@ object Wt9011Controller {
     }
 
     @Synchronized
-    fun calibrate() {
-        tiltWatch.calibrate()
+    fun calibrate(force: Boolean = false) {
+        tiltWatch.calibrate(force)
         fallEmitted = false
         _state.value = _state.value.copy(
             status = if (wanted) Wt9011Status.CALIBRATING else _state.value.status,
@@ -703,6 +714,7 @@ object Wt9011Controller {
     }
 
     private fun pumpConfig(g: BluetoothGatt) {
+        if (g !== gatt) return
         if (configInFlight) return
         val characteristic = writeChar
         if (characteristic == null) {
