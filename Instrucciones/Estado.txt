@@ -2765,6 +2765,10 @@ Cambio:
 - Instrucciones dentro de la app (punto 4) y TXT: el sensor es exclusivo de
   MOTO.
 - Historial dentro de la app con la entrada 1.98s.
+- Limpieza del repositorio: APK´s conserva la 1.98s y las dos anteriores; las
+  1.82s-1.95s se retiran del arbol (hashes en HISTORICO-RETIRADO.txt), siguen en
+  tags/historial y sus releases antiguas dejan de listarse. Se retira el
+  diagrama FLUJO-SEGU-LUKY.pdf de la 1.11s.
 
 Motivo: el sensor esta montado en la moto; no debe estar activo ni gastar BLE
 en COCHE o MOVIL.

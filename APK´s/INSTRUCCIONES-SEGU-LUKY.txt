@@ -176,7 +176,8 @@ NOVEDADES 1.70s
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
     Segu-Luky-1.98s.apk        <- version actual
-La 1.82s a 1.97s se conservan como historico.
+La 1.96s y la 1.97s se conservan como historico. Las anteriores siguen en los
+tags de git y en el historial; sus hashes estan en HISTORICO-RETIRADO.txt.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
 Firma propia: se puede instalar junto a InterCOM-Luky sin conflicto.

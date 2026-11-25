@@ -1,5 +1,9 @@
-SHA-256 DE LAS APK PUBLICADAS - Segu-Luky
-=========================================
+SHA-256 DE LAS APK ARCHIVADAS - Segu-Luky
+==========================================
+
+Se conservan la version actual y las dos anteriores. Las versiones retiradas
+del arbol, con sus hashes, estan en HISTORICO-RETIRADO.txt; sus APKs siguen en
+el historial de git.
 
 Comprobar un archivo descargado:
   Windows: certutil -hashfile "Segu-Luky-<version>.apk" SHA256
@@ -8,12 +12,9 @@ Comprobar un archivo descargado:
 
 Un SHA-256 distinto significa que el archivo no es el publicado.
 
-a6a72a7be4d7c0421005b0dd4eb5e10b775fee5f8e6e8802d4899361073ba2c9  Segu-Luky-1.82s.apk  (5627059 bytes)
-3ab445b21d1b1b546b7f7bccf689f2a2c8de15b94476f514564b249abe6e8bc2  Segu-Luky-1.83s.apk  (5628515 bytes)
-1b1db8cedc20d3a2c2ae367b3d89666a2ef78b0c3a43301c4970a8381a07fa38  Segu-Luky-1.84s.apk  (5606187 bytes)
-32e2c17630fc792b925df575d2f41ed47afcf81acb75e01edae3f350641c9ab2  Segu-Luky-1.85s.apk  (5612835 bytes)
-0a312675de190bd48f105b34279469e8437f4d9345f16548f23c430f9e728e7d  Segu-Luky-1.86s.apk  (5612859 bytes)
-99bd00a959a7e4cb641394bec8c31ffcf4aed0a3307f941406d4b2eae7e4bb7a  Segu-Luky-1.87s.apk  (5613967 bytes)
+c3b402f0dc7d9c74ab4b2006693cd56a2f2e1ff038d23c3b5ed883f8d3257c11  Segu-Luky-1.96s.apk  (5639335 bytes)
+7ae38fe1fd795694ea43a9ceac2a463381bf514fcded3a1ca02447546ede0611  Segu-Luky-1.97s.apk  (5687895 bytes)
+067f319854ae5b2b64e86c5b1b4f8cb98688386ee4cbce667f1ac3f8aa1d521f  Segu-Luky-1.98s.apk  (5688255 bytes)
 
 Detalle de permisos, destinos de red y por que avisa Play Protect:
   docs/SEGURIDAD.md
@@ -23,14 +24,3 @@ Firma de todas las versiones (misma clave desde la 1.44s):
   Certificado SHA-256:
     E0:E5:A8:FD:9B:42:EC:DA:38:22:B3:B1:BC:05:AD:D7:CA:02:DC:B3:DE:B8:77:1B:AF:8F:64:08:CF:E2:10:9E
   Comprobar la firma: apksigner verify --print-certs <apk>
-430350570b576d069169460aab3a1e8e9f5fa589cbcd9c6263809416d74b1e29  Segu-Luky-1.88s.apk  (5617139 bytes)
-d7592ba77671b3c4dc14e549eecd3dc1372b93e4e73f8847998aee583dea9d4a  Segu-Luky-1.89s.apk  (5616883 bytes)
-135a637755e26a305b41fa67653d055fbdc0f97a0619d8e55cee040f3dab78bb  Segu-Luky-1.90s.apk  (5619775 bytes)
-29964940b26d714d355339dda214924a1ba842427238cea94a61a983c513cb7c  Segu-Luky-1.91s.apk  (5621927 bytes)
-497f67a8f8385bf2a9b96ab1c0f50f7a66ec70c3894fd5074595cc2d537bf8f9  Segu-Luky-1.92s.apk  (5621935 bytes)
-86a9e68a070654f9fca50885ac9b88cb236277b97dc71b12ee75d38057ad7a86  Segu-Luky-1.93s.apk  (5622439 bytes)
-2bc23fbe1beca65234ce5d41352632289b6d675cdccf1689ecc162b3e33f3026  Segu-Luky-1.94s.apk  (5633895 bytes)
-cb7d2e391dad8c42695462691caa735516cd99da3fed5056ca1cbf427b511306  Segu-Luky-1.95s.apk  (5634207 bytes)
-c3b402f0dc7d9c74ab4b2006693cd56a2f2e1ff038d23c3b5ed883f8d3257c11  Segu-Luky-1.96s.apk  (5639335 bytes)
-7ae38fe1fd795694ea43a9ceac2a463381bf514fcded3a1ca02447546ede0611  Segu-Luky-1.97s.apk  (5687895 bytes)
-067f319854ae5b2b64e86c5b1b4f8cb98688386ee4cbce667f1ac3f8aa1d521f  Segu-Luky-1.98s.apk  (5688255 bytes)

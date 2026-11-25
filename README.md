@@ -126,12 +126,14 @@ gradlew.bat assembleDebug
 
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
-The shareable build of every released version is published in `APK´s/` as
-`Segu-Luky-<version>.apk`. The current build is `Segu-Luky-1.98s.apk`.
+The current build and the two previous ones are archived in `APK´s/` as
+`Segu-Luky-<version>.apk` with their R8 mappings. The current build is
+`Segu-Luky-1.98s.apk`.
 
 The latest GitHub release is `V-1.98s` with `Segu-Luky-1.98s.apk` attached.
-Older versions remain as git tags and as archived APKs/mappings in `APK´s/`;
-the public releases page only lists the current one.
+Older versions remain as git tags; their APKs and mappings were retired from
+the tree (their hashes are in `APK´s/HISTORICO-RETIRADO.txt`) and remain in the
+git history. The public releases page only lists the current one.
 **Buscar actualizacion** reads the GitHub API and compares against the highest
 published release/tag:
 

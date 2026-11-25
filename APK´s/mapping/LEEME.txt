@@ -7,25 +7,11 @@ Un `mapping.txt` es el mapa de ofuscacion que genera R8 al compilar la release.
 Sin el, las trazas de fallo de la app publicada muestran nombres como
 `a.b.c(SourceFile:1)` y no se pueden diagnosticar.
 
-Aqui se guarda uno comprimido por cada version publicada:
+Aqui se guardan la version actual y las dos anteriores:
 
     Segu-Luky-1.98s-mapping.txt.gz   <- version actual (versionCode 85)
     Segu-Luky-1.97s-mapping.txt.gz   <- historico (versionCode 84)
     Segu-Luky-1.96s-mapping.txt.gz   <- historico (versionCode 83)
-    Segu-Luky-1.95s-mapping.txt.gz   <- historico (versionCode 82)
-    Segu-Luky-1.94s-mapping.txt.gz   <- historico (versionCode 81)
-    Segu-Luky-1.93s-mapping.txt.gz   <- historico (versionCode 80)
-    Segu-Luky-1.92s-mapping.txt.gz   <- historico (versionCode 79)
-    Segu-Luky-1.91s-mapping.txt.gz   <- historico (versionCode 78)
-    Segu-Luky-1.90s-mapping.txt.gz   <- historico (versionCode 77)
-    Segu-Luky-1.89s-mapping.txt.gz   <- historico (versionCode 76)
-    Segu-Luky-1.88s-mapping.txt.gz   <- historico (versionCode 75)
-    Segu-Luky-1.87s-mapping.txt.gz   <- historico (versionCode 74)
-    Segu-Luky-1.86s-mapping.txt.gz   <- historico (versionCode 73)
-    Segu-Luky-1.85s-mapping.txt.gz   <- historico (versionCode 72)
-    Segu-Luky-1.84s-mapping.txt.gz   <- historico (versionCode 71)
-    Segu-Luky-1.83s-mapping.txt.gz   <- historico (versionCode 70)
-    Segu-Luky-1.82s-mapping.txt.gz   <- historico (versionCode 69)
 
 Cada archivo solo sirve para las trazas del codigo con el que se genero.
 
@@ -43,23 +29,13 @@ Procedencia de la 1.97s
 - Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
 Procedencia de la 1.96s
 --------------------------------
-- Generado con `gradlew assembleRelease` sobre
-  `lcj355-fix-sos-dispatch-hardening`, que declara
+- Generado con `gradlew assembleRelease` sobre la rama de la 1.96s, que declara
   `versionCode = 83` / `versionName = "1.96s"`.
 - Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-Procedencia de la 1.95s
---------------------------------
-- Generado con `gradlew assembleRelease` sobre `main`, que declara
-  `versionCode = 82` / `versionName = "1.95s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-Procedencia de la 1.94s
---------------------------------
-- Generado con `gradlew assembleRelease` sobre `main`, que declara
-  `versionCode = 81` / `versionName = "1.94s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
 
-Nota: los mappings anteriores a la 1.82s se retiraron del repositorio. Su
-procedencia queda en el historial de git; no hay archivo que descomprimir.
+Nota: los mappings anteriores a la 1.96s se retiraron del arbol. Sus APKs y
+hashes estan en `HISTORICO-RETIRADO.txt`; los archivos siguen en el historial de
+git y, cuando existe tag, el codigo se puede reconstruir.
 
 Alcance (importante)
 --------------------

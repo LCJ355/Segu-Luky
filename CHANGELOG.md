@@ -14,6 +14,10 @@
   MOTO, cuando el sensor esta activado y hay permiso de Bluetooth.
 - **Instrucciones y textos** aclaran que el sensor es exclusivo de MOTO; el
   punto 4 de `Como usar` y la seccion 4 del TXT lo indican.
+- **Limpieza del repositorio:** `APK´s/` conserva la 1.98s y las dos anteriores;
+  las 1.82s-1.95s se retiran del arbol (hashes en
+  `APK´s/HISTORICO-RETIRADO.txt`), siguen en tags/historial y sus releases
+  antiguas ya no se listan. Tambien se retira el diagrama 1.11s.
 - 298 pruebas y `lintDebug` sin errores.
 
 ## 1.97s (versionCode 84)

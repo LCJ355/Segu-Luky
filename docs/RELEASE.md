@@ -12,8 +12,11 @@
 4. Archive the R8 mapping, compressed, with the version in the name:
    `APK´s/mapping/Segu-Luky-<versionName>-mapping.txt.gz`. Without it the stack
    traces of the published build cannot be read; `app/build/` is git-ignored and
-   `gradlew clean` deletes the original. See `APK´s/mapping/LEEME.txt`.
-5. Copy the APK to `APK´s/` as `Segu-Luky-<versionName>.apk` and update
+   `gradlew clean` deletes the original. Keep the current mapping and the two
+   previous ones; retire older files from the tree and record their SHA-256 in
+   `APK´s/HISTORICO-RETIRADO.txt`. See `APK´s/mapping/LEEME.txt`.
+5. Copy the APK to `APK´s/` as `Segu-Luky-<versionName>.apk`; keep only the
+   current and the two previous APKs in the tree. Update
    `APK´s/PROTOCOLO-SEGU-LUKY.txt` and `APK´s/INSTRUCCIONES-SEGU-LUKY.txt` so
    they describe the version being released (version, channels, permissions).
 6. Verify the signature before publishing:
@@ -51,7 +54,8 @@
     ```
     The archived APKs stay in `APK´s/` with their mappings and digests in `APK´s/SHA256SUMS.txt`;
     only the public release list is pruned.
-12. Refresh `APK´s/SHA256SUMS.txt` (all archived APKs plus the certificate fingerprint) and put
+12. Refresh `APK´s/SHA256SUMS.txt` (the APKs kept in the tree plus the certificate
+    fingerprint), move the retired APK hashes to `APK´s/HISTORICO-RETIRADO.txt`, and put
     the new APK's SHA-256 in the release notes: it is how anyone verifies a download, together
     with `docs/SEGURIDAD.md`.
 
