@@ -50,7 +50,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -4187,21 +4186,15 @@ private fun SosPanel(onSos: () -> Unit) {
         targetValue = holdProgress,
         animationSpec = tween(durationMillis = 90, easing = LinearEasing)
     )
-    val xFraction = (abs(wt9011.axisXDegrees ?: 0f) / wt9011.thresholdDegrees)
-        .coerceIn(0f, 1f)
-    val yFraction = (abs(wt9011.axisYDegrees ?: 0f) / wt9011.thresholdDegrees)
-        .coerceIn(0f, 1f)
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Box(Modifier.fillMaxWidth()) {
-            Row(
-                modifier = Modifier.align(Alignment.Center),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(HOLD_COLUMN_GAP)
-            ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(HOLD_COLUMN_GAP)
+        ) {
             HoldProgressColumn(
                 fill = fill,
                 axisAngle = wt9011.axisXDegrees,
@@ -4245,21 +4238,22 @@ private fun SosPanel(onSos: () -> Unit) {
                     "Eje Y sin datos"
                 }
             )
-            }
-            if (showTilt) {
-                TiltArrowLabel(
+        }
+        if (showTilt) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TiltValueBadge(
                     axis = "X",
                     value = wt9011.axisXDegrees,
-                    fraction = xFraction,
-                    color = tiltColor,
-                    modifier = Modifier.align(Alignment.CenterStart)
+                    color = tiltColor
                 )
-                TiltArrowLabel(
+                TiltValueBadge(
                     axis = "Y",
                     value = wt9011.axisYDegrees,
-                    fraction = yFraction,
-                    color = tiltColor,
-                    modifier = Modifier.align(Alignment.CenterEnd)
+                    color = tiltColor
                 )
             }
         }
@@ -4351,30 +4345,33 @@ private fun HoldProgressColumn(
     }
 }
 
-/** Etiqueta flotante al lado de la flecha: eje y grados en el mismo nivel. */
+/**
+ * Valor del eje, centrado bajo su columna. Va en una fila propia para que el
+ * tamano de letra del sistema no lo meta encima de la barra ni lo recorte.
+ */
 @Composable
-private fun TiltArrowLabel(
+private fun TiltValueBadge(
     axis: String,
     value: Float?,
-    fraction: Float,
-    color: Color,
-    modifier: Modifier = Modifier
+    color: Color
 ) {
-    val offsetY = ((0.44f - 0.88f * fraction.coerceIn(0f, 1f)) * HOLD_COLUMN_HEIGHT.value).dp
     Box(
-        modifier = modifier
-            .offset(y = offsetY)
-            .padding(horizontal = 2.dp)
-            .clip(RoundedCornerShape(6.dp))
+        modifier = Modifier
+            .heightIn(min = 24.dp)
+            .clip(RoundedCornerShape(7.dp))
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.94f))
-            .border(1.dp, color.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 4.dp, vertical = 1.dp)
+            .border(1.dp, color.copy(alpha = 0.65f), RoundedCornerShape(7.dp))
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center
     ) {
         Text(
             "$axis ${value?.let { "${it.toInt()}°" } ?: "—"}",
             style = MaterialTheme.typography.labelSmall,
+            fontSize = 15.sp,
+            lineHeight = 17.sp,
             fontWeight = FontWeight.Bold,
             color = color,
+            textAlign = TextAlign.Center,
             maxLines = 1
         )
     }
@@ -4678,7 +4675,7 @@ private const val BLINK_ON_MS = 320L
 private const val BLINK_OFF_MS = 220L
 private val SENSITIVITY_TRACK_HEIGHT = 8.dp
 private val HOLD_COLUMN_WIDTH = 12.dp
-private val HOLD_COLUMN_GAP = 10.dp
+private val HOLD_COLUMN_GAP = 4.dp
 private val HOLD_COLUMN_HEIGHT = (SOS_BUTTON_SIZE + 24).dp
 private val HoldTrackGreen = Color(0xFFB9F6CA)
 private const val SOS_MAIN_FONT_SIZE = 40
