@@ -58,111 +58,8 @@ Procedencia de la 1.94s
   `versionCode = 81` / `versionName = "1.94s"`.
 - Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
 
-Procedencia de la 1.61s
------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 53` / `versionName = "1.61s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.60s
---------------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 52` / `versionName = "1.60s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.59s
---------------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 51` / `versionName = "1.59s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.58s
---------------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 50` / `versionName = "1.58s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.57s
---------------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 49` / `versionName = "1.57s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.56s
---------------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 48` / `versionName = "1.56s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.55s
---------------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 47` / `versionName = "1.55s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.54s
---------------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 46` / `versionName = "1.54s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.53s
---------------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 45` / `versionName = "1.53s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.52s
------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 44` / `versionName = "1.52s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.51s
------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 43` / `versionName = "1.51s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.50s
------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 42` / `versionName = "1.50s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.49s
------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 41` / `versionName = "1.49s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.48s
------------------------
-- Generado con `gradlew assembleRelease` sobre el commit que declara
-  `versionCode = 40` / `versionName = "1.48s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
-
-Procedencia de la 1.47s
------------------------
-- Generado con `gradlew assembleRelease` sobre el commit `173d7a8`
-  ("V-1.47s: tarjeta INTERCOM-LUKY en Configuracion"), que declara
-  `versionCode = 39` / `versionName = "1.47s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-- Compilado el 12/11/2026.
+Nota: los mappings anteriores a la 1.82s se retiraron del repositorio. Su
+procedencia queda en el historial de git; no hay archivo que descomprimir.
 
 Alcance (importante)
 --------------------
@@ -176,7 +73,7 @@ se recompila con otro commit, hace falta su propio mapping.
 Como usarlo
 -----------
 1. Descomprimir:
-   `gzip -dk Segu-Luky-1.61s-mapping.txt.gz`
+   `gzip -dk Segu-Luky-1.98s-mapping.txt.gz`
 2. Con la traza ofuscada en `trace.txt`, ejecutar desde la raiz del SDK:
    `java -jar build-tools\35.0.0\lib\d8.jar retrace.jar mapping.txt trace.txt`
    o la tarea de Gradle `retrace` si esta disponible.

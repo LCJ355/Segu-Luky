@@ -5,8 +5,9 @@ La velocidad y las revoluciones salen del coche; el GPS queda como respaldo.
 
 ## De donde salen los datos de conexion
 
-Del APK de referencia `docs/referencia/OBDII/Torque_Pro v1.8.16.apk`, por analisis
-estatico del DEX (REA + extraccion de literales). Lo observado:
+Del APK de referencia de Torque Pro (copia local fuera del repositorio, en
+`ANALIZADOR-OBDII\DOCs`), por analisis estatico del DEX (REA + extraccion de
+literales). Lo observado:
 
 - Transporte Bluetooth clasico: `createRfcommSocketToServiceRecord` con UUID
   **`00001101-0000-1000-8000-00805F9B34FB`** y `processBluetoothStateChanged`.

@@ -1,7 +1,8 @@
 # Moto: bus CAN de la Harley-Davidson Softail 2018
 
-Resumen del analisis del manual de servicio (`docs/referencia/OBDII/Softail-2018-
-Service-Manual-Harley-Davidson-94000529-OPT.pdf`, 1988 paginas) y plan para leer
+Resumen del analisis del manual de servicio (copia local fuera del repositorio:
+`ANALIZADOR-OBDII\DOCs\Softail-2018-Service-Manual-Harley-Davidson-94000529-OPT.pdf`,
+1988 paginas) y plan para leer
 la moto **cuando haya cable**. En las versiones 1.71s a 1.74s la tarjeta MOTO
 muestra este analisis como *pendiente*: la app usa el sensor del movil y el GPS.
 

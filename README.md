@@ -129,10 +129,9 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 The shareable build of every released version is published in `APK´s/` as
 `Segu-Luky-<version>.apk`. The current build is `Segu-Luky-1.98s.apk`.
 
-The latest GitHub release is `V-1.98s` with `Segu-Luky-1.98s.apk` attached; the
-previous `V-1.97s`, `V-1.96s`, `V-1.95s`, `V-1.94s`, `V-1.93s`, `V-1.90s`,
-`V-1.87s`, `V-1.86s`, `V-1.85s`, `V-1.84s`, `V-1.83s` and `V-1.82s` releases
-remain available.
+The latest GitHub release is `V-1.98s` with `Segu-Luky-1.98s.apk` attached.
+Older versions remain as git tags and as archived APKs/mappings in `APK´s/`;
+the public releases page only lists the current one.
 **Buscar actualizacion** reads the GitHub API and compares against the highest
 published release/tag:
 

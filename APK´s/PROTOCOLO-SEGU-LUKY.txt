@@ -202,7 +202,7 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   velocidad y 10 s de estabilidad); sin velocidad valida se queda en 20 Hz. El
   CSV incluye soporte, velocidad, magnitud, cambios de tasa y jerk_g_s.
 
-8) LIMITACIONES CONOCIDAS (documentadas en INFORME-BUGS-1.47s.md)
+8) LIMITACIONES CONOCIDAS
 ------------------------------------------------------------------
 - No hay senal fiable de "contestada": una llamada corta nunca cierra la ronda
   (se llama tambien a los demas contactos) y una conectada de 5 min se da por
