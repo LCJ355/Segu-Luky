@@ -8,6 +8,44 @@ import org.junit.Test
 
 class AccidentDetectorTest {
     @Test
+    fun externalFallStartsCountdownWithoutAnyPreviousHit() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+
+        val accepted = detector.confirmExternalFall("vuelco: sensor externo 58 grados")
+
+        assertTrue(accepted)
+        assertEquals(SafetyPhase.COUNTDOWN, detector.runtimeState().phase)
+        assertEquals(listOf("vuelco: sensor externo 58 grados"), events.externalReasons)
+        assertTrue(events.manualReasons.isEmpty())
+    }
+
+    @Test
+    fun externalFallIsIgnoredWhileCountdownIsAlreadyRunning() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        assertTrue(detector.confirmExternalFall("primero"))
+
+        val accepted = detector.confirmExternalFall("segundo")
+
+        assertFalse(accepted)
+        assertEquals(listOf("primero"), events.externalReasons)
+    }
+
+    @Test
+    fun externalFallCanConfirmAnOngoingValidation() {
+        val events = RecordingListener()
+        val detector = AccidentDetector(events)
+        detector.simulateImpact(timestamp = 1_000L)
+        assertEquals(SafetyPhase.VALIDATING, detector.runtimeState().phase)
+
+        val accepted = detector.confirmExternalFall("vuelco durante validacion")
+
+        assertTrue(accepted)
+        assertEquals(SafetyPhase.COUNTDOWN, detector.runtimeState().phase)
+    }
+
+    @Test
     fun configuredHitStartsImmediateCountdownRegardlessOfSpeed() {
         val events = RecordingListener()
         val detector = AccidentDetector(events)
@@ -632,6 +670,7 @@ class AccidentDetectorTest {
         var expiredValidations = 0
         var automaticEmergencies = 0
         val manualReasons = mutableListOf<String>()
+        val externalReasons = mutableListOf<String>()
         var vibrations = 0
         var motionDetected = false
         var candidateAborted = false
@@ -653,6 +692,10 @@ class AccidentDetectorTest {
 
         override fun onManualEmergency(reason: String) {
             manualReasons += reason
+        }
+
+        override fun onExternalEmergency(reason: String) {
+            externalReasons += reason
         }
 
         override fun onVibrationDetected() {

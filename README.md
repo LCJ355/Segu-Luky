@@ -1,4 +1,4 @@
-# Segu-Luky V-1.96s
+# Segu-Luky V-1.97s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -19,6 +19,13 @@ key; InterCOM is a separate app reached only through its exported bridge (see
 - The candidate wakes the screen and asks GPS for 2 s fixes so the rider can see
   and cancel the event. A candidate aborts when the phone returns upright, when
   GPS reports 30 km/h or more, or when the 15 s window expires while moving.
+- **External rollover sensor (WT9011DCL-BT50, BLE).** An IMU on the chassis or
+  seat measures X/Y tilt against a reference learned with the bike upright.
+  A sustained tilt of 55 degrees (adjustable 50-60) for 5 s opens the same
+  countdown and the full SOS protocol. It is an independent, non-exclusive
+  condition: it does not replace `CAIDA / ORIENTACION`, the phone impacts, voice
+  or the manual SOS, and it never duplicates a countdown. The two columns beside
+  the SOS button show X/Y arrows on top of the 5 s hold progress.
 - The hit threshold is **not** the slider value alone: `AdaptiveSensitivity`
   learns each device's rest noise, normal riding level and measured sample rate,
   and derives an effective threshold that is always shown on screen. A short
@@ -65,7 +72,9 @@ button goes up one level, not straight to the home screen).
   monitor stopped. Then the sensitivity slider with its
   0..7 scale, the `ADAPT.` averaging window, `PICO/EFECTIVO/SUGERIDO`, `PROBAR GOLPE`, fall/orientation
   confirmation, voice trigger and diagnostics
-  (device profile, reset learning, optional CSV/ZIP recording). On the home card only the
+  (device profile, reset learning, optional CSV/ZIP recording). It also carries the
+  **SENSOR DE VUELCO (WT9011DCL-BT50)** card with BT scan/connect, calibration,
+  live X/Y, threshold 50-60 degrees and its own enable switch. On the home card only the
   `SENSIBILIDAD A LOS GOLPES = x,x g` label and a read-only `T. PROMEDIO` row (AUTO/1/2/3; in AUTO both AUTO and the applied minute number are green, and that number blinks three times whenever AUTO changes the window).
 - **Contactos SOS**: contact list in call order, editor, and the map-link note.
 - **Canales de salida SOS**: auto WhatsApp (with its two
@@ -118,7 +127,9 @@ gradlew.bat assembleDebug
 The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The shareable build of every released version is published in `APK´s/` as
-`Segu-Luky-<version>.apk`. The current build is `Segu-Luky-1.96s.apk`.
+`Segu-Luky-<version>.apk`. The current development build is `1.97s` (external
+rollover sensor); it is installed for device testing and is not published yet.
+The latest published build is `Segu-Luky-1.96s.apk`.
 
 The latest GitHub release is `V-1.96s` with `Segu-Luky-1.96s.apk` attached; the
 previous `V-1.95s`, `V-1.93s`, `V-1.90s`, `V-1.87s`, `V-1.86s`, `V-1.85s`, `V-1.84s`,

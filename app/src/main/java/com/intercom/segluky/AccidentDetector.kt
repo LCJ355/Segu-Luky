@@ -21,6 +21,14 @@ class AccidentDetector(
         fun onValidationExpired()
         fun onAutomaticEmergency()
         fun onManualEmergency(reason: String)
+
+        /**
+         * Condicion independiente del sensor externo de vuelco. Por defecto se
+         * comporta como una confirmacion manual; el servicio puede distinguirla
+         * si necesita un registro propio.
+         */
+        fun onExternalEmergency(reason: String) = onManualEmergency(reason)
+
         fun onVibrationDetected()
         fun onMotionDetected()
         fun onFallCandidateArmed() = Unit
@@ -402,6 +410,20 @@ class AccidentDetector(
         ) return false
         startCountdown()
         listener.onManualEmergency(reason)
+        return true
+    }
+
+    /**
+     * Vuelco confirmado por el sensor externo. Es una condicion mas: no exige
+     * un golpe previo, no sustituye a las del movil y usa la misma cuenta atras.
+     */
+    fun confirmExternalFall(reason: String): Boolean {
+        if (phase != SafetyPhase.MONITORING &&
+            phase != SafetyPhase.VALIDATING &&
+            phase != SafetyPhase.FALL_CANDIDATE
+        ) return false
+        startCountdown()
+        listener.onExternalEmergency(reason)
         return true
     }
 

@@ -25,6 +25,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -94,8 +95,12 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
@@ -127,6 +132,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import java.security.MessageDigest
 import java.util.Locale
 
@@ -1349,6 +1356,9 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.97s - Sensor externo WT9011DCL-BT50 por BLE para detectar vuelco por inclinacion X/Y: umbral " +
+        "ajustable 50-60 grados (55 por defecto), 5 s sostenidos y condicion independiente del resto de avisos. " +
+        "Flechas X e Y junto al boton SOS y tarjeta de diagnostico para comprobar el montaje.")
     appendLine("1.96s - Si el SOS sale sin GPS (tunel, parking, GPS apagado), la ubicacion se reenvia sola en " +
         "cuanto el movil la consigue: SMS y Telegram salen automaticos, y en WhatsApp o enlace t.me queda el " +
         "aviso en la notificacion para enviarlo con un toque. Se acabo el 'ubicacion GPS no disponible' para " +
@@ -2160,6 +2170,7 @@ private fun EmergencySettingsScreen(
                     )
                 }
             }
+            item { Wt9011Card() }
             if (vehicleProfile == VehicleProfile.CAR) {
                 item { ObdLinkCard() }
             }
@@ -3215,6 +3226,254 @@ private fun CardHeader(
 }
 
 /**
+ * Sensor externo de vuelco. Es una condicion independiente: no sustituye a
+ * CAIDA / ORIENTACION ni a los golpes del movil. Se puede conectar con el
+ * monitor parado para comprobar los ejes con el sensor en la mano.
+ */
+@Composable
+private fun Wt9011Card() {
+    val context = LocalContext.current
+    val state by Wt9011Controller.state.collectAsStateWithLifecycle()
+    val scanResults by Wt9011Controller.scanResults.collectAsStateWithLifecycle()
+    var showList by remember { mutableStateOf(false) }
+    var threshold by remember(state.thresholdDegrees) { mutableStateOf(state.thresholdDegrees) }
+
+    LaunchedEffect(Unit) { Wt9011Controller.refreshSettings(context) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { granted ->
+        if (granted.values.all { it }) {
+            showList = true
+            Wt9011Controller.startScan(context)
+        } else {
+            SafetyStateStore.log("Sin permisos de Bluetooth no se puede buscar el sensor de vuelco")
+        }
+    }
+
+    fun missingPermissions(): List<String> = buildList {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!Wt9011Controller.hasScanPermission(context)) {
+                add(Manifest.permission.BLUETOOTH_SCAN)
+            }
+            if (!Wt9011Controller.hasConnectPermission(context)) {
+                add(Manifest.permission.BLUETOOTH_CONNECT)
+            }
+        } else if (!Wt9011Controller.hasScanPermission(context)) {
+            add(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    fun scan() {
+        val missing = missingPermissions()
+        if (missing.isEmpty()) {
+            showList = true
+            Wt9011Controller.startScan(context)
+        } else {
+            permissionLauncher.launch(missing.toTypedArray())
+        }
+    }
+
+    fun connectSavedOrScan() {
+        val saved = Wt9011Settings.loadDevice(context)
+        if (saved.address.isBlank()) {
+            scan()
+            return
+        }
+        val missing = missingPermissions()
+        if (missing.isNotEmpty()) {
+            permissionLauncher.launch(missing.toTypedArray())
+            return
+        }
+        Wt9011Controller.connect(context, saved)
+    }
+
+    val statusLabel = when (state.status) {
+        Wt9011Status.OFF -> "APAGADO"
+        Wt9011Status.NO_PERMISSION -> "SIN PERMISO"
+        Wt9011Status.NO_BLUETOOTH -> "SIN BLUETOOTH"
+        Wt9011Status.NO_DEVICE -> "SIN SENSOR"
+        Wt9011Status.SCANNING -> "BUSCANDO"
+        Wt9011Status.CONNECTING -> "CONECTANDO"
+        Wt9011Status.CALIBRATING -> "CALIBRANDO"
+        Wt9011Status.READY -> if (state.monitoring) "VIGILANDO" else "LISTO"
+        Wt9011Status.NO_DATA -> "SIN DATOS"
+        Wt9011Status.ERROR -> "ERROR"
+    }
+    val tone = when (state.status) {
+        Wt9011Status.READY -> Tone.OK
+        Wt9011Status.CALIBRATING,
+        Wt9011Status.CONNECTING,
+        Wt9011Status.SCANNING,
+        Wt9011Status.NO_DATA -> Tone.WARN
+        Wt9011Status.NO_PERMISSION,
+        Wt9011Status.NO_BLUETOOTH,
+        Wt9011Status.ERROR -> Tone.BAD
+        Wt9011Status.OFF,
+        Wt9011Status.NO_DEVICE -> Tone.OFF
+    }
+    val saved = Wt9011Settings.loadDevice(context)
+
+    SeguCard(
+        title = "SENSOR DE VUELCO (WT9011)",
+        status = if (state.enabled) statusLabel else "DESACTIVADO",
+        tone = if (state.enabled) tone else Tone.OFF,
+        description = "Condicion independiente: no sustituye a CAIDA / ORIENTACION ni a los golpes del " +
+            "movil. Se monta en la moto con el eje Z hacia arriba; la inclinacion se mide con X e Y.",
+        trailing = {
+            Switch(
+                checked = state.enabled,
+                onCheckedChange = { enabled ->
+                    Wt9011Controller.setEnabled(context, enabled)
+                    SafetyStateStore.log(
+                        if (enabled) "Sensor de vuelco activado" else "Sensor de vuelco desactivado"
+                    )
+                },
+                colors = activeSwitchColors()
+            )
+        }
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                if (saved.address.isBlank()) "Ningun sensor elegido" else saved.label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                state.detail.ifBlank {
+                    "50 Hz · 6 ejes · sin magnetometro. El rumbo no se usa."
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { scan() },
+                    modifier = Modifier.weight(1f),
+                    contentPadding = CompactButtonPadding
+                ) { TightButtonLabel("BUSCAR") }
+                Button(
+                    onClick = { connectSavedOrScan() },
+                    modifier = Modifier.weight(1f),
+                    contentPadding = CompactButtonPadding
+                ) { TightButtonLabel("CONECTAR") }
+                OutlinedButton(
+                    onClick = { Wt9011Controller.disconnect() },
+                    modifier = Modifier.weight(1f),
+                    contentPadding = CompactButtonPadding
+                ) { TightButtonLabel("CORTAR") }
+            }
+            OutlinedButton(
+                onClick = {
+                    Wt9011Controller.calibrate()
+                    SafetyStateStore.log("Calibrando sensor de vuelco: moto vertical y quieta")
+                },
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = CompactButtonPadding,
+                enabled = state.connected
+            ) { TightButtonLabel("CALIBRAR CON LA MOTO VERTICAL") }
+
+            if (showList) {
+                if (scanResults.isEmpty()) {
+                    Text(
+                        if (state.status == Wt9011Status.SCANNING) {
+                            "Buscando sensores WT901..."
+                        } else {
+                            "No se encontro ningun WT901. Enciende el sensor y pulsa BUSCAR."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    scanResults.forEach { device ->
+                        OutlinedButton(
+                            onClick = {
+                                showList = false
+                                Wt9011Controller.connect(context, device)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = CompactButtonPadding
+                        ) {
+                            TightButtonLabel("${device.label}    ${device.rssi} dBm")
+                        }
+                    }
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SensorAxisReading("X", state.ax, Modifier.weight(1f))
+                SensorAxisReading("Y", state.ay, Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SensorMetric(
+                    label = "INCLINACION X/Y",
+                    value = state.tiltDegrees?.let { "${it.toInt()}°" } ?: "—",
+                    modifier = Modifier.weight(1f)
+                )
+                SensorMetric(
+                    label = "UMBRAL",
+                    value = "${state.thresholdDegrees.toInt()}°",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Text(
+                "UMBRAL DE VUELCO",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Slider(
+                value = threshold,
+                onValueChange = { threshold = it.roundToInt().coerceIn(50, 60).toFloat() },
+                valueRange = Wt9011Settings.MIN_THRESHOLD_DEGREES..Wt9011Settings.MAX_THRESHOLD_DEGREES,
+                steps = 9,
+                onValueChangeFinished = {
+                    Wt9011Controller.setThreshold(context, threshold)
+                    SafetyStateStore.log("Umbral de vuelco: ${threshold.toInt()} grados")
+                }
+            )
+            Text(
+                "Verde hasta 15° antes del umbral; amarillo en esos 15°; rojo al alcanzarlo. " +
+                    "La condicion se evalua con 5 s sostenidos y no depende de CAIDA / ORIENTACION.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun SensorAxisReading(label: String, value: Float?, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            value?.let { String.format(Locale.US, "%+.2f g", it) } ?: "—",
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun SensorMetric(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+/**
  * Tarjeta del perfil COCHE: elegir el adaptador emparejado, conectar y ver los
  * datos en vivo. Nada de aqui participa en el SOS: si el adaptador falla, la app
  * sigue detectando golpes con el movil y el GPS.
@@ -3908,6 +4167,21 @@ private fun SosPanel(onSos: () -> Unit) {
     var holdProgress by remember { mutableStateOf(0f) }
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val sosHalo = if (isDark) MaterialTheme.colorScheme.errorContainer else Tone.BAD.soft
+    val wt9011 by Wt9011Controller.state.collectAsStateWithLifecycle()
+    val showTilt = wt9011.enabled &&
+        wt9011.monitoring &&
+        wt9011.calibrated &&
+        wt9011.status == Wt9011Status.READY
+    val tiltColor = when (wt9011.tiltLevel) {
+        2 -> Tone.BAD.text
+        1 -> Tone.WARN.text
+        else -> Tone.OK.text
+    }
+    val tiltDescription = when (wt9011.tiltLevel) {
+        2 -> "SOS"
+        1 -> "faltan menos de 15 grados"
+        else -> "correcto"
+    }
     val fill by animateFloatAsState(
         targetValue = holdProgress,
         animationSpec = tween(durationMillis = 90, easing = LinearEasing)
@@ -3921,7 +4195,19 @@ private fun SosPanel(onSos: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(HOLD_COLUMN_GAP)
         ) {
-            HoldProgressColumn(fill)
+            HoldProgressColumn(
+                fill = fill,
+                axisAngle = wt9011.axisXDegrees,
+                threshold = wt9011.thresholdDegrees,
+                showTilt = showTilt,
+                tiltColor = tiltColor,
+                direction = 1,
+                description = if (showTilt) {
+                    "Eje X: ${wt9011.axisXDegrees?.toInt() ?: 0} grados, $tiltDescription"
+                } else {
+                    "Eje X sin datos"
+                }
+            )
             Box(contentAlignment = Alignment.Center) {
                 Box(
                     Modifier
@@ -3939,7 +4225,19 @@ private fun SosPanel(onSos: () -> Unit) {
                     onHoldProgress = { holdProgress = it }
                 )
             }
-            HoldProgressColumn(fill)
+            HoldProgressColumn(
+                fill = fill,
+                axisAngle = wt9011.axisYDegrees,
+                threshold = wt9011.thresholdDegrees,
+                showTilt = showTilt,
+                tiltColor = tiltColor,
+                direction = -1,
+                description = if (showTilt) {
+                    "Eje Y: ${wt9011.axisYDegrees?.toInt() ?: 0} grados, $tiltDescription"
+                } else {
+                    "Eje Y sin datos"
+                }
+            )
         }
         Text(
             "MANTEN PULSADO 5 SEGUNDOS",
@@ -3949,18 +4247,36 @@ private fun SosPanel(onSos: () -> Unit) {
     }
 }
 
-/** Columna lateral del SOS: se rellena de abajo arriba con los 5 segundos de pulsacion. */
+/**
+ * Columna lateral del SOS.
+ *
+ * El relleno verde de abajo arriba sigue siendo el progreso de los 5 segundos.
+ * Encima se dibuja una flecha con la inclinacion del eje (X a la izquierda, Y a
+ * la derecha): sube con el angulo y cambia a ambar/rojo cerca del umbral. Las
+ * dos cosas se ven a la vez, tambien mientras se mantiene pulsado el SOS.
+ */
 @androidx.compose.runtime.Composable
-private fun HoldProgressColumn(fill: Float) {
-    val trackColor = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
+private fun HoldProgressColumn(
+    fill: Float,
+    axisAngle: Float?,
+    threshold: Float,
+    showTilt: Boolean,
+    tiltColor: Color,
+    direction: Int,
+    description: String
+) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val trackColor = if (isDark) {
         MaterialTheme.colorScheme.surfaceVariant
     } else {
         HoldTrackGreen
     }
+    val outlineColor = if (isDark) Color.White else Color.Black
     Box(
         modifier = Modifier
             .width(HOLD_COLUMN_WIDTH)
             .height(HOLD_COLUMN_HEIGHT)
+            .semantics { contentDescription = description }
             .clip(RoundedCornerShape(HOLD_COLUMN_WIDTH / 2))
             .background(trackColor),
         contentAlignment = Alignment.BottomCenter
@@ -3972,6 +4288,42 @@ private fun HoldProgressColumn(fill: Float) {
                 .clip(RoundedCornerShape(HOLD_COLUMN_WIDTH / 2))
                 .background(StrongGreen)
         )
+        Canvas(Modifier.fillMaxSize()) {
+            if (!showTilt || axisAngle == null) return@Canvas
+            val fraction = (abs(axisAngle) / threshold.coerceAtLeast(1f)).coerceIn(0f, 1f)
+            val centerY = size.height * (1f - 0.06f - 0.88f * fraction)
+            val arrowHeight = 10.dp.toPx()
+            val width = size.width
+            val path = Path().apply {
+                if (direction > 0) {
+                    moveTo(width * 0.10f, centerY - arrowHeight / 2f)
+                    lineTo(width * 0.90f, centerY)
+                    lineTo(width * 0.10f, centerY + arrowHeight / 2f)
+                } else {
+                    moveTo(width * 0.90f, centerY - arrowHeight / 2f)
+                    lineTo(width * 0.10f, centerY)
+                    lineTo(width * 0.90f, centerY + arrowHeight / 2f)
+                }
+                close()
+            }
+            // Barra + punta: se lee tambien sobre el relleno verde del SOS.
+            drawLine(
+                color = outlineColor,
+                start = Offset(0f, centerY),
+                end = Offset(width, centerY),
+                strokeWidth = 5.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawLine(
+                color = tiltColor,
+                start = Offset(0f, centerY),
+                end = Offset(width, centerY),
+                strokeWidth = 3.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+            drawPath(path, color = outlineColor, style = Stroke(width = 3.dp.toPx()))
+            drawPath(path, color = tiltColor)
+        }
     }
 }
 

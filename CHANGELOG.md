@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.97s (versionCode 84)
+
+### Vuelco por sensor externo WT9011DCL-BT50
+
+- **Sensor inalambrico en la moto.** La app se enlaza por BLE con el
+  WT9011DCL-BT50 (se anuncia como `WT901BLE67`) y calcula la inclinacion con
+  los ejes **X e Y**. El eje Z solo aporta rumbo y no interviene.
+- **Condicion de SOS propia y no excluyente.** Si la inclinacion supera el
+  umbral durante **5 s**, se abre la misma cuenta atras de 30 s y se ejecuta el
+  protocolo completo con todos los canales configurados. No sustituye a
+  CAIDA / ORIENTACION, ni a los golpes del movil, ni a la voz, ni al SOS manual;
+  cualquiera de ellos sigue funcionando y nunca se duplica una cuenta atras.
+- **Umbral ajustable 50-60 grados**, con **55 grados** por defecto. El aviso
+  visual es verde hasta 15 grados antes del umbral, amarillo en esos 15 y rojo
+  al alcanzarlo. Se aplica en caliente, sin reiniciar el monitor.
+- **Flechas X e Y junto al SOS.** Las dos columnas que ya marcaban los 5 s de
+  pulsacion muestran ademas una flecha con la inclinacion de cada eje. El
+  relleno verde sigue siendo el progreso de la pulsacion; la flecha se dibuja
+  encima y sigue visible durante los 5 s.
+- **Calibracion con la moto vertical.** Se aprende la referencia al conectar y
+  con el boton `CALIBRAR`; si la moto se mueve durante la ventana, la
+  calibracion se reinicia. Un pasa-bajos de la gravedad filtra la vibracion del
+  motor y los baches.
+- **Tarjeta de diagnostico** en Sensores: `BUSCAR`, `CONECTAR`, `CORTAR`,
+  `CALIBRAR`, valores `X` e `Y` en g, inclinacion, umbral, estado del enlace,
+  frecuencia real y aviso de que el magnetometro no se usa. Se puede conectar
+  con el monitor parado para comprobar los ejes con el sensor en la mano.
+- **Configuracion del sensor:** 6 ejes (`FF AA 24 01 00`), 50 Hz y contenido
+  aceleracion + giro + angulo (`0x07`), con 130 ms entre ordenes. El enlace se
+  mantiene en el servicio en primer plano y se reconecta solo.
+- **Android 14+:** se declara `FOREGROUND_SERVICE_CONNECTED_DEVICE` y el tipo
+  `connectedDevice` cuando el sensor esta activado y hay permiso de Bluetooth.
+- 295 pruebas y `lintDebug` sin errores.
+
+Prueba realizada: conectado el sensor real en el OPPO CPH2695 (`WT901BLE67`,
+`E8:B6:BE:8C:76:19`), tarjeta en `VIGILANDO`, `X/Y` en vivo e inclinacion 0-2
+grados con la moto vertical. Pendiente la prueba fisica de inclinacion y del
+disparo de la cuenta atras.
+
 ## 1.96s (versionCode 83)
 
 ### La ubicacion del SOS llega aunque el GPS despierte tarde

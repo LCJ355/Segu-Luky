@@ -229,6 +229,10 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                     beginCountdown(reason)
                 }
 
+                override fun onExternalEmergency(reason: String) {
+                    beginCountdown(reason)
+                }
+
                 override fun onVibrationDetected() {
                     // A screen that lights up on every strong bump is the single
                     // most expensive reaction available. It is only justified when
@@ -346,6 +350,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
                 }
             }
         )
+        Wt9011Controller.refreshSettings(this)
+        Wt9011Controller.onFall = ::onExternalFall
         createNotificationChannels()
     }
 
@@ -456,6 +462,8 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         }
         stopTicker()
         window.removeCallbacksAndMessages(null)
+        Wt9011Controller.onFall = null
+        Wt9011Controller.setMonitoring(this, false)
         ObdLinkController.disconnect()
         unregisterSensors()
         removeLocationUpdates()
@@ -474,6 +482,28 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         getSystemService(NotificationManager::class.java).cancel(EMERGENCY_ALERT_NOTIFICATION_ID)
         SafetyStateStore.reset()
         super.onDestroy()
+    }
+
+    /**
+     * Condicion independiente del sensor externo. No compite con el movil:
+     * cualquier otra condicion sigue pudiendo disparar y, si ya hay cuenta
+     * atras, esta se ignora.
+     */
+    private fun onExternalFall(fall: Wt9011Fall) {
+        if (!monitoringEnabled) return
+        if (detector.currentPhase == SafetyPhase.COUNTDOWN) return
+        val tilt = "${fall.tiltDegrees.toInt()} grados"
+        val threshold = "${fall.thresholdDegrees.toInt()} grados"
+        SafetyStateStore.log(
+            "VUELCO DETECTADO POR SENSOR EXTERNO: inclinacion $tilt (umbral $threshold)"
+        )
+        if (!ensureEmergencyForeground()) {
+            SafetyStateStore.log("Vuelco detectado, pero Android no dejo preparar el SOS")
+            return
+        }
+        if (!detector.confirmExternalFall("vuelco: sensor externo $tilt")) {
+            SafetyStateStore.log("Vuelco ignorado: la cuenta atras ya esta activa")
+        }
     }
 
     private fun runOnVoiceKeyword(word: String) {
@@ -822,6 +852,9 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
         monitoringEnabled = true
         runtimeRepository.setMonitoringRequested(true)
+        // El sensor de vuelco es una condicion independiente: si esta activado
+        // y tiene MAC guardada, se enlaza ahora y se calibra con la moto vertical.
+        Wt9011Controller.setMonitoring(this, true)
         // En coche se intenta enlazar con el adaptador al arrancar el monitor; si no
         // hay adaptador o falla, la app sigue con el movil y el GPS (el fallo queda
         // en la tarjeta del coche, nunca en el camino del SOS).
@@ -2568,6 +2601,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
 
     private fun stopMonitoringAndService() {
         monitoringEnabled = false
+        Wt9011Controller.setMonitoring(this, false)
         runtimeRepository.setMonitoringRequested(false)
         wasMonitoringBeforeEmergency = false
         countdownEndsAt = null
@@ -3095,14 +3129,32 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     private fun startLocationForeground(text: String): Boolean = startForegroundSafely(
         mode = ForegroundMode.LOCATION,
         text = text,
-        type = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+        type = withConnectedDeviceType(ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
     )
 
     private fun startSpecialForeground(text: String): Boolean = startForegroundSafely(
         mode = ForegroundMode.SPECIAL,
         text = text,
-        type = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
+        type = withConnectedDeviceType(
+            if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
+        )
     )
+
+    /**
+     * Android 14 exige declarar `connectedDevice` para un servicio en primer
+     * plano que mantiene un enlace BLE. Solo se pide si el sensor de vuelco esta
+     * activado y hay permiso de Bluetooth; si no, el monitor arranca igual.
+     */
+    private fun withConnectedDeviceType(base: Int): Int {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return base
+        if (!Wt9011Settings.loadEnabled(this)) return base
+        if (!Wt9011Controller.hasConnectPermission(this) &&
+            !Wt9011Controller.hasScanPermission(this)
+        ) {
+            return base
+        }
+        return base or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+    }
 
     private fun startEmergencyForeground(text: String): Boolean =
         if (monitoringEnabled && canUsePreciseLocation()) {

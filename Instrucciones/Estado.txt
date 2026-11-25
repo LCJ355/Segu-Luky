@@ -2701,6 +2701,52 @@ Mapping archivado: APK´s/mapping/Segu-Luky-1.96s-mapping.txt.gz
 Pendientes: probar en el movil el SOS sin GPS y comprobar que llega el reenvio
 cuando aparece la posicion; confirmar que WhatsApp y t.me solo avisan una vez.
 ======================================================================
+V-1.97s (versionCode 84)
+======================================================================
+
+Fecha: 25/11/2026
+Version: 1.97s (versionCode 84)
+
+Cambio:
+- Nuevo sensor externo WT9011DCL-BT50 por BLE para detectar vuelco por
+  inclinacion. Se anuncia como WT901BLE67, servicio FFE5, notificaciones FFE4 y
+  escritura FFE9; tramas 55 61 de 20 bytes.
+- Wt9011Protocol / Wt9011Config: parser de las tramas 0x61 y de la variante
+  clasica de 11 bytes, escalas 16 g / 2000 grados/s / 180 grados y plan de
+  configuracion a 6 ejes, 50 Hz y mascara 0x07 con 130 ms entre ordenes.
+- Wt9011TiltWatch: referencia de vertical aprendida con la moto quieta,
+  inclinacion X/Y con pasa-bajos de gravedad (350 ms), umbral ajustable 50-60
+  grados (55 por defecto), 5 s sostenidos, histeresis de 5 grados y rearme tras
+  3 s vertical.
+- Wt9011Controller: escaneo BLE, conexion GATT serializada, MTU 247, CCCD con
+  respaldo de 2,5 s, reconexion con espera creciente y estado en vivo a 5 Hz.
+- SafetyMonitorService: condicion de SOS independiente y no excluyente; usa la
+  misma cuenta atras y el protocolo completo. Se arma al iniciar el monitor y se
+  suelta al detenerlo. Android 14+: tipo connectedDevice en el servicio.
+- MainActivity: tarjeta SENSOR DE VUELCO (WT9011) en Sensores (BUSCAR, CONECTAR,
+  CORTAR, CALIBRAR, X/Y en g, inclinacion, umbral y estado). Las dos columnas
+  laterales del SOS muestran ademas una flecha X/Y con el relleno de los 5 s.
+- AccidentDetector: confirmExternalFall() para distinguir el vuelco externo de
+  una confirmacion manual, sin cambiar las fases existentes.
+- Historial dentro de la app con la entrada 1.97s.
+
+Motivo: el usuario quiere una condicion de vuelco con un IMU externo montado en
+el chasis/asiento, independiente de los avisos del movil. El sensor ofrece X/Y
+reales y el rumbo no aporta nada al vuelco.
+Prueba realizada: testDebugUnitTest (295 pruebas, 0 fallos), lintDebug (0
+errores), assembleDebug y assembleRelease. Instalado sobre la 1.96s en el OPPO
+CPH2695 y conectado el sensor real WT901BLE67 · E8:B6:BE:8C:76:19: la tarjeta
+pasa a VIGILANDO, muestra X/Y en vivo y la inclinacion 0-2 grados con el sensor
+vertical.
+Resultado: compila, conecta, recibe tramas y calibra. Pendiente la prueba fisica
+de inclinacion sostenida y del disparo real de la cuenta atras.
+APK generado: pendiente de publicar (build local 1.97s).
+Mapping archivado: pendiente.
+Pendientes: inclinar el sensor 30, 50 y 60 grados y comprobar flechas/colores;
+mantener 60 grados 5 s y confirmar que abre una sola cuenta atras; comprobar que
+CAIDA / ORIENTACION y el SOS manual siguen funcionando; revisar consumo del BLE
+en un recorrido.
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 
