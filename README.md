@@ -130,8 +130,9 @@ The shareable build of every released version is published in `APK´s/` as
 `Segu-Luky-<version>.apk`. The current build is `Segu-Luky-1.97s.apk`.
 
 The latest GitHub release is `V-1.97s` with `Segu-Luky-1.97s.apk` attached; the
-previous `V-1.96s`, `V-1.95s`, `V-1.93s`, `V-1.90s`, `V-1.87s`, `V-1.86s`,
-`V-1.85s`, `V-1.84s`, `V-1.83s` and `V-1.82s` releases remain available.
+previous `V-1.96s`, `V-1.95s`, `V-1.94s`, `V-1.93s`, `V-1.90s`, `V-1.87s`,
+`V-1.86s`, `V-1.85s`, `V-1.84s`, `V-1.83s` and `V-1.82s` releases remain
+available.
 **Buscar actualizacion** reads the GitHub API and compares against the highest
 published release/tag:
 
