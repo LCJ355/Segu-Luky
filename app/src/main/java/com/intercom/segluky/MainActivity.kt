@@ -50,6 +50,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -4186,15 +4187,21 @@ private fun SosPanel(onSos: () -> Unit) {
         targetValue = holdProgress,
         animationSpec = tween(durationMillis = 90, easing = LinearEasing)
     )
+    val xFraction = (abs(wt9011.axisXDegrees ?: 0f) / wt9011.thresholdDegrees)
+        .coerceIn(0f, 1f)
+    val yFraction = (abs(wt9011.axisYDegrees ?: 0f) / wt9011.thresholdDegrees)
+        .coerceIn(0f, 1f)
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(HOLD_COLUMN_GAP)
-        ) {
+        Box(Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.align(Alignment.Center),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(HOLD_COLUMN_GAP)
+            ) {
             HoldProgressColumn(
                 fill = fill,
                 axisAngle = wt9011.axisXDegrees,
@@ -4238,6 +4245,23 @@ private fun SosPanel(onSos: () -> Unit) {
                     "Eje Y sin datos"
                 }
             )
+            }
+            if (showTilt) {
+                TiltArrowLabel(
+                    axis = "X",
+                    value = wt9011.axisXDegrees,
+                    fraction = xFraction,
+                    color = tiltColor,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                )
+                TiltArrowLabel(
+                    axis = "Y",
+                    value = wt9011.axisYDegrees,
+                    fraction = yFraction,
+                    color = tiltColor,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                )
+            }
         }
         Text(
             "MANTEN PULSADO 5 SEGUNDOS",
@@ -4324,6 +4348,35 @@ private fun HoldProgressColumn(
             drawPath(path, color = outlineColor, style = Stroke(width = 3.dp.toPx()))
             drawPath(path, color = tiltColor)
         }
+    }
+}
+
+/** Etiqueta flotante al lado de la flecha: eje y grados en el mismo nivel. */
+@Composable
+private fun TiltArrowLabel(
+    axis: String,
+    value: Float?,
+    fraction: Float,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val offsetY = ((0.44f - 0.88f * fraction.coerceIn(0f, 1f)) * HOLD_COLUMN_HEIGHT.value).dp
+    Box(
+        modifier = modifier
+            .offset(y = offsetY)
+            .padding(horizontal = 2.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.94f))
+            .border(1.dp, color.copy(alpha = 0.55f), RoundedCornerShape(6.dp))
+            .padding(horizontal = 4.dp, vertical = 1.dp)
+    ) {
+        Text(
+            "$axis ${value?.let { "${it.toInt()}°" } ?: "—"}",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = color,
+            maxLines = 1
+        )
     }
 }
 
