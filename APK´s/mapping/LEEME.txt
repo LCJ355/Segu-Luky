@@ -9,13 +9,19 @@ Sin el, las trazas de fallo de la app publicada muestran nombres como
 
 Aqui se guardan la version actual y las dos anteriores:
 
-    Segu-Luky-2.00s-mapping.txt.gz   <- version actual (versionCode 87)
+    Segu-Luky-2.01s-mapping.txt.gz   <- version actual (versionCode 88)
+    Segu-Luky-2.00s-mapping.txt.gz   <- historico (versionCode 87)
     Segu-Luky-1.99s-mapping.txt.gz   <- historico (versionCode 86)
-    Segu-Luky-1.98s-mapping.txt.gz   <- historico (versionCode 85)
 
 Cada archivo solo sirve para las trazas del codigo con el que se genero.
 
-Procedencia de la 2.00s (actual)
+Procedencia de la 2.01s (actual)
+--------------------------------
+- Generado con `gradlew assembleRelease` sobre
+  `feat/vuelco-wt9011-1.97s`, que declara
+  `versionCode = 88` / `versionName = "2.01s"`.
+- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
+Procedencia de la 2.00s
 --------------------------------
 - Generado con `gradlew assembleRelease` sobre
   `feat/vuelco-wt9011-1.97s`, que declara
@@ -27,14 +33,8 @@ Procedencia de la 1.99s
   `feat/vuelco-wt9011-1.97s`, que declara
   `versionCode = 86` / `versionName = "1.99s"`.
 - Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
-Procedencia de la 1.98s
---------------------------------
-- Generado con `gradlew assembleRelease` sobre
-  `feat/vuelco-wt9011-1.97s`, que declara
-  `versionCode = 85` / `versionName = "1.98s"`.
-- Herramienta: R8 8.6.27 (AGP 8.6.1), `min_api 29`.
 
-Nota: los mappings anteriores a la 1.98s se retiraron del arbol. Sus APKs y
+Nota: los mappings anteriores a la 1.99s se retiraron del arbol. Sus APKs y
 hashes estan en `HISTORICO-RETIRADO.txt`; los archivos siguen en el historial de
 git y, cuando existe tag, el codigo se puede reconstruir.
 
@@ -50,7 +50,7 @@ se recompila con otro commit, hace falta su propio mapping.
 Como usarlo
 -----------
 1. Descomprimir:
-   `gzip -dk Segu-Luky-2.00s-mapping.txt.gz`
+   `gzip -dk Segu-Luky-2.01s-mapping.txt.gz`
 2. Con la traza ofuscada en `trace.txt`, ejecutar desde la raiz del SDK:
    `java -jar build-tools\35.0.0\lib\d8.jar retrace.jar mapping.txt trace.txt`
    o la tarea de Gradle `retrace` si esta disponible.

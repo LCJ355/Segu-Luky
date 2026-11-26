@@ -1,8 +1,8 @@
-SEGU-LUKY V-2.00s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-2.01s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 87). Los valores entre parentesis son los del codigo.
+archivo (versionCode 88). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -280,6 +280,13 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   la conexion y ver la temperatura en el acto. A la derecha de MODO se muestra
   az del sensor (g), no el rumbo del movil; se retiran PhoneHeading y
   headingDegrees. La tarjeta de Sensores anade Z a X e Y.
+- (2.01s) El rumbo de la derecha es el del sensor. Wt9011Config.plan usa
+  AXIS_9_COMMAND (FF AA 24 00 00): en 9 ejes el angulo Z de la trama 0x61 es
+  un rumbo magnetico absoluto; en 6 ejes era relativo y derivaba. Se normaliza
+  de ±180 a 0-360 y se publica como yawDegrees. La inclinacion de vuelco sigue
+  con la gravedad (X/Y), asi que el magnetometro no altera el detector. La
+  tarjeta de Sensores muestra RUMBO DEL SENSOR. Es informativo: el hierro del
+  motor puede desviarlo y no entra en el SOS.
 9) DIAGRAMA DE FLUJO
 --------------------
                  INICIO MONITOR
@@ -323,5 +330,5 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-2.00s (versionCode 87)
+Version: V-2.01s (versionCode 88)
 

@@ -2846,6 +2846,34 @@ APK generado: APK´s/Segu-Luky-2.00s.apk (SHA-256
 Mapping archivado: APK´s/mapping/Segu-Luky-2.00s-mapping.txt.gz.
 Pendientes: validar el eje Z con la moto inclinada y la temperatura en marcha.
 ======================================================================
+V-2.01s (versionCode 88)
+======================================================================
+
+Fecha: 26/11/2026
+Version: 2.01s (versionCode 88)
+
+Cambio:
+- A la derecha de - M O D O - vuelve RUMBO, pero ahora es el rumbo magnetico
+  del propio WT9011 (angulo Z en 9 ejes), no el del movil ni la aceleracion Z.
+- Wt9011Config activa el magnetometro (FF AA 24 00 00) para que el angulo Z
+  sea absoluto; en 6 ejes era relativo y derivaba. La inclinacion de vuelco
+  sigue con la gravedad (X e Y), sin cambios en el detector.
+- La tarjeta SENSOR DE VUELCO muestra RUMBO DEL SENSOR junto a la temperatura
+  y a X/Y/Z.
+- Se mantiene el enlace al abrir Moto sin MONITOR ON y el corte al salir.
+
+Motivo: el usuario aclaro que con "eje Z" se referia a la informacion
+magnetica del sensor que da su rumbo.
+Prueba realizada: testDebugUnitTest (299 pruebas, 0 fallos), lintDebug (0
+errores), assembleRelease; instalado en el OPPO CPH2695 con el sensor real.
+Comprobado: con MONITOR OFF, TEMP 25,4 C y RUMBO 215 estables; en Sensores se
+ven X/Y/Z, 25,3 C y RUMBO DEL SENSOR 215 durante mas de 8 s sin bailar.
+APK generado: APK´s/Segu-Luky-2.01s.apk (SHA-256
+e1c3322f18ab849eb948bbc1542421bf7da653e2d8d597cbf33cd49c5d1f58fc).
+Mapping archivado: APK´s/mapping/Segu-Luky-2.01s-mapping.txt.gz.
+Pendientes: comprobar el rumbo sobre la moto y ver si el motor desvia la
+brujula; si molesta, se puede volver a 6 ejes o dejar solo la temperatura.
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

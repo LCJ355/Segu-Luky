@@ -68,6 +68,8 @@ data class Wt9011State(
     val ax: Float? = null,
     val ay: Float? = null,
     val az: Float? = null,
+    /** Rumbo magnetico del sensor (angulo Z en 9 ejes), 0-360. */
+    val yawDegrees: Float? = null,
     /** Temperatura interna del modulo, leida del registro 0x40. */
     val tempC: Float? = null,
     val calibrated: Boolean = false,
@@ -409,6 +411,7 @@ object Wt9011Controller {
             ax = null,
             ay = null,
             az = null,
+            yawDegrees = null,
             tempC = null,
             calibrated = false,
             hz = 0,
@@ -834,6 +837,13 @@ object Wt9011Controller {
         }
     }
 
+    /** Pasa el angulo Z del sensor (±180) a un rumbo 0-360. */
+    private fun normalizeHeading(degrees: Float): Float {
+        var value = degrees % 360f
+        if (value < 0f) value += 360f
+        return value
+    }
+
     private fun onSample(sample: Wt9011Sample) {
         val now = SystemClock.elapsedRealtime()
         lastSampleAt = now
@@ -894,6 +904,7 @@ object Wt9011Controller {
                 ax = sample.ax,
                 ay = sample.ay,
                 az = sample.az,
+                yawDegrees = normalizeHeading(sample.angleZ),
                 calibrated = reading.calibrated,
                 frames = parser.frames,
                 updatedAtMs = System.currentTimeMillis()

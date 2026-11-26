@@ -1,4 +1,4 @@
-# Segu-Luky V-2.00s
+# Segu-Luky V-2.01s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -28,7 +28,7 @@ key; InterCOM is a separate app reached only through its exported bridge (see
   the SOS button show X/Y arrows on top of the 5 s hold progress. In MOTO, the
   sensor is linked as soon as the home screen opens (no `MONITOR ON` needed) and
   the panel beside `MODO` shows its internal temperature (register `0x40`,
-  polled over BLE) and the raw Z axis in g.
+  polled over BLE) and its own magnetic heading (Z angle in 9-axis mode).
 - The hit threshold is **not** the slider value alone: `AdaptiveSensitivity`
   learns each device's rest noise, normal riding level and measured sample rate,
   and derives an effective threshold that is always shown on screen. A short
@@ -131,9 +131,9 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The current build and the two previous ones are archived in `APK´s/` as
 `Segu-Luky-<version>.apk` with their R8 mappings. The current build is
-`Segu-Luky-2.00s.apk`.
+`Segu-Luky-2.01s.apk`.
 
-The latest GitHub release is `V-2.00s` with `Segu-Luky-2.00s.apk` attached.
+The latest GitHub release is `V-2.01s` with `Segu-Luky-2.01s.apk` attached.
 Older versions remain as git tags; their APKs and mappings were retired from
 the tree (their hashes are in `APK´s/HISTORICO-RETIRADO.txt`) and remain in the
 git history. The public releases page only lists the current one.
@@ -141,7 +141,7 @@ git history. The public releases page only lists the current one.
 published release/tag:
 
 ```text
-gh release create V-2.00s "APK´s/Segu-Luky-2.00s.apk" --title "Segu-Luky V-2.00s" --notes "..."
+gh release create V-2.01s "APK´s/Segu-Luky-2.01s.apk" --title "Segu-Luky V-2.01s" --notes "..."
 ```
 
 The published APK carries **no personal data**: contacts, phone numbers, the bot
@@ -149,7 +149,7 @@ key and the position live only in the phone's `SharedPreferences` (the app
 declares `allowBackup="false"`). Before uploading, check the file itself:
 
 ```text
-powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-2.00s.apk"
+powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-2.01s.apk"
 ```
 
 It fails if the package contains anything that is not code, resources or

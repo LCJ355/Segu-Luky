@@ -1,4 +1,4 @@
-SEGU-LUKY V-2.00s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-2.01s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -8,6 +8,17 @@ ESTE APK HACE COSAS REALES: llama, envia mensajes y abre WhatsApp. Antes de
 poner S O S en ON revisa los contactos. Para probar sensores,
 desactivala: la cuenta atras se ejecuta sin avisar a nadie.
 
+--------------------------------------------------------------------------
+NOVEDADES 2.01s
+--------------------------------------------------------------------------
+- A la derecha de - M O D O - vuelve RUMBO, pero ahora es el rumbo magnetico
+  del propio sensor WT9011 (angulo Z en 9 ejes), no el del movil ni la
+  aceleracion Z.
+- El sensor se configura con magnetometro para que el angulo Z sea absoluto.
+  La inclinacion de vuelco sigue con la gravedad (X e Y), sin cambios.
+- La tarjeta SENSOR DE VUELCO muestra RUMBO DEL SENSOR junto a la temperatura.
+- El magnetometro puede desviarse cerca del motor; es informativo y no entra
+  en el SOS.
 --------------------------------------------------------------------------
 NOVEDADES 2.00s
 --------------------------------------------------------------------------
@@ -197,8 +208,8 @@ NOVEDADES 1.70s
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-2.00s.apk        <- version actual
-La 1.98s y la 1.99s se conservan como historico. Las anteriores siguen en los
+    Segu-Luky-2.01s.apk        <- version actual
+La 1.99s y la 2.00s se conservan como historico. Las anteriores siguen en los
 tags de git y en el historial; sus hashes estan en HISTORICO-RETIRADO.txt.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
@@ -392,9 +403,10 @@ Configuracion; VOLVER otra vez vuelve a la pantalla principal.
   el eje y los grados. Verde = correcto; amarillo = faltan 15 grados o menos;
   rojo = umbral alcanzado. El relleno verde de los 5 s sigue funcionando igual.
 - En MODO Moto, junto al boton - M O D O -, la pantalla principal muestra TEMP
-  a la izquierda (temperatura interna del sensor) y EJE Z a la derecha
-  (aceleracion Z del sensor en g). El sensor se enlaza al abrir la pantalla,
-  sin necesidad de arrancar el monitor, para comprobar la conexion.
+  a la izquierda (temperatura interna del sensor) y RUMBO a la derecha (rumbo
+  magnetico del propio sensor, angulo Z en 9 ejes). El sensor se enlaza al
+  abrir la pantalla, sin necesidad de arrancar el monitor, para comprobar la
+  conexion.
 - El sensor externo es una condicion independiente: no sustituye a CAIDA /
   ORIENTACION, ni a los golpes del movil, ni a la voz, ni al SOS manual.
 - Movil en el bolsillo: activa la proteccion de pantalla si el telefono lo
@@ -545,4 +557,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-2.00s (versionCode 87) - paquete com.intercom.segluky.
+Version: V-2.01s (versionCode 88) - paquete com.intercom.segluky.

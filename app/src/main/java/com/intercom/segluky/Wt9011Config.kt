@@ -4,8 +4,9 @@ package com.intercom.segluky
  * Configuracion del WT9011DCL-BT50.
  *
  * El sensor viene de fabrica a 9,9 Hz y en 9 ejes. Para el vuelco no hace falta
- * el magnetometro: se deja en 6 ejes y a 50 Hz, que da de sobra para la
- * inclinacion y evita que el hierro del motor desvie la fusion.
+ * el magnetometro, pero el rumbo del sensor (angulo Z) si: se deja en 9 ejes y
+ * a 50 Hz. La inclinacion se sigue calculando con la gravedad (X/Y), asi que el
+ * magnetometro no altera el detector.
  *
  * Las ordenes se escriben con [COMMAND_GAP_MS] entre ellas: si se mandan de
  * golpe, el firmware solo aplica la primera.
@@ -31,7 +32,7 @@ object Wt9011Config {
     /** 6 ejes: solo acelerometro + giroscopio. El rumbo queda relativo. */
     val AXIS_6_COMMAND: ByteArray = registerCommand(REG_AXIS6, AXIS_6)
 
-    /** 9 ejes: activa el magnetometro. Se conserva para diagnostico. */
+    /** 9 ejes: activa el magnetometro y da el rumbo magnetico del sensor. */
     val AXIS_9_COMMAND: ByteArray = registerCommand(REG_AXIS6, AXIS_9)
 
     val RATE_50_HZ_COMMAND: ByteArray = registerCommand(REG_RATE, RATE_CODE_50_HZ)
@@ -53,7 +54,7 @@ object Wt9011Config {
     /** Secuencia completa de conexion. */
     fun plan(): List<ByteArray> = listOf(
         UNLOCK,
-        AXIS_6_COMMAND,
+        AXIS_9_COMMAND,
         RATE_50_HZ_COMMAND,
         CONTENT_COMMAND,
         SAVE

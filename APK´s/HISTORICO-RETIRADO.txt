@@ -1,7 +1,7 @@
 ﻿APKs Y MAPPINGS RETIRADOS DEL ARBOL - Segu-Luky
 =================================================
 
-Fecha: 25/11/2026 (actualizado el 26/11/2026 con la retirada de la 1.97s)
+Fecha: 25/11/2026 (actualizado el 26/11/2026 con la retirada de la 1.98s)
 Motivo: conservar solo la version actual y las dos anteriores en APK´s/.
 Estas versiones siguen en el historial de git y, si tienen tag, se pueden
 reconstruir desde el codigo. Los SHA-256 permiten verificar una copia que se
@@ -24,6 +24,7 @@ Segu-Luky-1.94s.apk                                        2bc23fbe1beca65234ce5
 Segu-Luky-1.95s.apk                                        cb7d2e391dad8c42695462691caa735516cd99da3fed5056ca1cbf427b511306  5634207 si
 Segu-Luky-1.96s.apk                                        c3b402f0dc7d9c74ab4b2006693cd56a2f2e1ff038d23c3b5ed883f8d3257c11  5639335 si
 Segu-Luky-1.97s.apk                                        7ae38fe1fd795694ea43a9ceac2a463381bf514fcded3a1ca02447546ede0611  5687895 si
+Segu-Luky-1.98s.apk                                        067f319854ae5b2b64e86c5b1b4f8cb98688386ee4cbce667f1ac3f8aa1d521f  5688255 si
 
 Mappings retirados (mismo historial):
   Segu-Luky-1.82s-mapping.txt.gz
@@ -42,6 +43,7 @@ Mappings retirados (mismo historial):
   Segu-Luky-1.95s-mapping.txt.gz
   Segu-Luky-1.96s-mapping.txt.gz
   Segu-Luky-1.97s-mapping.txt.gz
+  Segu-Luky-1.98s-mapping.txt.gz
 
 Los APKs 1.88s, 1.89s, 1.91s y 1.92s no tienen tag; su binario sigue en los
 commits antiguos del historial. Las demas versiones tienen tag.

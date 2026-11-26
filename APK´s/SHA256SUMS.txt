@@ -12,9 +12,9 @@ Comprobar un archivo descargado:
 
 Un SHA-256 distinto significa que el archivo no es el publicado.
 
-067f319854ae5b2b64e86c5b1b4f8cb98688386ee4cbce667f1ac3f8aa1d521f  Segu-Luky-1.98s.apk  (5688255 bytes)
 59bec385a17399afea90c41f3f7da9542de4a6697772622e6de3a7debc83b083  Segu-Luky-1.99s.apk  (5697523 bytes)
 0ea50baddbe64ad10f9568bd2a947a5f69ae0dd9538bc8794ab25d9cc2cf1971  Segu-Luky-2.00s.apk  (5695003 bytes)
+e1c3322f18ab849eb948bbc1542421bf7da653e2d8d597cbf33cd49c5d1f58fc  Segu-Luky-2.01s.apk  (5696903 bytes)
 
 Detalle de permisos, destinos de red y por que avisa Play Protect:
   docs/SEGURIDAD.md

@@ -74,7 +74,8 @@ the normalized message matches exactly.
   comprobar los ejes.
 - `Wt9011Protocol` y `Wt9011Config` son Kotlin puro y estan cubiertos por
   pruebas JVM: tramas `55 61` de 20 bytes, variante clasica de 11 bytes y plan
-  de configuracion a 6 ejes / 50 Hz / mascara `0x07`.
+  de configuracion a 9 ejes / 50 Hz / mascara `0x07`; el magnetometro da el
+  rumbo del sensor y la inclinacion sigue calculandose con la gravedad.
 - `Wt9011TiltWatch` calcula la inclinacion X/Y contra una referencia aprendida
   con la moto vertical, con pasa-bajos de gravedad, umbral 50-60 grados, 5 s
   sostenidos, histeresis y rearme. No usa el magnetometro ni el rumbo.
@@ -85,7 +86,7 @@ the normalized message matches exactly.
 - La temperatura interna se pide aparte, por BLE, con `FF AA 27 40 00` (registro
   `0x40`) cada 5 s; la respuesta `55 71 40` no interfiere con las tramas `0x61`.
   Con el monitor parado, la pantalla de MOTO mantiene el enlace para comprobar
-  la conexion y ver `TEMP`; a su lado se muestra el eje Z del sensor.
+  la conexion y ver `TEMP`; a su lado se muestra el rumbo magnetico del sensor.
   Ambos datos son informativos y no entran en el detector ni en el SOS.
 
 ## Testing

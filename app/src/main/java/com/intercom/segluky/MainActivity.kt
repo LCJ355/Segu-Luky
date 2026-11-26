@@ -550,7 +550,7 @@ class MainActivity : ComponentActivity() {
                     val wt9011 by Wt9011Controller.state.collectAsStateWithLifecycle()
                     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
                     val tempAccent = if (isDark) Color(0xFFFFB74D) else Color(0xFFE65100)
-                    val axisAccent = if (isDark) Color(0xFF4FC3F7) else Color(0xFF0277BD)
+                    val headingAccent = if (isDark) Color(0xFF4FC3F7) else Color(0xFF0277BD)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -589,16 +589,16 @@ class MainActivity : ComponentActivity() {
                             onClick = { applyQuickMode(QuickMode.next(quickMode)) }
                         )
                         if (quickMode == QuickMode.MOTO) {
-                            val axisZ = wt9011.az
+                            val heading = wt9011.yawDegrees
                             MotoInfoCard(
-                                label = "EJE Z",
-                                value = axisZ?.let { String.format(Locale.US, "%+.2f", it) } ?: "--",
-                                unit = "g",
-                                accent = axisAccent,
-                                available = axisZ != null,
-                                description = axisZ?.let {
-                                    "Eje Z del sensor ${String.format(Locale.US, "%+.2f", it)} g"
-                                } ?: "Eje Z del sensor sin dato",
+                                label = "RUMBO",
+                                value = heading?.let { String.format(Locale.US, "%.0f", it) } ?: "--",
+                                unit = "°",
+                                accent = headingAccent,
+                                available = heading != null,
+                                description = heading?.let {
+                                    "Rumbo magnetico del sensor ${String.format(Locale.US, "%.0f", it)} grados"
+                                } ?: "Rumbo magnetico del sensor sin dato",
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -1407,6 +1407,9 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("2.01s - A la derecha de MODO, el RUMBO magnetico del propio sensor WT9011 " +
+        "(angulo Z en 9 ejes), no el del movil. El sensor se configura con magnetometro y la " +
+        "inclinacion sigue midiendose con X e Y.")
     appendLine("2.00s - En Moto, el sensor WT9011 se enlaza al abrir la pantalla, sin arrancar el " +
         "monitor, para comprobar la conexion y ver la temperatura en el acto. A la izquierda de " +
         "MODO sigue TEMP; a la derecha, el eje Z del sensor en g (sustituye al rumbo del movil).")
@@ -3020,7 +3023,7 @@ private fun InstructionsScreen(
             UsageInstruction(
                 title = "4. Caida, orientacion y sensor de vuelco",
                 text = "Con MODO MOTO, un golpe fuerte deja el aviso en espera 15 s y la pantalla se enciende para que puedas cancelarlo. El SOS salta solo si el movil queda inclinado 55 grados o mas durante 4 s seguidos. Se cancela si vuelve a estar vertical, si el GPS marca 30 km/h o mas (sigues rodando) o si pasan esos 15 s. Si lo desactivas, cualquier golpe empieza la cuenta atras directamente. " +
-                    "El sensor WT9011DCL-BT50 solo aparece y funciona con TIPO DE VEHICULO en MOTO. Si lo tienes montado, entra en Configuracion > Sensores, pulsa BUSCAR, elige WT901BLE67 y CONECTAR. Con la moto vertical y quieta aprende la referencia (CALIBRAR); si esta en la pata de cabra espera a enderezarla. Cuando la inclinacion X/Y supera el umbral ajustable (50-60 grados; 55 por defecto) durante 5 s, abre la misma cuenta atras. Es una condicion independiente: no sustituye a la caida del movil, ni a la voz, ni al SOS manual. Las dos columnas junto al SOS llevan una flecha X a la izquierda y Y a la derecha; debajo, cada etiqueta muestra el eje y los grados. Verde: correcto; amarillo: faltan 15 grados o menos; rojo: umbral alcanzado. En MODO Moto, la pantalla principal muestra ademas TEMP a la izquierda de - M O D O - (temperatura interna del sensor) y EJE Z a la derecha; se enlazan al abrir la pantalla, sin necesidad de arrancar el monitor, para comprobar la conexion."
+                    "El sensor WT9011DCL-BT50 solo aparece y funciona con TIPO DE VEHICULO en MOTO. Si lo tienes montado, entra en Configuracion > Sensores, pulsa BUSCAR, elige WT901BLE67 y CONECTAR. Con la moto vertical y quieta aprende la referencia (CALIBRAR); si esta en la pata de cabra espera a enderezarla. Cuando la inclinacion X/Y supera el umbral ajustable (50-60 grados; 55 por defecto) durante 5 s, abre la misma cuenta atras. Es una condicion independiente: no sustituye a la caida del movil, ni a la voz, ni al SOS manual. Las dos columnas junto al SOS llevan una flecha X a la izquierda y Y a la derecha; debajo, cada etiqueta muestra el eje y los grados. Verde: correcto; amarillo: faltan 15 grados o menos; rojo: umbral alcanzado. En MODO Moto, la pantalla principal muestra ademas TEMP a la izquierda de - M O D O - (temperatura interna del sensor) y RUMBO a la derecha (rumbo magnetico del sensor con su magnetometro); se enlazan al abrir la pantalla, sin necesidad de arrancar el monitor, para comprobar la conexion."
             )
         }
         item {
@@ -3384,7 +3387,7 @@ private fun Wt9011Card() {
         tone = if (state.enabled) tone else Tone.OFF,
         description = "Solo se activa en MODO MOTO. Condicion independiente: no sustituye a " +
             "CAIDA / ORIENTACION ni a los golpes del movil. Se monta en la moto con el eje Z hacia " +
-            "arriba; la inclinacion se mide con X e Y.",
+            "arriba; la inclinacion se mide con X e Y y el rumbo con el magnetometro.",
         trailing = {
             Switch(
                 checked = state.enabled,
@@ -3406,7 +3409,7 @@ private fun Wt9011Card() {
             )
             Text(
                 state.detail.ifBlank {
-                    "50 Hz · 6 ejes · sin magnetometro. Z se muestra como referencia de montaje."
+                    "50 Hz · 9 ejes · magnetometro: rumbo del sensor."
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -3485,6 +3488,11 @@ private fun Wt9011Card() {
             SensorMetric(
                 label = "TEMPERATURA INTERNA",
                 value = state.tempC?.let { String.format(Locale.US, "%.1f °C", it) } ?: "—",
+                modifier = Modifier.fillMaxWidth()
+            )
+            SensorMetric(
+                label = "RUMBO DEL SENSOR",
+                value = state.yawDegrees?.let { String.format(Locale.US, "%.0f°", it) } ?: "—",
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
@@ -3813,7 +3821,7 @@ private fun StateToggleButton(
     }
 }
 
-/** Dato grande junto al selector de modo en MOTO: temperatura o eje Z. */
+/** Dato grande junto al selector de modo en MOTO: temperatura o rumbo. */
 @Composable
 private fun MotoInfoCard(
     label: String,

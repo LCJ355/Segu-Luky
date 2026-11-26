@@ -7,7 +7,7 @@ import org.junit.Test
 class Wt9011ConfigTest {
 
     @Test
-    fun planUsesSixAxesFiftyHertzAndFastContent() {
+    fun planUsesNineAxesFiftyHertzAndFastContent() {
         val plan = Wt9011Config.plan()
         assertEquals(5, plan.size)
         assertArrayEquals(
@@ -15,7 +15,7 @@ class Wt9011ConfigTest {
             plan[0]
         )
         assertArrayEquals(
-            byteArrayOf(0xFF.toByte(), 0xAA.toByte(), 0x24, 0x01, 0x00),
+            byteArrayOf(0xFF.toByte(), 0xAA.toByte(), 0x24, 0x00, 0x00),
             plan[1]
         )
         assertArrayEquals(

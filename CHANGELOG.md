@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.01s (versionCode 88)
+
+### El rumbo ahora es el del sensor, no el del movil
+
+- **A la derecha de `- M O D O -` va el rumbo magnetico del WT9011** (angulo Z
+  en 9 ejes), no la aceleracion Z ni la brujula del telefono. En la prueba real
+  marca `215°` y se mantiene estable.
+- **El sensor vuelve a 9 ejes.** `Wt9011Config` activa el magnetometro
+  (`FF AA 24 00 00`) para que el angulo Z sea un rumbo absoluto; en 6 ejes era
+  relativo y derivaba. La inclinacion de vuelco sigue calculandose con la
+  gravedad (X e Y), asi que el detector no cambia.
+- **La tarjeta de Sensores muestra `RUMBO DEL SENSOR`** junto a la temperatura y
+  a X/Y/Z.
+- **Se mantiene el enlace sin `MONITOR ON`.** El sensor se conecta al abrir
+  Moto y se suelta al salir de la app o cambiar a Coche/Bolsillo.
+- **Aviso:** el magnetometro puede desviarse cerca del motor o de masas
+  metalicas; es un dato informativo y no interviene en el SOS.
+- 299 pruebas y `lintDebug` sin errores.
+
 ## 2.00s (versionCode 87)
 
 ### Ver la temperatura al conectar, sin MONITOR ON
