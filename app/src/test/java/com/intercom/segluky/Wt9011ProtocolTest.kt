@@ -139,6 +139,18 @@ class Wt9011ProtocolTest {
     }
 
     @Test
+    fun headingIncreasesClockwise() {
+        // El sensor entrega el angulo Z en sentido antihorario: +90 es girar a
+        // la izquierda (oeste), que en una brujula es 270.
+        assertEquals(270f, Wt9011Parser.headingFromYaw(90f), 0.01f)
+        assertEquals(90f, Wt9011Parser.headingFromYaw(-90f), 0.01f)
+        assertEquals(0f, Wt9011Parser.headingFromYaw(0f), 0.01f)
+        assertEquals(180f, Wt9011Parser.headingFromYaw(180f), 0.01f)
+        assertEquals(1f, Wt9011Parser.headingFromYaw(359f), 0.01f)
+        assertEquals(359f, Wt9011Parser.headingFromYaw(-359f), 0.01f)
+    }
+
+    @Test
     fun resetClearsCountersAndPendingBytes() {
         val parser = Wt9011Parser()
         parser.feed(byteArrayOf(0x55)) {}

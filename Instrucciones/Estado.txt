@@ -2874,6 +2874,32 @@ Mapping archivado: APK´s/mapping/Segu-Luky-2.01s-mapping.txt.gz.
 Pendientes: comprobar el rumbo sobre la moto y ver si el motor desvia la
 brujula; si molesta, se puede volver a 6 ejes o dejar solo la temperatura.
 ======================================================================
+V-2.02s (versionCode 89)
+======================================================================
+
+Fecha: 26/11/2026
+Version: 2.02s (versionCode 89)
+
+Cambio:
+- El rumbo del sensor ahora gira en el sentido de una brujula: a la derecha
+  sube y a la izquierda baja. El WT9011 entrega el angulo Z en sentido
+  antihorario, asi que se invierte el signo y se normaliza a 0-360 con
+  Wt9011Parser.headingFromYaw.
+- Prueba nueva headingIncreasesClockwise con 0/90/180/270 y los limites 1/359.
+- Sin cambios en inclinacion, temperatura, detector ni SOS.
+
+Motivo: el usuario observo que al girar a la derecha el valor disminuia y a la
+izquierda aumentaba, al contrario de un rumbo real.
+Prueba realizada: testDebugUnitTest (300 pruebas, 0 fallos), lintDebug (0
+errores), assembleRelease; instalado en el OPPO CPH2695 con el sensor real.
+Comprobado: la app arranca en Moto y muestra TEMP y RUMBO; el valor cambia al
+girar el sensor y la formula se valida con la prueba unitaria.
+APK generado: APK´s/Segu-Luky-2.02s.apk (SHA-256
+75af53d80687be5431c946f8351ab2086797d0e699889d7365fe4654418570dc).
+Mapping archivado: APK´s/mapping/Segu-Luky-2.02s-mapping.txt.gz.
+Pendientes: confirmar en la moto que el rumbo sube al girar a la derecha y
+medir el desfase de montaje del sensor respecto al morro.
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

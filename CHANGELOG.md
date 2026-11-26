@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.02s (versionCode 89)
+
+### El rumbo gira en el sentido correcto
+
+- **Al girar el sensor a la derecha el rumbo ahora sube**, y al girar a la
+  izquierda baja, como una brujula normal. El WT9011 entrega el angulo Z en
+  sentido antihorario, asi que se invierte el signo y se normaliza a 0-360
+  (`headingFromYaw`).
+- Nueva prueba `headingIncreasesClockwise` con los cuatro puntos cardinales y
+  los limites 1/359. Total: 300 pruebas.
+- Sin cambios en la inclinacion, la temperatura ni el detector: solo cambia la
+  representacion del rumbo.
+
 ## 2.01s (versionCode 88)
 
 ### El rumbo ahora es el del sensor, no el del movil

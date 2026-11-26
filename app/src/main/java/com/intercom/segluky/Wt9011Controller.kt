@@ -837,13 +837,6 @@ object Wt9011Controller {
         }
     }
 
-    /** Pasa el angulo Z del sensor (±180) a un rumbo 0-360. */
-    private fun normalizeHeading(degrees: Float): Float {
-        var value = degrees % 360f
-        if (value < 0f) value += 360f
-        return value
-    }
-
     private fun onSample(sample: Wt9011Sample) {
         val now = SystemClock.elapsedRealtime()
         lastSampleAt = now
@@ -904,7 +897,7 @@ object Wt9011Controller {
                 ax = sample.ax,
                 ay = sample.ay,
                 az = sample.az,
-                yawDegrees = normalizeHeading(sample.angleZ),
+                yawDegrees = Wt9011Parser.headingFromYaw(sample.angleZ),
                 calibrated = reading.calibrated,
                 frames = parser.frames,
                 updatedAtMs = System.currentTimeMillis()

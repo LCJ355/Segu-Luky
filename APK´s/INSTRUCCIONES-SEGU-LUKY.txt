@@ -1,4 +1,4 @@
-SEGU-LUKY V-2.01s - INSTRUCCIONES DE INSTALACION Y USO
+SEGU-LUKY V-2.02s - INSTRUCCIONES DE INSTALACION Y USO
 ======================================================
 App de seguridad para moto: detecta un posible accidente y avisa a tus
 contactos (SMS, WhatsApp, Telegram y llamadas). Coexiste con InterCOM-Luky
@@ -8,6 +8,14 @@ ESTE APK HACE COSAS REALES: llama, envia mensajes y abre WhatsApp. Antes de
 poner S O S en ON revisa los contactos. Para probar sensores,
 desactivala: la cuenta atras se ejecuta sin avisar a nadie.
 
+--------------------------------------------------------------------------
+NOVEDADES 2.02s
+--------------------------------------------------------------------------
+- El rumbo del sensor ahora gira como una brujula: al girar a la derecha sube
+  y a la izquierda baja. Antes iba al reves porque el sensor entrega el angulo
+  Z en sentido antihorario.
+- Solo cambia la representacion del rumbo; inclinacion, temperatura, detector
+  y SOS siguen igual. Incluye una prueba nueva del sentido de giro.
 --------------------------------------------------------------------------
 NOVEDADES 2.01s
 --------------------------------------------------------------------------
@@ -208,8 +216,8 @@ NOVEDADES 1.70s
 1) QUE ARCHIVO INSTALAR
 --------------------------------------------------------------------------
 En esta carpeta hay una APK por version. Instala siempre la ultima:
-    Segu-Luky-2.01s.apk        <- version actual
-La 1.99s y la 2.00s se conservan como historico. Las anteriores siguen en los
+    Segu-Luky-2.02s.apk        <- version actual
+La 2.00s y la 2.01s se conservan como historico. Las anteriores siguen en los
 tags de git y en el historial; sus hashes estan en HISTORICO-RETIRADO.txt.
 
 Requiere Android 10 (API 29) o superior. Paquete: com.intercom.segluky.
@@ -557,4 +565,4 @@ contactos, GPS, bateria y permisos antes de circular. La app no envia datos a
 ningun servidor propio: solo usa la red para Telegram (si lo configuras) y
 para comprobar actualizaciones en GitHub.
 
-Version: V-2.01s (versionCode 88) - paquete com.intercom.segluky.
+Version: V-2.02s (versionCode 89) - paquete com.intercom.segluky.

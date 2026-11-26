@@ -242,6 +242,19 @@ class Wt9011Parser(
         /** 180 grados sobre 32768 cuentas. */
         const val ANGLE_SCALE = 180f / 32768f
 
+        /**
+         * Convierte el angulo Z del sensor en un rumbo de brujula.
+         *
+         * El sensor gira en sentido antihorario (positivo) visto desde arriba;
+         * el rumbo real aumenta al girar a la derecha, asi que se invierte el
+         * signo y se normaliza a 0-360.
+         */
+        fun headingFromYaw(yawDegrees: Float): Float {
+            var value = -yawDegrees % 360f
+            if (value < 0f) value += 360f
+            return value
+        }
+
         fun i16(payload: ByteArray, index: Int): Int {
             val low = payload[index].toInt() and 0xFF
             val high = payload[index + 1].toInt() and 0xFF

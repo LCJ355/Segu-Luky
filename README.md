@@ -1,4 +1,4 @@
-# Segu-Luky V-2.01s
+# Segu-Luky V-2.02s
 
 Independent Android safety prototype for accident validation, designed to coexist
 with InterCOM-Luky. It keeps its own package (`com.intercom.segluky`) and signing
@@ -131,9 +131,9 @@ The debug APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 The current build and the two previous ones are archived in `APK´s/` as
 `Segu-Luky-<version>.apk` with their R8 mappings. The current build is
-`Segu-Luky-2.01s.apk`.
+`Segu-Luky-2.02s.apk`.
 
-The latest GitHub release is `V-2.01s` with `Segu-Luky-2.01s.apk` attached.
+The latest GitHub release is `V-2.02s` with `Segu-Luky-2.02s.apk` attached.
 Older versions remain as git tags; their APKs and mappings were retired from
 the tree (their hashes are in `APK´s/HISTORICO-RETIRADO.txt`) and remain in the
 git history. The public releases page only lists the current one.
@@ -141,7 +141,7 @@ git history. The public releases page only lists the current one.
 published release/tag:
 
 ```text
-gh release create V-2.01s "APK´s/Segu-Luky-2.01s.apk" --title "Segu-Luky V-2.01s" --notes "..."
+gh release create V-2.02s "APK´s/Segu-Luky-2.02s.apk" --title "Segu-Luky V-2.02s" --notes "..."
 ```
 
 The published APK carries **no personal data**: contacts, phone numbers, the bot
@@ -149,7 +149,7 @@ key and the position live only in the phone's `SharedPreferences` (the app
 declares `allowBackup="false"`). Before uploading, check the file itself:
 
 ```text
-powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-2.01s.apk"
+powershell -File tools/comprobar-apk.ps1 -Apk "APK´s/Segu-Luky-2.02s.apk"
 ```
 
 It fails if the package contains anything that is not code, resources or

@@ -87,6 +87,8 @@ the normalized message matches exactly.
   `0x40`) cada 5 s; la respuesta `55 71 40` no interfiere con las tramas `0x61`.
   Con el monitor parado, la pantalla de MOTO mantiene el enlace para comprobar
   la conexion y ver `TEMP`; a su lado se muestra el rumbo magnetico del sensor.
+  El angulo Z del WT9011 crece en sentido antihorario, asi que se invierte para
+  que el rumbo suba al girar a la derecha, como en una brujula.
   Ambos datos son informativos y no entran en el detector ni en el SOS.
 
 ## Testing

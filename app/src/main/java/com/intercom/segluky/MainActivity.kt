@@ -1407,6 +1407,8 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("2.02s - El rumbo del sensor gira como una brujula: a la derecha sube y a la " +
+        "izquierda baja. Se invierte el angulo Z del WT9011 (antihorario) y se normaliza a 0-360.")
     appendLine("2.01s - A la derecha de MODO, el RUMBO magnetico del propio sensor WT9011 " +
         "(angulo Z en 9 ejes), no el del movil. El sensor se configura con magnetometro y la " +
         "inclinacion sigue midiendose con X e Y.")
