@@ -2815,6 +2815,37 @@ Mapping archivado: (ver entrada de publicacion).
 Pendientes: confirmar el rumbo con una brujula de referencia y validar la
 temperatura en marcha (cerca del motor subira respecto a la ambiente).
 ======================================================================
+V-2.00s (versionCode 87)
+======================================================================
+
+Fecha: 26/11/2026
+Version: 2.00s (versionCode 87)
+
+Cambio:
+- En MODO Moto el sensor WT9011 se enlaza al abrir la pantalla principal,
+  aunque el monitor este parado, para comprobar la conexion y ver la
+  temperatura sin arrancar la vigilancia. Al salir de la app o cambiar a
+  Coche/Bolsillo se suelta; si el monitor vigila, el enlace se mantiene.
+- A la derecha de - M O D O - se muestra el eje Z del sensor en grande
+  (+1.00 g en la prueba). Sustituye al rumbo magnetico del movil; se retira
+  PhoneHeading y el campo headingDegrees.
+- La tarjeta SENSOR DE VUELCO (WT9011) muestra ahora X, Y y Z junto a la
+  temperatura interna (25,9 C en la prueba), con el monitor parado.
+- La temperatura sigue por BLE (registro 0x40) y las tramas 0x61 a 50 Hz.
+
+Motivo: el usuario queria ver la temperatura al conectar el sensor, no solo
+con MONITOR ON, y prefiere el eje Z del sensor en lugar del rumbo del movil.
+Prueba realizada: testDebugUnitTest (299 pruebas, 0 fallos), lintDebug (0
+errores), assembleRelease; instalado en el OPPO CPH2695 con el sensor real.
+Comprobado: con MONITOR OFF aparece TEMP 25,8 C y EJE Z +1.00 g; MONITOR ON
+mantiene X 0 / Y 6 y la temperatura; al pasar a Coche desaparecen las dos
+tarjetas; al volver a Moto reconecta solo (26,4 C); en Sensores se ven X/Y/Z y
+25,9 C.
+APK generado: APK´s/Segu-Luky-2.00s.apk (SHA-256
+0ea50baddbe64ad10f9568bd2a947a5f69ae0dd9538bc8794ab25d9cc2cf1971).
+Mapping archivado: APK´s/mapping/Segu-Luky-2.00s-mapping.txt.gz.
+Pendientes: validar el eje Z con la moto inclinada y la temperatura en marcha.
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

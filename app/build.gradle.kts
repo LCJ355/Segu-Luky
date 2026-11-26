@@ -42,8 +42,8 @@ android {
         applicationId = "com.intercom.segluky"
         minSdk = 29
         targetSdk = 35
-        versionCode = 86
-        versionName = "1.99s"
+        versionCode = 87
+        versionName = "2.00s"
     }
 
     buildTypes {

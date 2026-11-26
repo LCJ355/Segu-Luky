@@ -29,8 +29,6 @@ data class SafetySnapshot(
     /** Vehiculo elegido en Configuracion > Sensores. */
     val vehicleProfile: VehicleProfile = VehicleProfile.PHONE,
     val speedKmh: Float? = null,
-    /** Rumbo magnetico del movil, solo informativo. */
-    val headingDegrees: Float? = null,
     /** Estado del enlace OBDII del coche. */
     val obd: ObdState = ObdState(),
     /** Ultimo veredicto bache/accidente (solo informativo en esta version). */

@@ -59,8 +59,6 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     /** Ultimo giro leido, para que cada muestra de movimiento lo lleve encima. */
     private val gyroHold = ImpactGyroHold()
     private var gravitySensor: Sensor? = null
-    private var phoneHeading: PhoneHeading? = null
-    private var lastHeadingAt = 0L
     private var sensorsRegistered = false
     private var locationUpdatesRegistered = false
     private var monitoringEnabled = false
@@ -166,13 +164,6 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     override fun onCreate() {
         super.onCreate()
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        phoneHeading = PhoneHeading(this) { heading ->
-            val now = SystemClock.elapsedRealtime()
-            if (now - lastHeadingAt >= HEADING_MIN_INTERVAL_MS) {
-                lastHeadingAt = now
-                SafetyStateStore.update { it.copy(headingDegrees = heading) }
-            }
-        }
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
         alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
         wakeScreenController = WakeScreenController(this)
@@ -952,13 +943,6 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         sensorsRegistered = true
         sensorRegisteredAt = SystemClock.elapsedRealtime()
         sensorAccuracyReliable = true
-        // Rumbo del movil solo para la pantalla de MOTO; no entra en el SOS.
-        if (vehicleProfile == VehicleProfile.MOTO) {
-            phoneHeading?.start()
-        } else {
-            phoneHeading?.stop()
-            SafetyStateStore.update { it.copy(headingDegrees = null) }
-        }
         val kind = if (selected.type == Sensor.TYPE_LINEAR_ACCELERATION) "lineal" else "acelerometro con filtro"
         val wake = if (selected.isWakeUpSensor) "wake-up" else "no wake-up"
         val maxG = selected.maximumRange / AccidentDetector.STANDARD_GRAVITY
@@ -1061,9 +1045,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
     }
 
     private fun unregisterSensors() {
-        phoneHeading?.stop()
         if (::sensorManager.isInitialized) sensorManager.unregisterListener(this)
-        SafetyStateStore.update { it.copy(headingDegrees = null) }
         sensorsRegistered = false
         sensorRegisteredAt = null
         sensorAccuracyReliable = true
@@ -3416,7 +3398,6 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
         private const val MOVEMENT_DECAY = 0.78f
         private const val BEEP_DURATION_MS = 120
         private const val LOCATION_INTERVAL_INITIAL_MS = 2_000L
-        private const val HEADING_MIN_INTERVAL_MS = 200L
         private const val LOCATION_INTERVAL_ROUTINE_MS = 20_000L
         private const val LOCATION_INTERVAL_VALIDATION_MS = 2_000L
         private const val SPEED_POLICY_MAX_AGE_MS = 30_000L
@@ -3615,6 +3596,7 @@ class SafetyMonitorService : Service(), SensorEventListener, LocationListener {
             preferences.edit().putString(KEY_VEHICLE_PROFILE, vehicle.id).apply()
             // El sensor externo de vuelco es exclusivo de MOTO.
             if (vehicle != VehicleProfile.MOTO) {
+                Wt9011Controller.setPreview(context, false)
                 Wt9011Controller.setMonitoring(context, false)
             }
             SafetyStateStore.log("Vehiculo: ${vehicle.label}")

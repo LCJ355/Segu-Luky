@@ -84,7 +84,8 @@ the normalized message matches exactly.
   protocolo completos. Es una condicion mas, nunca exclusiva.
 - La temperatura interna se pide aparte, por BLE, con `FF AA 27 40 00` (registro
   `0x40`) cada 5 s; la respuesta `55 71 40` no interfiere con las tramas `0x61`.
-  `PhoneHeading` calcula el rumbo magnetico del movil para la pantalla de MOTO.
+  Con el monitor parado, la pantalla de MOTO mantiene el enlace para comprobar
+  la conexion y ver `TEMP`; a su lado se muestra el eje Z del sensor.
   Ambos datos son informativos y no entran en el detector ni en el SOS.
 
 ## Testing

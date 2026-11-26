@@ -67,6 +67,7 @@ data class Wt9011State(
     val axisYDegrees: Float? = null,
     val ax: Float? = null,
     val ay: Float? = null,
+    val az: Float? = null,
     /** Temperatura interna del modulo, leida del registro 0x40. */
     val tempC: Float? = null,
     val calibrated: Boolean = false,
@@ -144,6 +145,8 @@ object Wt9011Controller {
     private var writeChar: BluetoothGattCharacteristic? = null
     private var wanted = false
     private var monitoring = false
+    /** Enlace mantenido solo para ver la temperatura con el monitor parado. */
+    private var preview = false
     private var connectedNotified = false
     private var scanning = false
     private var reconnectAttempts = 0
@@ -405,12 +408,33 @@ object Wt9011Controller {
             axisYDegrees = null,
             ax = null,
             ay = null,
+            az = null,
             tempC = null,
             calibrated = false,
             hz = 0,
             frames = 0L,
             updatedAtMs = System.currentTimeMillis()
         )
+    }
+
+    /**
+     * Mantiene el enlace mientras la pantalla de MOTO esta visible.
+     *
+     * Sirve para comprobar la conexion y ver la temperatura sin arrancar el
+     * monitor. Si el monitor esta activo, el enlace sigue igual.
+     */
+    @Synchronized
+    fun setPreview(context: Context, active: Boolean) {
+        applicationContext = context.applicationContext
+        refreshSettings(context)
+        preview = active
+        if (active) {
+            if (_state.value.enabled && device.address.isNotBlank() && gatt == null) {
+                connect(context, device)
+            }
+        } else if (!monitoring) {
+            disconnect()
+        }
     }
 
     /** El servicio lo llama al arrancar o detener el monitor. */
@@ -425,7 +449,8 @@ object Wt9011Controller {
             if (_state.value.enabled && device.address.isNotBlank() && gatt == null) {
                 connect(context, device)
             }
-        } else {
+        } else if (!preview) {
+            // Sin monitor y sin pantalla de MOTO no hay nada que medir.
             disconnect()
         }
     }
@@ -434,9 +459,9 @@ object Wt9011Controller {
     fun setEnabled(context: Context, enabled: Boolean) {
         Wt9011Settings.saveEnabled(context, enabled)
         _state.value = _state.value.copy(enabled = enabled)
-        if (!enabled && monitoring) {
+        if (!enabled) {
             disconnect()
-        } else if (enabled && monitoring && device.address.isNotBlank() && gatt == null) {
+        } else if ((monitoring || preview) && device.address.isNotBlank() && gatt == null) {
             connect(context, device)
         }
     }
@@ -868,6 +893,7 @@ object Wt9011Controller {
                 axisYDegrees = reading.axisYDegrees,
                 ax = sample.ax,
                 ay = sample.ay,
+                az = sample.az,
                 calibrated = reading.calibrated,
                 frames = parser.frames,
                 updatedAtMs = System.currentTimeMillis()

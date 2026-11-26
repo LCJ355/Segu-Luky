@@ -1,8 +1,8 @@
-SEGU-LUKY V-1.99s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-2.00s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 86). Los valores entre parentesis son los del codigo.
+archivo (versionCode 87). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -273,6 +273,13 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   temperatura interna del modulo, no la ambiente. El rumbo de la derecha es el
   del movil (vector de rotacion, giro de pantalla y suavizado) y solo informa:
   no entra en el detector ni en el SOS. TEMP y RUMBO solo se muestran en MOTO.
+- (2.00s) El enlace de vista previa sustituye al rumbo por el eje Z. En MODO
+  Moto, MainActivity llama a Wt9011Controller.setPreview(true) al quedar visible
+  y gira el enlace aunque el monitor este parado; al salir (ON_STOP) o cambiar
+  de perfil se suelta, salvo que el monitor siga activo. Sirve para comprobar
+  la conexion y ver la temperatura en el acto. A la derecha de MODO se muestra
+  az del sensor (g), no el rumbo del movil; se retiran PhoneHeading y
+  headingDegrees. La tarjeta de Sensores anade Z a X e Y.
 9) DIAGRAMA DE FLUJO
 --------------------
                  INICIO MONITOR
@@ -316,5 +323,5 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-1.99s (versionCode 86)
+Version: V-2.00s (versionCode 87)
 

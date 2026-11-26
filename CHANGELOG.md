@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.00s (versionCode 87)
+
+### Ver la temperatura al conectar, sin MONITOR ON
+
+- **El sensor se enlaza al abrir la pantalla de Moto.** Con el monitor parado,
+  la app abre el BLE del WT9011 en cuanto la pantalla principal esta visible y
+  ya muestra `TEMP`: sirve para comprobar que el sensor conecta y responde sin
+  arrancar la vigilancia.
+- **El enlace se suelta al salir de la app** o al cambiar a Coche/Bolsillo; si
+  el monitor esta activo se mantiene como siempre. Al volver a Moto se
+  reconecta solo.
+- **A la derecha de `- M O D O -` ahora va el eje Z del sensor** (`+1.00 g`),
+  con el mismo texto grande. Sustituye al rumbo magnetico del movil, que se
+  retira junto con `PhoneHeading`.
+- **La tarjeta de Sensores muestra X, Y y Z** ademas de la temperatura interna,
+  para verificar el montaje y la conexion de un vistazo.
+- La temperatura se sigue pidiendo por BLE al registro `0x40` cada 5 s y las
+  tramas `0x61` continuan a 50 Hz.
+- 299 pruebas y `lintDebug` sin errores.
+
 ## 1.99s (versionCode 86)
 
 ### Temperatura del sensor y rumbo junto a MODO
