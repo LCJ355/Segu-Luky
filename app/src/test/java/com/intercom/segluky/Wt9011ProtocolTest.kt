@@ -118,6 +118,27 @@ class Wt9011ProtocolTest {
     }
 
     @Test
+    fun decodesTemperatureRegisterResponse() {
+        val frame = ByteArray(20)
+        frame[0] = 0x55
+        frame[1] = 0x71.toByte()
+        frame[2] = 0x40
+        frame[3] = 0x00
+        // 25,80 C = 2580 = 0x0A14, little-endian
+        frame[4] = 0x14
+        frame[5] = 0x0A
+        val registers = mutableListOf<Wt9011Register>()
+        val parser = Wt9011Parser()
+        parser.registerListener = { registers += it }
+        parser.feed(frame) { }
+
+        assertEquals(1, registers.size)
+        assertEquals(0x40, registers.first().address)
+        assertEquals(2580, registers.first().values.first())
+        assertEquals(1L, parser.registerFrames)
+    }
+
+    @Test
     fun resetClearsCountersAndPendingBytes() {
         val parser = Wt9011Parser()
         parser.feed(byteArrayOf(0x55)) {}

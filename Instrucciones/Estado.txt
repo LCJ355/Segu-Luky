@@ -2781,6 +2781,40 @@ APK generado: (ver entrada de publicacion).
 Mapping archivado: (ver entrada de publicacion).
 Pendientes: validar en la moto en marcha que el enlace se mantiene en MOTO.
 ======================================================================
+V-1.99s (versionCode 86)
+======================================================================
+
+Fecha: 26/11/2026
+Version: 1.99s (versionCode 86)
+
+Cambio:
+- Pantalla principal, MODO Moto: a la izquierda del boton aparece TEMP con la
+  temperatura interna del WT9011DCL-BT50 en texto grande; a la derecha, RUMBO
+  magnetico del movil.
+- La temperatura se pide por BLE con FF AA 27 40 00 (registro 0x40) cada 5 s y
+  se decodifica la respuesta 55 71 40 00 TL TH... con T=((TH<<8)|TL)/100 C.
+  No requiere desbloquear el sensor ni cambia la tasa de las tramas 0x61.
+- El parser reconoce ahora la trama 0x71 de 20 bytes (lectura de registros).
+- El rumbo usa PhoneHeading: vector de rotacion (o acelerometro + magnetometro
+  de respaldo), giro de pantalla y suavizado; solo informativo, no entra en el
+  detector ni en el SOS. Se activa solo en MOTO.
+- Las tarjetas TEMP/RUMBO solo aparecen en MOTO; en Coche y Bolsillo no cambian.
+- Actualizada la documentacion del sensor: el USB Type-C del BT50 es solo carga;
+  temperatura por BLE (registro 0x40).
+- Historial dentro de la app con la entrada 1.99s.
+
+Motivo: el usuario quiere ver la temperatura del sensor y el rumbo magnetico en
+la pantalla de Moto, junto al selector MODO.
+Prueba realizada: testDebugUnitTest (299 pruebas, 0 fallos), lintDebug (0
+errores), assembleRelease; instalado en el OPPO CPH2695 con el sensor real.
+Resultado: la pantalla muestra TEMP 25,6 C en naranja a la izquierda, MODO Moto
+en el centro y RUMBO 229 en cian a la derecha; el sensor sigue a 50 Hz y las
+flechas X/Y funcionan.
+APK generado: (ver entrada de publicacion).
+Mapping archivado: (ver entrada de publicacion).
+Pendientes: confirmar el rumbo con una brujula de referencia y validar la
+temperatura en marcha (cerca del motor subira respecto a la ambiente).
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

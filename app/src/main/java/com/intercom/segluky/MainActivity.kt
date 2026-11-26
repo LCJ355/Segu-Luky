@@ -528,6 +528,10 @@ class MainActivity : ComponentActivity() {
                 item {
                     val obd by ObdLinkController.state.collectAsStateWithLifecycle()
                     val obdSpeedKmh = obd.freshSpeed(System.currentTimeMillis())
+                    val wt9011 by Wt9011Controller.state.collectAsStateWithLifecycle()
+                    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+                    val tempAccent = if (isDark) Color(0xFFFFB74D) else Color(0xFFE65100)
+                    val headingAccent = if (isDark) Color(0xFF4FC3F7) else Color(0xFF0277BD)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -537,6 +541,20 @@ class MainActivity : ComponentActivity() {
                             SpeedSourceCard(
                                 label = "GPS",
                                 speedKmh = snapshot.speedKmh,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (quickMode == QuickMode.MOTO) {
+                            val temperature = wt9011.tempC
+                            MotoInfoCard(
+                                label = "TEMP",
+                                value = temperature?.let { String.format(Locale.US, "%.1f", it) } ?: "--",
+                                unit = "°C",
+                                accent = tempAccent,
+                                available = temperature != null,
+                                description = temperature?.let {
+                                    "Temperatura del sensor ${String.format(Locale.US, "%.1f", it)} grados"
+                                } ?: "Sensor de temperatura sin dato",
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -551,6 +569,20 @@ class MainActivity : ComponentActivity() {
                             accessibilityLabel = "Modo ${quickMode.label}; tocar para cambiar",
                             onClick = { applyQuickMode(QuickMode.next(quickMode)) }
                         )
+                        if (quickMode == QuickMode.MOTO) {
+                            val heading = snapshot.headingDegrees
+                            MotoInfoCard(
+                                label = "RUMBO",
+                                value = heading?.let { String.format(Locale.US, "%.0f", it) } ?: "--",
+                                unit = "°",
+                                accent = headingAccent,
+                                available = heading != null,
+                                description = heading?.let {
+                                    "Rumbo magnetico del movil ${String.format(Locale.US, "%.0f", it)} grados"
+                                } ?: "Rumbo magnetico sin dato",
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                         if (quickMode == QuickMode.COCHE) {
                             SpeedSourceCard(
                                 label = "OBD2",
@@ -1356,6 +1388,9 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("1.99s - Temperatura del sensor WT9011 a la izquierda de MODO en Moto y rumbo magnetico " +
+        "del movil a la derecha. La temperatura se pide por BLE al registro 0x40; el rumbo usa el " +
+        "vector de rotacion del telefono.")
     appendLine("1.98s - El sensor externo WT9011DCL-BT50 solo se activa con TIPO DE VEHICULO en MOTO: " +
         "la tarjeta desaparece en MOVIL y COCHE, y el enlace BLE se corta al cambiar de perfil.")
     appendLine("1.97s - Sensor externo WT9011DCL-BT50 por BLE para detectar vuelco por inclinacion X/Y: umbral " +
@@ -2963,7 +2998,7 @@ private fun InstructionsScreen(
             UsageInstruction(
                 title = "4. Caida, orientacion y sensor de vuelco",
                 text = "Con MODO MOTO, un golpe fuerte deja el aviso en espera 15 s y la pantalla se enciende para que puedas cancelarlo. El SOS salta solo si el movil queda inclinado 55 grados o mas durante 4 s seguidos. Se cancela si vuelve a estar vertical, si el GPS marca 30 km/h o mas (sigues rodando) o si pasan esos 15 s. Si lo desactivas, cualquier golpe empieza la cuenta atras directamente. " +
-                    "El sensor WT9011DCL-BT50 solo aparece y funciona con TIPO DE VEHICULO en MOTO. Si lo tienes montado, entra en Configuracion > Sensores, pulsa BUSCAR, elige WT901BLE67 y CONECTAR. Con la moto vertical y quieta aprende la referencia (CALIBRAR); si esta en la pata de cabra espera a enderezarla. Cuando la inclinacion X/Y supera el umbral ajustable (50-60 grados; 55 por defecto) durante 5 s, abre la misma cuenta atras. Es una condicion independiente: no sustituye a la caida del movil, ni a la voz, ni al SOS manual. Las dos columnas junto al SOS llevan una flecha X a la izquierda y Y a la derecha; debajo, cada etiqueta muestra el eje y los grados. Verde: correcto; amarillo: faltan 15 grados o menos; rojo: umbral alcanzado."
+                    "El sensor WT9011DCL-BT50 solo aparece y funciona con TIPO DE VEHICULO en MOTO. Si lo tienes montado, entra en Configuracion > Sensores, pulsa BUSCAR, elige WT901BLE67 y CONECTAR. Con la moto vertical y quieta aprende la referencia (CALIBRAR); si esta en la pata de cabra espera a enderezarla. Cuando la inclinacion X/Y supera el umbral ajustable (50-60 grados; 55 por defecto) durante 5 s, abre la misma cuenta atras. Es una condicion independiente: no sustituye a la caida del movil, ni a la voz, ni al SOS manual. Las dos columnas junto al SOS llevan una flecha X a la izquierda y Y a la derecha; debajo, cada etiqueta muestra el eje y los grados. Verde: correcto; amarillo: faltan 15 grados o menos; rojo: umbral alcanzado. En MODO Moto, la pantalla principal muestra ademas TEMP a la izquierda de - M O D O - (temperatura interna del sensor) y RUMBO a la derecha (brujula del movil, solo informativa)."
             )
         }
         item {
@@ -3424,6 +3459,11 @@ private fun Wt9011Card() {
                     modifier = Modifier.weight(1f)
                 )
             }
+            SensorMetric(
+                label = "TEMPERATURA INTERNA",
+                value = state.tempC?.let { String.format(Locale.US, "%.1f °C", it) } ?: "—",
+                modifier = Modifier.fillMaxWidth()
+            )
             Text(
                 "UMBRAL DE VUELCO",
                 style = MaterialTheme.typography.labelSmall,
@@ -3746,6 +3786,64 @@ private fun StateToggleButton(
                 fontWeight = FontWeight.Bold,
                 maxLines = 1
             )
+        }
+    }
+}
+
+/** Dato grande junto al selector de modo en MOTO: temperatura o rumbo. */
+@Composable
+private fun MotoInfoCard(
+    label: String,
+    value: String,
+    unit: String,
+    accent: Color,
+    available: Boolean,
+    description: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .height(52.dp)
+            .semantics { contentDescription = description },
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            2.dp,
+            if (available) accent.copy(alpha = 0.70f) else MaterialTheme.colorScheme.outlineVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 3.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(1.dp)
+            ) {
+                Text(
+                    value,
+                    fontSize = 26.sp,
+                    lineHeight = 27.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (available) accent else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+                Text(
+                    unit,
+                    fontSize = 12.sp,
+                    lineHeight = 13.sp,
+                    color = if (available) accent.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 2.dp),
+                    maxLines = 1
+                )
+            }
         }
     }
 }

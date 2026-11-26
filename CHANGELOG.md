@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.99s (versionCode 86)
+
+### Temperatura del sensor y rumbo junto a MODO
+
+- **Temperatura en la pantalla principal.** En `MODO Moto`, a la izquierda del
+  boton `- M O D O -`, aparece `TEMP` en grande con la temperatura interna del
+  WT9011DCL-BT50 (`25.6 °C` en la prueba real).
+- **Se lee por BLE, no por USB.** El sensor no incluye la temperatura en la
+  trama `0x61`; la app envia `FF AA 27 40 00` (registro `0x40`) cada 5 s y
+  decodifica la respuesta `55 71 40 00 TL TH…`:
+  `T = ((TH << 8) | TL) / 100 °C`. No necesita desbloquear el sensor ni baja la
+  tasa de 50 Hz de la inclinacion.
+- **Rumbo magnetico a la derecha.** La tarjeta `RUMBO` usa el vector de rotacion
+  del propio movil (o acelerometro + magnetometro de respaldo), con el giro de
+  pantalla y suavizado. Es informativo: no interviene en el detector ni en el
+  SOS. Si no hay brujula o no esta disponible, muestra `--`.
+- **Solo en MOTO.** Las dos tarjetas laterales solo aparecen con
+  `TIPO DE VEHICULO = MOTO`; en Coche y Bolsillo el selector queda como antes.
+- **Aclaracion importante:** en el BT50 el USB Type-C es **solo carga**; los
+  datos van por BLE. La temperatura es la interna del modulo, no la ambiente.
+- 299 pruebas y `lintDebug` sin errores.
+
 ## 1.98s (versionCode 85)
 
 ### El sensor de vuelco solo existe en MODO MOTO

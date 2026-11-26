@@ -29,6 +29,12 @@ data class Wt9011Sample(
     val gyroModuleDps: Float get() = sqrt(gx * gx + gy * gy + gz * gz)
 }
 
+/** Respuesta `55 71` a una lectura de registro: direccion y 8 valores int16. */
+data class Wt9011Register(
+    val address: Int,
+    val values: IntArray
+)
+
 /**
  * Parser incremental: tolera notificaciones partidas, bytes de basura y
  * checksums malos sin perder el flujo. Todo lo que entrega es inmutable.
@@ -54,6 +60,11 @@ class Wt9011Parser(
         private set
     var fastFrames = 0L
         private set
+    var registerFrames = 0L
+        private set
+
+    /** Se invoca al llegar una respuesta `55 71` (lectura de registro). */
+    var registerListener: ((Wt9011Register) -> Unit)? = null
 
     fun reset() {
         length = 0
@@ -67,6 +78,7 @@ class Wt9011Parser(
         badChecksum = 0L
         frames = 0L
         fastFrames = 0L
+        registerFrames = 0L
     }
 
     fun feed(data: ByteArray, count: Int = data.size, onSample: (Wt9011Sample) -> Unit) {
@@ -96,6 +108,7 @@ class Wt9011Parser(
             val flag = buffer[index + 1].toInt() and 0xFF
             val frameLength = when {
                 flag == FLAG_FAST -> FAST_FRAME_LENGTH
+                flag == FLAG_REGISTER -> REGISTER_FRAME_LENGTH
                 flag in CLASSIC_FLAG_MIN..CLASSIC_FLAG_MAX -> CLASSIC_FRAME_LENGTH
                 else -> 0
             }
@@ -106,7 +119,7 @@ class Wt9011Parser(
             }
             if (length - index < frameLength) break
 
-            if (flag != FLAG_FAST) {
+            if (flag != FLAG_FAST && flag != FLAG_REGISTER) {
                 var sum = 0
                 for (offset in 0 until frameLength - 1) {
                     sum += buffer[index + offset].toInt() and 0xFF
@@ -147,6 +160,14 @@ class Wt9011Parser(
                         fastFrame = true
                     )
                 )
+            } else if (flag == FLAG_REGISTER) {
+                val address = (buffer[index + 2].toInt() and 0xFF) or
+                    ((buffer[index + 3].toInt() and 0xFF) shl 8)
+                val values = IntArray(8) { slot ->
+                    i16(buffer, index + 4 + slot * 2)
+                }
+                registerFrames++
+                registerListener?.invoke(Wt9011Register(address, values))
             } else {
                 when (flag) {
                     FLAG_ACC -> {
@@ -200,6 +221,9 @@ class Wt9011Parser(
         const val HEADER = 0x55
         const val FLAG_FAST = 0x61
         const val FAST_FRAME_LENGTH = 20
+
+        const val FLAG_REGISTER = 0x71
+        const val REGISTER_FRAME_LENGTH = 20
 
         const val FLAG_ACC = 0x52
         const val FLAG_GYRO = 0x53

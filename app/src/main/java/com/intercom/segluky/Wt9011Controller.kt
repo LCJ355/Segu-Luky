@@ -67,6 +67,8 @@ data class Wt9011State(
     val axisYDegrees: Float? = null,
     val ax: Float? = null,
     val ay: Float? = null,
+    /** Temperatura interna del modulo, leida del registro 0x40. */
+    val tempC: Float? = null,
     val calibrated: Boolean = false,
     val hz: Int = 0,
     val frames: Long = 0L,
@@ -114,6 +116,8 @@ object Wt9011Controller {
     private const val DESCRIPTOR_TIMEOUT_MS = 2_500L
     private const val NO_DATA_MS = 2_500L
     private const val CONFIG_SETTLE_MS = 350L
+    private const val TEMPERATURE_FIRST_MS = 2_000L
+    private const val TEMPERATURE_PERIOD_MS = 5_000L
 
     private val SERVICE_UUID: UUID = UUID.fromString("0000ffe5-0000-1000-8000-00805f9a34fb")
     private val NOTIFY_UUID: UUID = UUID.fromString("0000ffe4-0000-1000-8000-00805f9a34fb")
@@ -199,6 +203,19 @@ object Wt9011Controller {
         val context = applicationContext ?: return@Runnable
         if (!wanted || gatt != null) return@Runnable
         openGatt(context, device, resetAttempts = false)
+    }
+
+    private val temperaturePoll = object : Runnable {
+        override fun run() {
+            if (!wanted || !connectedNotified) return
+            val g = gatt
+            val characteristic = writeChar
+            if (g != null && characteristic != null && !configInFlight) {
+                // Lectura del registro 0x40; no necesita desbloquear.
+                writeBytes(g, characteristic, Wt9011Config.TEMPERATURE_READ)
+            }
+            handler.postDelayed(this, TEMPERATURE_PERIOD_MS)
+        }
     }
 
     private val noDataCheck = object : Runnable {
@@ -376,6 +393,7 @@ object Wt9011Controller {
         wanted = false
         handler.removeCallbacks(reconnectRunnable)
         handler.removeCallbacks(noDataCheck)
+        handler.removeCallbacks(temperaturePoll)
         stopScanInternal()
         closeGatt()
         resetSession()
@@ -387,6 +405,7 @@ object Wt9011Controller {
             axisYDegrees = null,
             ax = null,
             ay = null,
+            tempC = null,
             calibrated = false,
             hz = 0,
             frames = 0L,
@@ -474,6 +493,7 @@ object Wt9011Controller {
         sessionGeneration++
         synchronized(parserLock) {
             parser = Wt9011Parser { SystemClock.elapsedRealtimeNanos() }
+            parser.registerListener = { register -> onRegisterFrame(register) }
         }
         tiltWatch = Wt9011TiltWatch(Wt9011Settings.loadThreshold(context))
         tiltWatch.setThreshold(_state.value.thresholdDegrees)
@@ -486,12 +506,14 @@ object Wt9011Controller {
         framesWindowStart = 0L
         framesWindowCount = 0
         lastUiPublishAt = 0L
+        _state.value = _state.value.copy(tempC = null)
     }
 
     private fun closeGatt() {
         descriptorTimeout?.let { handler.removeCallbacks(it) }
         descriptorTimeout = null
         handler.removeCallbacks(noDataCheck)
+        handler.removeCallbacks(temperaturePoll)
         connectedNotified = false
         notifyChar = null
         writeChar = null
@@ -654,6 +676,8 @@ object Wt9011Controller {
             logIfMonitoring("SENSOR DE VUELCO: conectado (${device.label})")
             // La cola de comandos y el temporizador viven en el hilo principal.
             handler.post { sendConfigPlan(g) }
+            handler.removeCallbacks(temperaturePoll)
+            handler.postDelayed(temperaturePoll, TEMPERATURE_FIRST_MS)
         }
 
         override fun onDescriptorWrite(
@@ -768,6 +792,20 @@ object Wt9011Controller {
             }
         } catch (error: SecurityException) {
             false
+        }
+    }
+
+    /** Respuesta `55 71`: el registro 0x40 es la temperatura interna. */
+    private fun onRegisterFrame(register: Wt9011Register) {
+        if (register.address != 0x40 || register.values.isEmpty()) return
+        val temperature = register.values[0] / 100f
+        if (!temperature.isFinite() || temperature < -40f || temperature > 85f) return
+        handler.post {
+            if (!wanted) return@post
+            _state.value = _state.value.copy(
+                tempC = temperature,
+                updatedAtMs = System.currentTimeMillis()
+            )
         }
     }
 

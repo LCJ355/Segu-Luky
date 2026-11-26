@@ -82,6 +82,10 @@ the normalized message matches exactly.
   monitor este activo y que no haya SOS o envio en curso, y llama a
   `AccidentDetector.confirmExternalFall`, que reutiliza la cuenta atras y el
   protocolo completos. Es una condicion mas, nunca exclusiva.
+- La temperatura interna se pide aparte, por BLE, con `FF AA 27 40 00` (registro
+  `0x40`) cada 5 s; la respuesta `55 71 40` no interfiere con las tramas `0x61`.
+  `PhoneHeading` calcula el rumbo magnetico del movil para la pantalla de MOTO.
+  Ambos datos son informativos y no entran en el detector ni en el SOS.
 
 ## Testing
 

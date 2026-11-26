@@ -38,6 +38,18 @@ object Wt9011Config {
 
     val CONTENT_COMMAND: ByteArray = registerCommand(REG_CONTENT, CONTENT_MASK)
 
+    /**
+     * Lectura del registro 0x40 (temperatura interna). Es solo lectura: no
+     * necesita desbloquear y se puede enviar mientras llegan las tramas 0x61.
+     */
+    val TEMPERATURE_READ: ByteArray = byteArrayOf(
+        0xFF.toByte(),
+        0xAA.toByte(),
+        0x27,
+        0x40,
+        0x00
+    )
+
     /** Secuencia completa de conexion. */
     fun plan(): List<ByteArray> = listOf(
         UNLOCK,
