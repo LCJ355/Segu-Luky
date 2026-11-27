@@ -1407,6 +1407,9 @@ private fun privacyText(): String = buildString {
 private fun historyText(versionLabel: String): String = buildString {
     appendLine("Version instalada: $versionLabel")
     appendLine()
+    appendLine("2.03s - Si el sensor guardado no responde tras dos intentos, la app deja de " +
+        "reintentar y muestra 'Este sensor no responde. BUSCAR OTRO'. El boton BUSCAR cambia a " +
+        "BUSCAR OTRO y CONECTAR a REINTENTAR. Tambien se corrige el aviso de escaneo ya activo.")
     appendLine("2.02s - El rumbo del sensor gira como una brujula: a la derecha sube y a la " +
         "izquierda baja. Se invierte el angulo Z del WT9011 (antihorario) y se normaliza a 0-360.")
     appendLine("2.01s - A la derecha de MODO, el RUMBO magnetico del propio sensor WT9011 " +
@@ -3366,7 +3369,7 @@ private fun Wt9011Card() {
         Wt9011Status.CALIBRATING -> "CALIBRANDO"
         Wt9011Status.READY -> if (state.monitoring) "VIGILANDO" else "LISTO"
         Wt9011Status.NO_DATA -> "SIN DATOS"
-        Wt9011Status.ERROR -> "ERROR"
+        Wt9011Status.ERROR -> if (state.savedDeviceFailed) "SIN RESPUESTA" else "ERROR"
     }
     val tone = when (state.status) {
         Wt9011Status.READY,
@@ -3416,22 +3419,42 @@ private fun Wt9011Card() {
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (state.savedDeviceFailed) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { scan() },
+                        modifier = Modifier.weight(2f),
+                        contentPadding = CompactButtonPadding
+                    ) { TightButtonLabel("BUSCAR OTRO") }
+                    OutlinedButton(
+                        onClick = { Wt9011Controller.disconnect() },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = CompactButtonPadding
+                    ) { TightButtonLabel("CORTAR") }
+                }
                 OutlinedButton(
-                    onClick = { scan() },
-                    modifier = Modifier.weight(1f),
-                    contentPadding = CompactButtonPadding
-                ) { TightButtonLabel("BUSCAR") }
-                Button(
                     onClick = { connectSavedOrScan() },
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     contentPadding = CompactButtonPadding
-                ) { TightButtonLabel("CONECTAR") }
-                OutlinedButton(
-                    onClick = { Wt9011Controller.disconnect() },
-                    modifier = Modifier.weight(1f),
-                    contentPadding = CompactButtonPadding
-                ) { TightButtonLabel("CORTAR") }
+                ) { TightButtonLabel("REINTENTAR EL MISMO SENSOR") }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { scan() },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = CompactButtonPadding
+                    ) { TightButtonLabel("BUSCAR") }
+                    Button(
+                        onClick = { connectSavedOrScan() },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = CompactButtonPadding
+                    ) { TightButtonLabel("CONECTAR") }
+                    OutlinedButton(
+                        onClick = { Wt9011Controller.disconnect() },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = CompactButtonPadding
+                    ) { TightButtonLabel("CORTAR") }
+                }
             }
             OutlinedButton(
                 onClick = {

@@ -2900,6 +2900,37 @@ Mapping archivado: APK´s/mapping/Segu-Luky-2.02s-mapping.txt.gz.
 Pendientes: confirmar en la moto que el rumbo sube al girar a la derecha y
 medir el desfase de montaje del sensor respecto al morro.
 ======================================================================
+V-2.03s (versionCode 90)
+======================================================================
+
+Fecha: 27/11/2026
+Version: 2.03s (versionCode 90)
+
+Cambio:
+- Si el sensor guardado no responde tras dos intentos, la app deja de
+  reintentar, muestra SIN RESPUESTA y el texto "Este sensor no responde.
+  BUSCAR OTRO".
+- En ese estado aparecen BUSCAR OTRO, CORTAR y REINTENTAR EL MISMO SENSOR.
+  Al elegir otro sensor se guarda como nuevo ultimo y el contador vuelve a 0.
+- El aviso "Codigo 1" (SCAN_FAILED_ALREADY_STARTED) se trata como un escaneo
+  viejo: se cancela y se pide pulsar BUSCAR de nuevo, en vez de dar ERROR.
+- El contador de fallos se reinicia al conectar, al elegir otro sensor, al
+  arrancar el monitor y al cortar. Si el monitor estaba activo y se cae el
+  enlace, se sigue reintentando.
+
+Motivo: el usuario prefiere que la app no se quede en bucle con un sensor
+apagado y le ofrezca buscar otro.
+Prueba realizada: testDebugUnitTest (300 pruebas, 0 fallos), lintDebug (0
+errores), assembleRelease; instalado en el OPPO CPH2695 con el sensor apagado.
+Comprobado: tras dos timeouts GATT (147), la tarjeta muestra SIN RESPUESTA,
+"Este sensor no responde. BUSCAR OTRO", BUSCAR OTRO, CORTAR y REINTENTAR EL
+MISMO SENSOR; deja de reintentar.
+APK generado: APK´s/Segu-Luky-2.03s.apk (SHA-256
+4441038ba4db1ae0626154fc7ff71c6f5b18cb7296a1a8fef2190e118f16ee78).
+Mapping archivado: APK´s/mapping/Segu-Luky-2.03s-mapping.txt.gz.
+Pendientes: probar que al elegir otro sensor se guarda y conecta, y que al
+encender el sensor guardado REINTENTAR EL MISMO SENSOR vuelve a enlazar.
+======================================================================
 FORMATO PARA FUTURAS ENTRADAS
 ======================================================================
 

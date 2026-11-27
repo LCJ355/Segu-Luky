@@ -90,6 +90,10 @@ the normalized message matches exactly.
   El angulo Z del WT9011 crece en sentido antihorario, asi que se invierte para
   que el rumbo suba al girar a la derecha, como en una brujula.
   Ambos datos son informativos y no entran en el detector ni en el SOS.
+- Si el sensor guardado falla dos veces seguidas al conectar, el controlador
+  deja de reintentar (`wanted=false`, `savedDeviceSuspended=true`) y muestra
+  `BUSCAR OTRO`. El contador se reinicia al conectar, al elegir otro sensor, al
+  arrancar el monitor o al cortar.
 
 ## Testing
 

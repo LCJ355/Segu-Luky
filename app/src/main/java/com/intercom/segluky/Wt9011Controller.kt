@@ -58,6 +58,8 @@ data class Wt9011Device(
 data class Wt9011State(
     val status: Wt9011Status = Wt9011Status.OFF,
     val detail: String = "",
+    /** El sensor guardado no responde; hay que buscar otro. */
+    val savedDeviceFailed: Boolean = false,
     val deviceName: String = "",
     val deviceAddress: String = "",
     val enabled: Boolean = true,
@@ -149,6 +151,9 @@ object Wt9011Controller {
     private var monitoring = false
     /** Enlace mantenido solo para ver la temperatura con el monitor parado. */
     private var preview = false
+    /** Fallos seguidos del sensor guardado antes de dejar de reintentar. */
+    private var connectionFailures = 0
+    private var savedDeviceSuspended = false
     private var connectedNotified = false
     private var scanning = false
     private var reconnectAttempts = 0
@@ -200,6 +205,13 @@ object Wt9011Controller {
 
         override fun onScanFailed(errorCode: Int) {
             scanning = false
+            if (errorCode == 1) {
+                // SCAN_FAILED_ALREADY_STARTED: habia un escaneo viejo abierto.
+                // Se cancela y se pide otra pulsacion de BUSCAR.
+                stopScanInternal()
+                publish(Wt9011Status.FOUND, "Ya habia una busqueda activa. Pulsa BUSCAR de nuevo.")
+                return
+            }
             publish(Wt9011Status.ERROR, "No se pudo buscar por BLE (codigo $errorCode)")
         }
     }
@@ -380,9 +392,12 @@ object Wt9011Controller {
         }
         device = target
         Wt9011Settings.saveDevice(context, target)
+        connectionFailures = 0
+        savedDeviceSuspended = false
         _state.value = _state.value.copy(
             deviceName = target.name,
-            deviceAddress = target.address
+            deviceAddress = target.address,
+            savedDeviceFailed = false
         )
         wanted = true
         reconnectAttempts = 0
@@ -396,6 +411,8 @@ object Wt9011Controller {
     @Synchronized
     fun disconnect() {
         wanted = false
+        connectionFailures = 0
+        savedDeviceSuspended = false
         handler.removeCallbacks(reconnectRunnable)
         handler.removeCallbacks(noDataCheck)
         handler.removeCallbacks(temperaturePoll)
@@ -405,6 +422,7 @@ object Wt9011Controller {
         _state.value = _state.value.copy(
             status = Wt9011Status.OFF,
             detail = "Desconectado",
+            savedDeviceFailed = false,
             tiltDegrees = null,
             axisXDegrees = null,
             axisYDegrees = null,
@@ -432,6 +450,7 @@ object Wt9011Controller {
         refreshSettings(context)
         preview = active
         if (active) {
+            if (savedDeviceSuspended) return
             if (_state.value.enabled && device.address.isNotBlank() && gatt == null) {
                 connect(context, device)
             }
@@ -448,6 +467,9 @@ object Wt9011Controller {
         monitoring = active
         _state.value = _state.value.copy(monitoring = active)
         if (active) {
+            connectionFailures = 0
+            savedDeviceSuspended = false
+            _state.value = _state.value.copy(savedDeviceFailed = false)
             tiltWatch.calibrate()
             if (_state.value.enabled && device.address.isNotBlank() && gatt == null) {
                 connect(context, device)
@@ -464,7 +486,8 @@ object Wt9011Controller {
         _state.value = _state.value.copy(enabled = enabled)
         if (!enabled) {
             disconnect()
-        } else if ((monitoring || preview) && device.address.isNotBlank() && gatt == null) {
+        } else if ((monitoring || preview) && !savedDeviceSuspended &&
+            device.address.isNotBlank() && gatt == null) {
             connect(context, device)
         }
     }
@@ -561,11 +584,45 @@ object Wt9011Controller {
         handler.postDelayed(reconnectRunnable, delay)
     }
 
+    /**
+     * Dos fallos seguidos del sensor guardado: se deja de reintentar y se pide
+     * buscar otro. No se vuelve a conectar solo hasta que el usuario pulse
+     * BUSCAR/CONECTAR o arranque el monitor.
+     */
+    private fun giveUpOnSavedDevice() {
+        wanted = false
+        savedDeviceSuspended = true
+        handler.removeCallbacks(reconnectRunnable)
+        handler.removeCallbacks(noDataCheck)
+        handler.removeCallbacks(temperaturePoll)
+        closeGatt()
+        resetSession()
+        _state.value = _state.value.copy(
+            status = Wt9011Status.ERROR,
+            detail = "Este sensor no responde. BUSCAR OTRO",
+            savedDeviceFailed = true,
+            tiltDegrees = null,
+            axisXDegrees = null,
+            axisYDegrees = null,
+            ax = null,
+            ay = null,
+            az = null,
+            yawDegrees = null,
+            tempC = null,
+            calibrated = false,
+            hz = 0,
+            frames = 0L,
+            updatedAtMs = System.currentTimeMillis()
+        )
+        logIfMonitoring("SENSOR DE VUELCO: el sensor guardado no responde; hay que buscar otro")
+    }
+
     private fun stopScanInternal() {
         scanTimeout?.let { handler.removeCallbacks(it) }
         scanTimeout = null
-        if (!scanning) return
         scanning = false
+        // Se llama siempre: si quedo un escaneo viejo abierto, Android devuelve
+        // SCAN_FAILED_ALREADY_STARTED (codigo 1) y hay que cerrarlo.
         runCatching {
             adapter(applicationContext)?.bluetoothLeScanner?.stopScan(scanCallback)
         }
@@ -609,7 +666,16 @@ object Wt9011Controller {
                 val wasConnected = connectedNotified
                 closeGatt()
                 if (wanted) {
-                    if (wasConnected) logIfMonitoring("SENSOR DE VUELCO: enlace perdido; reintentando")
+                    if (!wasConnected) {
+                        connectionFailures++
+                        if (connectionFailures >= 2) {
+                            giveUpOnSavedDevice()
+                            return
+                        }
+                    } else {
+                        connectionFailures = 0
+                        logIfMonitoring("SENSOR DE VUELCO: enlace perdido; reintentando")
+                    }
                     publish(Wt9011Status.CONNECTING, "Sin enlace; reintentando con el sensor...")
                     scheduleReconnect()
                 } else {
@@ -692,6 +758,8 @@ object Wt9011Controller {
         private fun markConnected(g: BluetoothGatt) {
             if (connectedNotified) return
             connectedNotified = true
+            connectionFailures = 0
+            savedDeviceSuspended = false
             descriptorTimeout?.let { handler.removeCallbacks(it) }
             descriptorTimeout = null
             connectedAt = SystemClock.elapsedRealtime()
@@ -699,7 +767,8 @@ object Wt9011Controller {
                 status = Wt9011Status.CALIBRATING,
                 detail = "Sensor conectado; configurando y calibrando",
                 deviceName = device.name,
-                deviceAddress = device.address
+                deviceAddress = device.address,
+                savedDeviceFailed = false
             )
             logIfMonitoring("SENSOR DE VUELCO: conectado (${device.label})")
             // La cola de comandos y el temporizador viven en el hilo principal.

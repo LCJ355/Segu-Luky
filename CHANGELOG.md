@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.03s (versionCode 90)
+
+### El sensor guardado deja de reintentar y pide buscar otro
+
+- **Dos fallos y se detiene.** Si el sensor guardado no responde tras dos
+  intentos de conexión, la app deja de reintentar, muestra `SIN RESPUESTA` y el
+  mensaje **“Este sensor no responde. BUSCAR OTRO”**.
+- **Botones claros.** En ese estado aparece un botón grande `BUSCAR OTRO`,
+  `CORTAR` y `REINTENTAR EL MISMO SENSOR`. Al elegir otro sensor, se guarda como
+  nuevo último y el contador vuelve a cero.
+- **Se corrige el “Código 1”.** `SCAN_FAILED_ALREADY_STARTED` se trata como un
+  escaneo viejo que hay que cerrar: se cancela y se pide pulsar `BUSCAR` de
+  nuevo, en vez de mostrar un error definitivo.
+- **Sin reintentos infinitos.** El contador se reinicia al conectar, al elegir
+  otro sensor, al arrancar el monitor o al cortar. Si el monitor estaba activo
+  y el sensor se cae, se sigue reintentando para no perder la vigilancia.
+- 300 pruebas y `lintDebug` sin errores.
+
 ## 2.02s (versionCode 89)
 
 ### El rumbo gira en el sentido correcto

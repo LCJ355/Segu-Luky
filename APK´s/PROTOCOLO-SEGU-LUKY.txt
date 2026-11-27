@@ -1,8 +1,8 @@
-SEGU-LUKY V-2.02s - PROTOCOLO Y ALGORITMO
+SEGU-LUKY V-2.03s - PROTOCOLO Y ALGORITMO
 ==========================================
 Documento de comprension de la app (deteccion, cuenta atras, canales de aviso,
 ubicacion y recuperacion). Describe el codigo real del APK que acompana a este
-archivo (versionCode 89). Los valores entre parentesis son los del codigo.
+archivo (versionCode 90). Los valores entre parentesis son los del codigo.
 
 AVISO IMPORTANTE
 ----------------
@@ -291,6 +291,13 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
   rumbo de brujula. headingFromYaw invierte el signo y normaliza a 0-360:
   giro a la derecha = rumbo sube; giro a la izquierda = rumbo baja. La prueba
   headingIncreasesClockwise cubre 0, 90, 180, 270, 1 y 359.
+- (2.03s) Tras dos fallos seguidos del sensor guardado, Wt9011Controller deja
+  de reintentar: wanted=false, savedDeviceSuspended=true y publica ERROR con
+  "Este sensor no responde. BUSCAR OTRO". La tarjeta muestra SIN RESPUESTA y
+  los botones BUSCAR OTRO, CORTAR y REINTENTAR EL MISMO SENSOR. El contador se
+  reinicia al conectar, al elegir otro sensor, al arrancar el monitor y al
+  cortar. SCAN_FAILED_ALREADY_STARTED (codigo 1) se cancela y se pide pulsar
+  BUSCAR de nuevo.
 9) DIAGRAMA DE FLUJO
 --------------------
                  INICIO MONITOR
@@ -334,5 +341,5 @@ para WhatsApp y Telegram; el SMS usa la misma plantilla.
                     -> aviso de voz InterCOM
                     -> monitor rearmado
 
-Version: V-2.02s (versionCode 89)
+Version: V-2.03s (versionCode 90)
 
